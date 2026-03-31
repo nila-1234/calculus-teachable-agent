@@ -1,40 +1,42 @@
-export const SCENARIO = `A smartwatch tracks a runner's performance during a workout.
+export const SCENARIO = `A company brings you a weekly profit report and says that some weeks seem unusually important in the overall pattern. In some places, the report appears to flatten briefly, and in other places the pattern becomes difficult to interpret clearly. The team wants help deciding which weeks in the report should be treated as especially important for further analysis.`;
 
-The device records information such as the runner's speed, changes in motion, and moments when the runner's movement pattern shifts — for example when they stop accelerating, slow down, or briefly pause before speeding up again. The running coach wants to analyze these patterns in order to better understand how the runner's performance changes throughout the workout.
-In the following stages, you will design calculus questions that help analyze different aspects of the runner's motion.`;
+export const STUDENT_TASK = `Choose the question that best translates the team’s concern into mathematical language.`;
 
-export const STUDENT_TASK = `Create a calculus question based on the running scenario above. Your question should involve critical numbers of a function that models the runner's motion.
+export const QUESTION_CHOICES = {
+  A: "Which weeks should be treated as especially important because the rate at which profit is changing is zero or is not defined?",
+  B: "Which weeks should be treated as especially important because the profit value itself is zero or is not defined?",
+  C: "Which weeks should be treated as especially important because the profit reaches a local high or a local low?",
+} as const;
 
-Write the question so that another student could try to solve it.`;
+export const EVAL_QUESTION_PROMPT = `You are giving feedback on a student's multiple-choice selection in a calculus interpretation task.
 
-export const EVAL_QUESTION_PROMPT = `You are grading a calculus question written by a student.
-The goal of this task is for students to create a question about **critical numbers** of a function.
-Evaluate the student's question using the rubric below.
+The scenario is about identifying weeks that should be treated as especially important because the pattern briefly flattens or becomes difficult to interpret clearly.
 
-Important:
-- Focus on whether the question clearly asks about **critical numbers**.
-- The question should involve a function and be solvable by another student.
-- If the question asks about **critical points, coordinates, or (t, f(t))**, it is acceptable but not perfect because the focus should primarily be critical numbers.
+The intended mathematical idea is critical numbers:
+- values in the domain where the derivative is zero, or
+- values in the domain where the derivative does not exist.
 
-Scoring:
-
-5 – Clear calculus question about critical numbers of a function. The question includes a function and clearly asks students to find or reason about critical numbers.
-
-4 – Mostly correct but includes extra tasks (for example also asking for critical points or coordinates). The main focus is still critical numbers.
-
-3 – Mentions calculus but the question is vague, incomplete, or unclear.
-
-2 – Weakly related to calculus or missing important elements such as a function or a clear task.
-
-1 – Not a calculus question (gibberish, random text, or unrelated content).
+Choice A is the best answer because it correctly focuses on where the rate of change is zero or undefined.
+Choice B is incorrect because it focuses on the profit value itself being zero or undefined.
+Choice C is incomplete because local highs and lows may occur at some important weeks, but the scenario is broader than extrema alone.
 
 Feedback rules:
-- Write 1–2 sentences only.
-- Briefly explain why the score was given.
-- Reference specific wording from the student's question when possible.`;
+- Write 2-4 sentences.
+- State whether the selected choice is correct or incorrect.
+- Briefly explain the reasoning in plain language.
+- If the choice is incorrect, explain what confusion it shows.`;
 
-export const AI_STUDENT_INSTRUCTION = `The problem involves distinguishing between a critical number and a critical point.
-Student B misconception: The student thinks a critical number is the coordinate (c, f(c)).
-Student C misconception: The student confuses the output value f(c) with the critical number.`;
+export const AI_STUDENT_INSTRUCTION = `You are generating sample student responses for a multiple-choice calculus interpretation task.
 
-export const RUBRIC_FOCUS = `Concept focus: critical number definition. Key ideas that good rubrics might include: derivative equals zero; derivative does not exist; point must be in the domain.`;
+The student is answering this question:
+"Which weeks should be treated as especially important because the rate at which profit is changing is zero or is not defined?"
+
+Generate three short student-style answer/explanation options:
+- one strong/correct response
+- one response showing confusion between critical numbers and where the profit value itself is zero or undefined
+- one response showing confusion between critical numbers and only local highs/local lows
+
+Each response should sound like something a student might actually write.
+Keep each response concise but realistic.`;
+
+export const RUBRIC_FOCUS = `Concept focus: whether a response correctly interprets the important weeks as values where the derivative is zero or undefined, rather than where the function value is zero or undefined, or only where local extrema occur. Good rubrics may check for: attention to rate of change, recognition of undefined derivative cases, distinction between input values and output values, and avoidance of narrowing the concept to extrema only.`;

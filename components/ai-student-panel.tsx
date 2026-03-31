@@ -9,10 +9,6 @@ export type RubricRow = {
   remarks: string;
 };
 
-export type HumanAssignedRubric = {
-  rows: RubricRow[];
-};
-
 type AiStudentPanelProps = {
   question: string;
   rubricRows: RubricRow[];
@@ -23,6 +19,20 @@ type AiStudentPanelProps = {
   answersLoading?: boolean;
   onSubmit: () => void;
 };
+
+const CRITERIA_OPTIONS = [
+  "completeness",
+  "accuracy",
+  // "correctness",
+  "explanation",
+  "relevance",
+] as const;
+
+const SCORE_OPTIONS = ["0", "1", "2", "3", "4", "5"] as const;
+
+function createRubricRowId() {
+  return `rubric-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 export default function AiStudentPanel({
   question,
@@ -52,10 +62,6 @@ export default function AiStudentPanel({
     );
   };
 
-  function createRubricRowId() {
-    return `rubric-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-  }
-
   const addRow = () => {
     setRubricRows((prev) => [
       ...prev,
@@ -75,136 +81,130 @@ export default function AiStudentPanel({
   return (
     <div className="flex h-full flex-col rounded-2xl border border-red-200 bg-red-50 shadow-sm">
       <div className="rounded-t-2xl bg-red-100 px-6 py-4">
-        <h1 className="text-xl font-semibold text-slate-900">Evaluation</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Evaluate AI Student</h1>
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
         <div className="rounded-2xl bg-white p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Your Question</h2>
-          <div className="mt-2">
+          <h2 className="text-lg font-semibold text-gray-900">Your Question</h2>
+          <div className="mt-3">
             {question ? (
               <MathDisplay text={question} />
             ) : (
-              <p className="text-slate-500">No question submitted yet.</p>
+              <p className="text-gray-500">No question submitted yet.</p>
             )}
           </div>
         </div>
 
-        <div className="rounded-2xl bg-red-100 p-5">
-          <h2 className="text-lg font-semibold text-slate-900">AI Student Answer</h2>
+        <div className="rounded-2xl bg-white p-5">
+          <h2 className="text-lg font-semibold text-gray-900">AI Student Answer</h2>
 
           {answersLoading ? (
-            <div className="mt-3 flex items-center gap-3 text-sm text-slate-600">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+            <div className="mt-4 flex items-center gap-3 text-sm text-gray-600">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
               <span>Solving...</span>
             </div>
           ) : (
-            <div className="mt-3 whitespace-pre-wrap text-slate-800">
-              {aiAnswer || "No AI student answer available yet."}
+            <div className="mt-3 text-gray-800">
+              {aiAnswer ? (
+                <MathDisplay text={aiAnswer} />
+              ) : (
+                <p className="text-gray-500">No AI student answer available yet.</p>
+              )}
             </div>
           )}
         </div>
 
         <div className="rounded-2xl bg-white p-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Your Rubric</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Your Rubric</h2>
             <button
               type="button"
               onClick={addRow}
               disabled={loading || submitted}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-xl border-2 border-red-200 bg-red-100 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
             >
-              Add row
+              Add Row
             </button>
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
             <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-slate-100">
+              <thead className="bg-red-100">
                 <tr>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold text-slate-700">
+                  <th className="border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
                     Criteria
                   </th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold text-slate-700 w-32">
+                  <th className="w-40 border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
                     Score
                   </th>
-                  <th className="border-b border-slate-200 px-4 py-3 text-left font-semibold text-slate-700">
+                  <th className="border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
                     Remarks
                   </th>
-                  <th className="border-b border-slate-200 px-4 py-3 w-20" />
+                  <th className="w-24 border-b border-gray-200 px-4 py-3" />
                 </tr>
               </thead>
 
               <tbody>
                 {rubricRows.map((row) => (
                   <tr key={row.id} className="align-top">
-                    <td className="border-b border-slate-200 p-2">
-                      <input
-                        type="text"
+                    <td className="border-b border-gray-200 p-2">
+                      <select
                         value={row.criteria}
                         onChange={(e) =>
                           updateRow(row.id, "criteria", e.target.value)
                         }
                         disabled={loading || submitted}
-                        placeholder="e.g. Correctness of solution"
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
-                      />
+                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
+                      >
+                        <option value="">Select criterion</option>
+                        {CRITERIA_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option.charAt(0).toUpperCase() + option.slice(1)}
+                          </option>
+                        ))}
+                      </select>
                     </td>
 
-                    <td className="border-b border-slate-200 p-2">
-                      <input
-                        type="text"
+                    <td className="border-b border-gray-200 p-2">
+                      <select
                         value={row.score}
                         onChange={(e) =>
                           updateRow(row.id, "score", e.target.value)
                         }
                         disabled={loading || submitted}
-                        placeholder="Score /5"
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
-                      />
+                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
+                      >
+                        <option value="">Select score</option>
+                        {SCORE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </td>
 
-                    <td className="border-b border-slate-200 p-2">
+                    <td className="border-b border-gray-200 p-2">
                       <textarea
                         value={row.remarks}
                         onChange={(e) =>
                           updateRow(row.id, "remarks", e.target.value)
                         }
                         disabled={loading || submitted}
-                        placeholder="Why this score?"
+                        placeholder="Add remarks here..."
                         rows={3}
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50"
+                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
                       />
                     </td>
 
-                    <td className="border-b border-slate-200 p-2 text-right">
-                      {/* <button
-                        type="button"
-                        onClick={() => removeRow(row.id)}
-                        disabled={loading || submitted || rubricRows.length === 1}
-                        className="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                      >
-                        Remove
-                      </button> */}
-
+                    <td className="border-b border-gray-200 p-2 text-right">
                       <button
                         type="button"
                         onClick={() => removeRow(row.id)}
                         disabled={loading || submitted || rubricRows.length === 1}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-xl px-3 py-2 text-sm font-medium text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-400"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-5 w-5"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M10 8.586 4.707 3.293a1 1 0 0 0-1.414 1.414L8.586 10l-5.293 5.293a1 1 0 1 0 1.414 1.414L10 11.414l5.293 5.293a1 1 0 0 0 1.414-1.414L11.414 10l5.293-5.293a1 1 0 0 0-1.414-1.414L10 8.586Z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+                        Remove
                       </button>
                     </td>
                   </tr>
@@ -218,7 +218,7 @@ export default function AiStudentPanel({
               type="button"
               onClick={onSubmit}
               disabled={isDisabled}
-              className="rounded-xl bg-slate-900 px-5 py-2.5 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500"
+              className="rounded-xl bg-red-300 px-5 py-2.5 font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
             >
               {loading
                 ? "Submitting..."
@@ -228,7 +228,7 @@ export default function AiStudentPanel({
             </button>
 
             {!loading && !submitted && !hasAnyRubricContent ? (
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-gray-500">
                 Fill in at least one rubric row to continue.
               </span>
             ) : null}

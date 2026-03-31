@@ -17,6 +17,8 @@ export type RubricRow = {
   remarks: string;
 };
 
+type ChoiceId = "A" | "B" | "C" | "";
+
 function createRubricRowId() {
   return `rubric-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -29,6 +31,7 @@ const INITIAL_RUBRIC_ROWS: RubricRow[] = [
 
 export default function AiStudentPage() {
   const [question, setQuestion] = useState("");
+  const [selectedChoice, setSelectedChoice] = useState<ChoiceId>("");
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [aiAnswers, setAiAnswers] = useState<AiStudentAnswer[]>([]);
@@ -38,7 +41,10 @@ export default function AiStudentPage() {
 
   useEffect(() => {
     const savedQuestion = sessionStorage.getItem("studentQuestion") || "";
+    const savedChoice = (sessionStorage.getItem("selectedChoice") || "") as ChoiceId;
+
     setQuestion(savedQuestion);
+    setSelectedChoice(savedChoice);
 
     if (!savedQuestion) return;
 
@@ -49,11 +55,14 @@ export default function AiStudentPage() {
         const res = await fetch("/api/ai-student-answers", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ studentQuestion: savedQuestion }),
+          body: JSON.stringify({
+            studentQuestion: savedQuestion,
+            selectedChoice: savedChoice,
+          }),
         });
 
         const data = await res.json();
-        setAiAnswers(data.answers || []);
+        setAiAnswers(Array.isArray(data.answers) ? data.answers : []);
       } finally {
         setLoadingAnswers(false);
       }
@@ -90,6 +99,7 @@ export default function AiStudentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           studentQuestion: question,
+          selectedChoice,
           "human-assigned-rubric": humanAssignedRubric,
         }),
       });
@@ -106,7 +116,9 @@ export default function AiStudentPage() {
 
   return (
     <main className="min-h-screen bg-red-200 p-3">
-      <div className="grid min-h-[calc(100vh-1.5rem)] grid-cols-1 gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+      {/* <div className="grid min-h-[calc(100vh-1.5rem)] grid-cols-1 gap-3 lg:grid-cols-[1.15fr_0.85fr]"> */}
+      <div className="grid min-h-[calc(100vh-1.5rem)] grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr]">
+
         <div className="min-h-0">
           <AiStudentPanel
             question={question}

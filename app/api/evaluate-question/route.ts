@@ -1,42 +1,62 @@
 import { NextResponse } from "next/server";
 import client from "@/lib/openai";
+import { EVAL_QUESTION_PROMPT } from "@/lib/prompts";
 import { MODELS } from "@/lib/models";
+
+type ChoiceId = "A" | "B" | "C";
+
+const CHOICE_EXPLANATIONS: Record<ChoiceId, string> = {
+  A: "Correct. This choice focuses on where the rate of change is zero or undefined, which matches the idea of identifying especially important weeks based on the pattern flattening or becoming non-smooth.",
+  B: "Incorrect. This choice focuses on where the profit value itself is zero or undefined, which is different from identifying weeks where the pattern's behavior is especially important.",
+  C: "Incorrect. This choice narrows the idea to only local highs and lows. Those may occur at some important weeks, but the scenario is broader than extrema alone.",
+};
 
 export async function POST(req: Request) {
   try {
-    const { studentQuestion } = await req.json();
+    const body = await req.json();
 
-    if (!studentQuestion?.trim()) {
+    const selectedChoice = body.selectedChoice as ChoiceId | undefined;
+    const selectedQuestion = body.selectedQuestion as string | undefined;
+
+    if (
+      !selectedChoice ||
+      !["A", "B", "C"].includes(selectedChoice) ||
+      !selectedQuestion?.trim()
+    ) {
       return NextResponse.json(
-        { error: "studentQuestion is required" },
+        { error: "selectedChoice and selectedQuestion are required" },
         { status: 400 }
       );
     }
 
-    const response = await client.chat.completions.create({
-      model: MODELS.GEMINI_FAST,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are grading a student's calculus question. Return JSON only with keys score and feedback. Score must be 1-5. Feedback must be 1-2 sentences.",
-        },
-        {
-          role: "user",
-          content: `Student question:\n${studentQuestion}`,
-        },
-      ],
-      temperature: 0.2,
-      response_format: { type: "json_object" },
-    });
+//     const response = await client.chat.completions.create({
+//       model: MODELS.GEMINI_PRO_PREVIEW,
+//       messages: [
+//         {
+//           role: "system",
+//           content: EVAL_QUESTION_PROMPT,
+//         },
+//         {
+//           role: "user",
+//           content: `The student selected choice ${selectedChoice}.
 
-    const raw = response.choices[0]?.message?.content || "{}";
-    const parsed = JSON.parse(raw);
+// Selected question:
+// ${selectedQuestion}
 
-    return NextResponse.json({
-      score: Math.max(1, Math.min(5, Number(parsed.score) || 3)),
-      feedback: parsed.feedback || "No feedback returned.",
-    });
+// Reference explanation:
+// ${CHOICE_EXPLANATIONS[selectedChoice]}
+
+// Write feedback for the student now.`,
+//         },
+//       ],
+//       temperature: 0.2,
+//     });
+
+    const feedback =
+      // response.choices[0]?.message?.content?.trim() ||
+      CHOICE_EXPLANATIONS[selectedChoice];
+
+    return NextResponse.json({ feedback });
   } catch (error: any) {
     console.error("evaluate-question error:", error);
     return NextResponse.json(
