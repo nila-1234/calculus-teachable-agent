@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import AiStudentPanel from "../../components/ai-student-panel";
-import FeedbackCard from "../../components/feedback-card";
 
 type AiStudentAnswer = {
   label: string;
@@ -13,8 +12,7 @@ type AiStudentAnswer = {
 export type RubricRow = {
   id: string;
   criteria: string;
-  score: string;
-  remarks: string;
+  score: "Pass" | "Fail" | "";
 };
 
 type ChoiceId = "A" | "B" | "C" | "";
@@ -24,9 +22,9 @@ function createRubricRowId() {
 }
 
 const INITIAL_RUBRIC_ROWS: RubricRow[] = [
-  { id: createRubricRowId(), criteria: "", score: "", remarks: "" },
-  { id: createRubricRowId(), criteria: "", score: "", remarks: "" },
-  { id: createRubricRowId(), criteria: "", score: "", remarks: "" },
+  { id: createRubricRowId(), criteria: "", score: ""},
+  { id: createRubricRowId(), criteria: "", score: ""},
+  { id: createRubricRowId(), criteria: "", score: ""},
 ];
 
 export default function AiStudentPage() {
@@ -72,7 +70,7 @@ export default function AiStudentPage() {
   }, []);
 
   const hasAnyRubricContent = rubricRows.some(
-    (row) => row.criteria.trim() || row.score.trim() || row.remarks.trim()
+    (row) => row.criteria.trim() || row.score.trim()
   );
 
   const handleSubmit = async () => {
@@ -85,12 +83,11 @@ export default function AiStudentPage() {
         rows: rubricRows
           .filter(
             (row) =>
-              row.criteria.trim() || row.score.trim() || row.remarks.trim()
+              row.criteria.trim() || row.score.trim()
           )
           .map((row) => ({
             criteria: row.criteria.trim(),
             score: row.score.trim(),
-            remarks: row.remarks.trim(),
           })),
       };
 
@@ -115,31 +112,22 @@ export default function AiStudentPage() {
   };
 
   return (
-    <main className="min-h-screen bg-red-200 p-3">
-      {/* <div className="grid min-h-[calc(100vh-1.5rem)] grid-cols-1 gap-3 lg:grid-cols-[1.15fr_0.85fr]"> */}
-      <div className="grid min-h-[calc(100vh-1.5rem)] grid-cols-1 gap-3 lg:grid-cols-[2fr_1fr]">
-
-        <div className="min-h-0">
-          <AiStudentPanel
-            question={question}
-            rubricRows={rubricRows}
-            setRubricRows={setRubricRows}
-            submitted={submitted}
-            loading={loadingFeedback}
-            aiAnswer={aiAnswers[0]?.text || ""}
-            answersLoading={loadingAnswers}
-            onSubmit={handleSubmit}
-          />
-        </div>
-
-        <div className="min-h-0">
-          <FeedbackCard
-            title="Rubric Feedback"
-            text={feedback}
-            loading={loadingFeedback}
-            emptyMessage="Submit your rubric to receive AI feedback."
-          />
-        </div>
+    <main
+      className="h-screen p-3 flex"
+      style={{ backgroundColor: "var(--lime-8)" }}
+    >
+      <div className="flex-1 min-h-0">
+        <AiStudentPanel
+          question={question}
+          rubricRows={rubricRows}
+          setRubricRows={setRubricRows}
+          submitted={submitted}
+          loading={loadingFeedback}
+          aiAnswer={aiAnswers[0]?.text || ""}
+          answersLoading={loadingAnswers}
+          onSubmit={handleSubmit}
+          feedback={feedback}
+        />
       </div>
     </main>
   );

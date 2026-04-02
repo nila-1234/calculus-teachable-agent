@@ -1,12 +1,21 @@
 "use client";
 
 import MathDisplay from "@/components/math-display";
+import {
+  Button,
+  Card,
+  Flex,
+  Heading,
+  Select,
+  Table,
+  Text,
+} from "@radix-ui/themes";
+import { Cross2Icon } from "@radix-ui/react-icons";
 
 export type RubricRow = {
   id: string;
   criteria: string;
-  score: string;
-  remarks: string;
+  score: "Pass" | "Fail" | "";
 };
 
 type AiStudentPanelProps = {
@@ -18,17 +27,17 @@ type AiStudentPanelProps = {
   aiAnswer?: string;
   answersLoading?: boolean;
   onSubmit: () => void;
+  feedback: string;
 };
 
 const CRITERIA_OPTIONS = [
   "completeness",
   "accuracy",
-  // "correctness",
   "explanation",
   "relevance",
 ] as const;
 
-const SCORE_OPTIONS = ["0", "1", "2", "3", "4", "5"] as const;
+const SCORE_OPTIONS = ["Pass", "Fail"] as const;
 
 function createRubricRowId() {
   return `rubric-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -43,9 +52,10 @@ export default function AiStudentPanel({
   aiAnswer,
   answersLoading = false,
   onSubmit,
+  feedback,
 }: AiStudentPanelProps) {
   const hasAnyRubricContent = rubricRows.some(
-    (row) => row.criteria.trim() || row.score.trim() || row.remarks.trim()
+    (row) => row.criteria.trim() || row.score.trim()
   );
 
   const isDisabled = !hasAnyRubricContent || loading || submitted;
@@ -69,7 +79,6 @@ export default function AiStudentPanel({
         id: createRubricRowId(),
         criteria: "",
         score: "",
-        remarks: "",
       },
     ]);
   };
@@ -79,162 +88,181 @@ export default function AiStudentPanel({
   };
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-red-200 bg-red-50 shadow-sm">
-      <div className="rounded-t-2xl bg-red-100 px-6 py-4">
-        <h1 className="text-xl font-semibold text-gray-900">Evaluate AI Student</h1>
-      </div>
+    <Card size="3" className="h-full">
+      <Flex direction="column" gap="5" className="h-full">
+        <Heading size="5">Evaluate AI Student</Heading>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-6">
-        <div className="rounded-2xl bg-white p-5">
-          <h2 className="text-lg font-semibold text-gray-900">Your Question</h2>
-          <div className="mt-3">
-            {question ? (
-              <MathDisplay text={question} />
-            ) : (
-              <p className="text-gray-500">No question submitted yet.</p>
-            )}
-          </div>
-        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto">
+          <Card size="2">
+            <Flex direction="column" gap="3">
+              <Heading size="4">Your Question</Heading>
+              <div>
+                {question ? (
+                  <MathDisplay text={question} />
+                ) : (
+                  <Text color="gray">No question submitted yet.</Text>
+                )}
+              </div>
+            </Flex>
+          </Card>
 
-        <div className="rounded-2xl bg-white p-5">
-          <h2 className="text-lg font-semibold text-gray-900">AI Student Answer</h2>
+          <Card size="2">
+            <Flex direction="column" gap="3">
+              <Heading size="4">AI Student Answer</Heading>
 
-          {answersLoading ? (
-            <div className="mt-4 flex items-center gap-3 text-sm text-gray-600">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
-              <span>Solving...</span>
-            </div>
-          ) : (
-            <div className="mt-3 text-gray-800">
-              {aiAnswer ? (
+              {answersLoading ? (
+                <Flex align="center" gap="3">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
+                  <Text color="gray">Solving...</Text>
+                </Flex>
+              ) : aiAnswer ? (
                 <MathDisplay text={aiAnswer} />
               ) : (
-                <p className="text-gray-500">No AI student answer available yet.</p>
+                <Text color="gray">No AI student answer available yet.</Text>
               )}
-            </div>
-          )}
+            </Flex>
+          </Card>
+
+          <Card size="2">
+            <Flex direction="column" gap="4">
+              <Flex align="center" justify="between">
+                <Heading size="4">Your Rubric</Heading>
+                <Button
+                  type="button"
+                  onClick={addRow}
+                  disabled={loading || submitted}
+                  variant="soft"
+                  color="crimson"
+                >
+                  Add Row
+                </Button>
+              </Flex>
+
+              <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+                <Table.Root variant="surface">
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.ColumnHeaderCell>Criteria</Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell className="w-48">
+                        Score
+                      </Table.ColumnHeaderCell>
+                      <Table.ColumnHeaderCell className="w-28" />
+                    </Table.Row>
+                  </Table.Header>
+
+                  <Table.Body>
+                    {rubricRows.map((row) => (
+                      <Table.Row key={row.id}>
+                        <Table.Cell>
+                          <Select.Root
+                            value={row.criteria}
+                            onValueChange={(value) =>
+                              updateRow(row.id, "criteria", value)
+                            }
+                            disabled={loading || submitted}
+                          >
+                            <Select.Trigger
+                              placeholder="Select criterion"
+                              className="w-full"
+                            />
+                            <Select.Content>
+                              {CRITERIA_OPTIONS.map((option) => (
+                                <Select.Item key={option} value={option}>
+                                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                                </Select.Item>
+                              ))}
+                            </Select.Content>
+                          </Select.Root>
+                        </Table.Cell>
+
+                        <Table.Cell>
+                          <div className="flex w-full overflow-hidden rounded-lg border border-gray-200">
+                            <button
+                              type="button"
+                              onClick={() => updateRow(row.id, "score", "Pass")}
+                              disabled={loading || submitted}
+                              className={`flex-1 px-3 py-1.5 text-sm font-medium transition ${row.score === "Pass"
+                                ? "bg-green-100 text-green-700"
+                                : "bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                              Pass
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => updateRow(row.id, "score", "Fail")}
+                              disabled={loading || submitted}
+                              className={`flex-1 px-3 py-1.5 text-sm font-medium transition border-l border-gray-200 ${row.score === "Fail"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-white text-gray-600 hover:bg-gray-50"
+                                }`}
+                            >
+                              Fail
+                            </button>
+                          </div>
+                        </Table.Cell>
+
+                        <Table.Cell align="center">
+                          <button
+                            type="button"
+                            onClick={() => removeRow(row.id)}
+                            disabled={loading || submitted || rubricRows.length === 1}
+                            className="inline-flex items-center justify-center rounded-md p-2 
+                            text-gray-400 transition hover:bg-red-50 hover:text-red-600 
+                            disabled:cursor-not-allowed disabled:text-gray-300"
+                          >
+                            <Cross2Icon width={16} height={16} />
+                          </button>
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table.Root>
+              </div>
+
+              <Flex direction="column" gap="2">
+                {!loading && !submitted && !hasAnyRubricContent ? (
+                  <Text size="2" color="gray">
+                    Fill in at least one rubric row to continue.
+                  </Text>
+                ) : null}
+
+                <Flex align="center" justify="between">
+                  <div />
+                  <Button
+                    type="button"
+                    onClick={onSubmit}
+                    disabled={isDisabled}
+                    color="crimson"
+                    variant="solid"
+                  >
+                    {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
+                  </Button>
+                </Flex>
+              </Flex>
+            </Flex>
+          </Card>
+
+          <Card size="2">
+            <Flex direction="column" gap="3">
+              <Heading size="4">Rubric Feedback</Heading>
+
+              {loading ? (
+                <Text color="gray">Generating feedback...</Text>
+              ) : feedback ? (
+                <Text size="3" className="whitespace-pre-wrap">
+                  {feedback}
+                </Text>
+              ) : (
+                <Text color="gray">
+                  Submit your rubric to receive AI feedback.
+                </Text>
+              )}
+            </Flex>
+          </Card>
         </div>
-
-        <div className="rounded-2xl bg-white p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Your Rubric</h2>
-            <button
-              type="button"
-              onClick={addRow}
-              disabled={loading || submitted}
-              className="rounded-xl border-2 border-red-200 bg-red-100 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-red-200 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-            >
-              Add Row
-            </button>
-          </div>
-
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
-            <table className="min-w-full border-collapse text-sm">
-              <thead className="bg-red-100">
-                <tr>
-                  <th className="border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
-                    Criteria
-                  </th>
-                  <th className="w-40 border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
-                    Score
-                  </th>
-                  <th className="border-b border-gray-200 px-4 py-3 text-left font-semibold text-gray-900">
-                    Remarks
-                  </th>
-                  <th className="w-24 border-b border-gray-200 px-4 py-3" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {rubricRows.map((row) => (
-                  <tr key={row.id} className="align-top">
-                    <td className="border-b border-gray-200 p-2">
-                      <select
-                        value={row.criteria}
-                        onChange={(e) =>
-                          updateRow(row.id, "criteria", e.target.value)
-                        }
-                        disabled={loading || submitted}
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
-                      >
-                        <option value="">Select criterion</option>
-                        {CRITERIA_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option.charAt(0).toUpperCase() + option.slice(1)}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-
-                    <td className="border-b border-gray-200 p-2">
-                      <select
-                        value={row.score}
-                        onChange={(e) =>
-                          updateRow(row.id, "score", e.target.value)
-                        }
-                        disabled={loading || submitted}
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
-                      >
-                        <option value="">Select score</option>
-                        {SCORE_OPTIONS.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-
-                    <td className="border-b border-gray-200 p-2">
-                      <textarea
-                        value={row.remarks}
-                        onChange={(e) =>
-                          updateRow(row.id, "remarks", e.target.value)
-                        }
-                        disabled={loading || submitted}
-                        placeholder="Add remarks here..."
-                        rows={3}
-                        className="w-full rounded-xl border-2 border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100 disabled:bg-gray-50"
-                      />
-                    </td>
-
-                    <td className="border-b border-gray-200 p-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => removeRow(row.id)}
-                        disabled={loading || submitted || rubricRows.length === 1}
-                        className="rounded-xl px-3 py-2 text-sm font-medium text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-gray-400"
-                      >
-                        Remove
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isDisabled}
-              className="rounded-xl bg-red-300 px-5 py-2.5 font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
-            >
-              {loading
-                ? "Submitting..."
-                : submitted
-                  ? "Submitted"
-                  : "Submit"}
-            </button>
-
-            {!loading && !submitted && !hasAnyRubricContent ? (
-              <span className="text-sm text-gray-500">
-                Fill in at least one rubric row to continue.
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
+      </Flex>
+    </Card>
   );
 }

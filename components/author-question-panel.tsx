@@ -1,6 +1,16 @@
 "use client";
 
 import { SCENARIO } from "@/lib/prompts";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
+import {
+  Box,
+  Button,
+  Card,
+  Flex,
+  Heading,
+  RadioCards,
+  Text,
+} from "@radix-ui/themes";
 
 type ChoiceId = "A" | "B" | "C";
 
@@ -30,6 +40,8 @@ type AuthorQuestionPanelProps = {
   submitted: boolean;
   loading: boolean;
   onSubmit: () => void;
+  onContinue: () => void;
+  feedback: string;
 };
 
 export default function AuthorQuestionPanel({
@@ -38,82 +50,102 @@ export default function AuthorQuestionPanel({
   submitted,
   loading,
   onSubmit,
+  onContinue,
+  feedback,
 }: AuthorQuestionPanelProps) {
   const isEmpty = !selectedChoice;
-  const isDisabled = isEmpty || loading || submitted;
+  const isSubmitDisabled = isEmpty || loading || submitted;
+  const showContinue = submitted && selectedChoice === "A";
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-red-200 bg-red-50 shadow-sm">
-      <div className="rounded-t-2xl bg-red-100 px-6 py-4">
-        <h1 className="text-xl font-semibold text-slate-900">Choose a Question</h1>
-      </div>
+    <Card size="3" className="h-full">
+      <Flex direction="column" gap="5" className="h-full">
+        <Heading size="5">Choose a Question</Heading>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-6">
-        <div className="rounded-2xl bg-white p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Scenario</h2>
-          <p className="mt-3 whitespace-pre-line leading-7 text-slate-800">
-            {SCENARIO}
-          </p>
+        <Card size="2">
+          <Flex direction="column" gap="3">
+            <Heading size="4">Scenario</Heading>
+            <Text className="whitespace-pre-line leading-7 text-slate-800">
+              {SCENARIO}
+            </Text>
+            <Text weight="medium">
+              Student task: Choose the question that best translates the team’s
+              concern into mathematical language.
+            </Text>
+          </Flex>
+        </Card>
 
-          <p className="mt-4 font-medium text-slate-900">
-            Student task: Choose the question that best translates the team’s concern into mathematical language.
-          </p>
-        </div>
+        <Card size="2">
+          <Flex direction="column" gap="4">
+            <Heading size="4">Question Choices</Heading>
 
-        <div className="rounded-2xl bg-white p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Question Choices</h2>
-
-          <div className="mt-4 space-y-3">
-            {CHOICES.map((choice) => {
-              const isSelected = selectedChoice === choice.id;
-
-              return (
-                <label
-                  key={choice.id}
-                  className={`flex cursor-pointer items-start gap-3 rounded-2xl border border-2 p-4 transition ${isSelected
-                      ? "border-red-300 bg-red-100"
-                      : "border-gray-200 bg-white hover:border-red-200 hover:bg-red-50"
-                    } ${submitted ? "cursor-not-allowed opacity-90" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="question-choice"
-                    value={choice.id}
-                    checked={isSelected}
-                    onChange={() => setSelectedChoice(choice.id)}
-                    disabled={loading || submitted}
-                    className="mt-1 h-4 w-4 accent-red-400 transition hover:accent-red-500"
-                  />
-
-                  <div className="flex gap-2">
-                    <span className="font-medium">{choice.id}.</span>
-                    <span className="text-slate-800">
-                      {choice.text}
-                    </span>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-
-          <div className="mt-5 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isDisabled}
-              className="rounded-xl bg-red-300 px-5 py-2.5 font-medium text-white transition hover:bg-red-400 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+            <RadioCards.Root
+              value={selectedChoice}
+              onValueChange={(value) => setSelectedChoice(value as ChoiceId)}
+              columns="1"
+              className="w-full"
             >
-              {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
-            </button>
+              {CHOICES.map((choice) => (
+                <RadioCards.Item
+                  key={choice.id}
+                  value={choice.id}
+                  disabled={loading || submitted}
+                >
+                  <Flex align="start" gap="2" className="w-full text-left">
+                    <Text weight="bold">{choice.id}.</Text>
+                    <Text>{choice.text}</Text>
+                  </Flex>
+                </RadioCards.Item>
+              ))}
+            </RadioCards.Root>
 
-            {!loading && !submitted && isEmpty ? (
-              <span className="text-sm text-slate-500">
-                Select a question to continue.
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
+            <Flex direction="column" gap="2">
+              {/* {!loading && !submitted && isEmpty ? (
+                <Text size="2" color="gray">
+                  Select a question to continue.
+                </Text>
+              ) : null} */}
+
+              <Flex align="center" justify="between">
+                <Button
+                  type="button"
+                  onClick={onSubmit}
+                  disabled={isSubmitDisabled}
+                  color="lime"
+                  variant="solid"
+                >
+                  {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
+                </Button>
+
+                {showContinue ? (
+                  <Button type="button" onClick={onContinue} color="lime">
+                    Continue
+                    <ArrowRightIcon width={16} height={16} />
+                  </Button>
+                ) : <div />}
+              </Flex>
+            </Flex>
+          </Flex>
+        </Card>
+
+        <Card size="2">
+          <Flex direction="column" gap="3">
+            <Heading size="4">Feedback</Heading>
+
+            {loading ? (
+              <Text color="gray">Generating feedback...</Text>
+            ) : feedback ? (
+              <Text size="3" className="whitespace-pre-wrap">
+                {feedback}
+              </Text>
+            ) : (
+              <Text color="gray">
+                Submit your selected question to receive AI feedback.
+              </Text>
+            )}
+          </Flex>
+        </Card>
+      </Flex>
+    </Card>
   );
 }
