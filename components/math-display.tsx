@@ -8,26 +8,17 @@ type MathDisplayProps = {
 };
 
 function splitMath(text: string) {
-  // match equation-like chunks (simple heuristic)
-  const regex =
-    /([a-zA-Z]\([^)]*\)\s*=\s*[^.]+|\b[a-zA-Z]\([^)]*\)|\d+\s*[a-zA-Z]?[\^_][^ ]+)/g;
+  // Split on \( ... \)
+  const regex = /(\\\(.*?\\\))/g;
 
   const parts = text.split(regex).filter(Boolean);
 
   return parts.map((part, i) => {
-    // const isMath =
-    //   part.includes("=") ||
-    //   part.includes("^") ||
-    //   part.includes("_") ||
-    //   part.includes("\\frac") ||
-    //   part.includes("\\sqrt");
-
-    const isMath =
-      /[=^_]/.test(part) ||
-      /\\(frac|sqrt|int|sum)/.test(part);
+    const isMath = part.startsWith("\\(") && part.endsWith("\\)");
 
     if (isMath) {
-      return <InlineMath key={i} math={part.replace(/\.$/, "")} />;
+      const math = part.slice(2, -2); // remove \( \)
+      return <InlineMath key={i} math={math} />;
     }
 
     return <span key={i}>{part}</span>;
