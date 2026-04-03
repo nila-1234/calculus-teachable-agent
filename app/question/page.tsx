@@ -68,7 +68,7 @@ export default function AuthorQuestionPage() {
     if (!selected?.correct) return;
 
     sessionStorage.setItem("authorScenario", SCENARIO_PLACEHOLDER);
-    sessionStorage.setItem("studentQuestion", QUESTION_PLACEHOLDER);
+    sessionStorage.setItem("studentQuestion", selected.text);
     sessionStorage.setItem("selectedChoice", selected.id);
     sessionStorage.setItem(
       "selectedChoiceCorrect",

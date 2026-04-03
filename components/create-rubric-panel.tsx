@@ -1,0 +1,136 @@
+"use client";
+
+import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import MathDisplay from "@/components/math-display";
+
+export type RubricOption = {
+  id: string;
+  label: string;
+  description: string;
+};
+
+type SampleAnswer = {
+  title: string;
+  text: string;
+};
+
+type CreateRubricPanelProps = {
+  question: string;
+  correctSample: SampleAnswer;
+  incorrectSample: SampleAnswer;
+  rubricOptions: readonly RubricOption[];
+  selectedRubricIds: string[];
+  onToggleRubric: (id: string) => void;
+  onContinue: () => void;
+};
+
+export default function CreateRubricPanel({
+  question,
+  correctSample,
+  incorrectSample,
+  rubricOptions,
+  selectedRubricIds,
+  onToggleRubric,
+  onContinue,
+}: CreateRubricPanelProps) {
+  return (
+    <Card size="3" className="h-full">
+      <Flex direction="column" gap="5" className="h-full">
+        <Heading size="6">Create Rubric</Heading>
+
+        <div className="flex-1 space-y-5 overflow-y-auto">
+          <Card size="2">
+            <Flex direction="column" gap="3">
+              <Heading size="4">Question</Heading>
+              <Text size="3" className="whitespace-pre-wrap leading-7">
+                <MathDisplay text={question} />
+              </Text>
+            </Flex>
+          </Card>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card size="2">
+              <Flex direction="column" gap="3">
+                <Heading size="4">{correctSample.title}</Heading>
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  <MathDisplay text={correctSample.text} />
+                </Text>
+              </Flex>
+            </Card>
+
+            <Card size="2">
+              <Flex direction="column" gap="3">
+                <Heading size="4">{incorrectSample.title}</Heading>
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  <MathDisplay text={incorrectSample.text} />
+                </Text>
+              </Flex>
+            </Card>
+          </div>
+
+          <Card size="2">
+            <Flex direction="column" gap="4">
+              <Heading size="4">Select Rubric Criteria</Heading>
+
+              <div className="overflow-hidden rounded-2xl border border-gray-200">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                        Select
+                      </th>
+                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                        Criterion
+                      </th>
+                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rubricOptions.map((option) => {
+                      const selected = selectedRubricIds.includes(option.id);
+
+                      return (
+                        <tr key={option.id} className="bg-white">
+                          <td className="border-b border-gray-200 px-4 py-3 align-top">
+                            <input
+                              type="checkbox"
+                              checked={selected}
+                              onChange={() => onToggleRubric(option.id)}
+                              className="mt-1 h-4 w-4"
+                            />
+                          </td>
+                          <td className="border-b border-gray-200 px-4 py-3 align-top text-sm font-medium text-slate-900">
+                            <MathDisplay text={option.label} />
+                          </td>
+                          <td className="border-b border-gray-200 px-4 py-3 align-top text-sm text-slate-700">
+                            <MathDisplay text={option.description} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <Flex align="center" justify="between">
+                <Text size="2" color="gray">
+                  Select one or more rubric criteria.
+                </Text>
+
+                <Button
+                  onClick={onContinue}
+                  disabled={selectedRubricIds.length === 0}
+                  color="crimson"
+                >
+                  Continue
+                </Button>
+              </Flex>
+            </Flex>
+          </Card>
+        </div>
+      </Flex>
+    </Card>
+  );
+}

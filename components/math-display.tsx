@@ -1,27 +1,41 @@
 "use client";
 
-import { InlineMath } from "react-katex";
+import { InlineMath, BlockMath } from "react-katex";
 
 type MathDisplayProps = {
   text: string;
   className?: string;
 };
 
-function splitMath(text: string) {
-  // Split on \( ... \)
-  const regex = /(\\\(.*?\\\))/g;
+function parseMath(text: string) {
+  // Match both inline \( ... \) and block \[ ... \]
+  const regex = /(\\\[.*?\\\]|\\\(.*?\\\))/g;
 
   const parts = text.split(regex).filter(Boolean);
 
   return parts.map((part, i) => {
-    const isMath = part.startsWith("\\(") && part.endsWith("\\)");
+    // Block math
+    if (part.startsWith("\\[") && part.endsWith("\\]")) {
+      const math = part.slice(2, -2).trim();
+      return (
+        <div key={i} className="my-1 overflow-x-auto">
+          <BlockMath math={math} />
+        </div>
+      );
+    }
 
-    if (isMath) {
-      const math = part.slice(2, -2); // remove \( \)
+    // Inline math
+    if (part.startsWith("\\(") && part.endsWith("\\)")) {
+      const math = part.slice(2, -2);
       return <InlineMath key={i} math={math} />;
     }
 
-    return <span key={i}>{part}</span>;
+    // Plain text (preserve line breaks)
+    return (
+      <span key={i} className="whitespace-pre-wrap">
+        {part}
+      </span>
+    );
   });
 }
 
@@ -30,8 +44,8 @@ export default function MathDisplay({
   className = "",
 }: MathDisplayProps) {
   return (
-    <p className={`leading-7 text-slate-800 ${className}`}>
-      {splitMath(text)}
-    </p>
+    <div className={`text-slate-800 space-y-1 ${className}`}>
+      {parseMath(text)}
+    </div>
   );
 }
