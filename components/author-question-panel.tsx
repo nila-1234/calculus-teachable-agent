@@ -1,150 +1,170 @@
 "use client";
 
-import { SCENARIO } from "@/lib/prompts";
+import Image from "next/image";
+import { Button, Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
-import {
-  Box,
-  Button,
-  Card,
-  Flex,
-  Heading,
-  RadioCards,
-  Text,
-} from "@radix-ui/themes";
+import MathDisplay from "@/components/math-display";
+import { useEffect, useRef } from "react";
 
-type ChoiceId = "A" | "B" | "C";
+import ScatterPlot from "@/components/scatter-plot";
 
 type Choice = {
-  id: ChoiceId;
+  id: string;
   text: string;
+  correct?: boolean;
+  feedback?: string;
 };
-
-const CHOICES: Choice[] = [
-  {
-    id: "A",
-    text: "Which weeks should be treated as especially important because the rate at which profit is changing is zero or is not defined?",
-  },
-  {
-    id: "B",
-    text: "Which weeks should be treated as especially important because the profit value itself is zero or is not defined?",
-  },
-  {
-    id: "C",
-    text: "Which weeks should be treated as especially important because the profit reaches a local high or a local low?",
-  },
-];
 
 type AuthorQuestionPanelProps = {
-  selectedChoice: ChoiceId | "";
-  setSelectedChoice: (value: ChoiceId) => void;
+  scenario: string;
+  question: string;
+  scatterPlotSrc: string;
+  choices: Choice[];
+  selectedChoice: string;
   submitted: boolean;
-  loading: boolean;
+  selectedFeedback: string;
+  isCorrectSelection: boolean;
+  onSelectChoice: (id: string) => void;
   onSubmit: () => void;
   onContinue: () => void;
-  feedback: string;
+  onTryAgain: () => void;
 };
 
+
 export default function AuthorQuestionPanel({
+  scenario,
+  question,
+  scatterPlotSrc,
+  choices,
   selectedChoice,
-  setSelectedChoice,
   submitted,
-  loading,
+  selectedFeedback,
+  isCorrectSelection,
+  onSelectChoice,
   onSubmit,
   onContinue,
-  feedback,
+  onTryAgain,
 }: AuthorQuestionPanelProps) {
-  const isEmpty = !selectedChoice;
-  const isSubmitDisabled = isEmpty || loading || submitted;
-  const showContinue = submitted && selectedChoice === "A";
 
+  const feedbackRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (submitted && feedbackRef.current) {
+      feedbackRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [submitted]);
+
+  
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
-        <Heading size="5">Choose a Question</Heading>
+        <Heading size="6">Scenario</Heading>
 
-        <Card size="2">
-          <Flex direction="column" gap="3">
-            <Heading size="4">Scenario</Heading>
-            <Text className="whitespace-pre-line leading-7 text-slate-800">
-              {SCENARIO}
-            </Text>
-            <Text weight="medium">
-              Student task: Choose the question that best translates the team’s
-              concern into mathematical language.
-            </Text>
-          </Flex>
-        </Card>
-
-        <Card size="2">
-          <Flex direction="column" gap="4">
-            <Heading size="4">Question Choices</Heading>
-
-            <RadioCards.Root
-              value={selectedChoice}
-              onValueChange={(value) => setSelectedChoice(value as ChoiceId)}
-              columns="1"
-              className="w-full"
-            >
-              {CHOICES.map((choice) => (
-                <RadioCards.Item
-                  key={choice.id}
-                  value={choice.id}
-                  disabled={loading || submitted}
-                >
-                  <Flex align="start" gap="2" className="w-full text-left">
-                    <Text weight="bold">{choice.id}.</Text>
-                    <Text>{choice.text}</Text>
-                  </Flex>
-                </RadioCards.Item>
-              ))}
-            </RadioCards.Root>
-
-            <Flex direction="column" gap="2">
-              {/* {!loading && !submitted && isEmpty ? (
-                <Text size="2" color="gray">
-                  Select a question to continue.
+        <div className="flex-1 space-y-5">
+          <Card size="2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+              <div>
+                {/* <Heading size="4" mb="3">
+                  Scenario
+                </Heading> */}
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  {scenario}
                 </Text>
-              ) : null} */}
+              </div>
+
+              {/* <div className="rounded-2xl border border-gray-200 bg-white p-4"> */}
+                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
+                  {scatterPlotSrc ? (
+                    <ScatterPlot filePath={scatterPlotSrc} />
+                  ) : (
+                    <Text color="gray">Scatter plot placeholder</Text>
+                  )}
+                </div>
+              {/* </div> */}
+            </div>
+          </Card>
+
+          <Card size="2">
+            <Flex direction="column" gap="4">
+              <Heading size="4">Question</Heading>
+
+              <Text size="3" className="whitespace-pre-wrap leading-7">
+                {question}
+              </Text>
+
+              <RadioCards.Root
+                value={selectedChoice}
+                onValueChange={(value) => onSelectChoice(value)}
+                columns="1"
+                className="w-full"
+              >
+                {choices.map((choice) => {
+                  const isSelected = selectedChoice === choice.id;
+
+                  return (
+                    <RadioCards.Item
+                      key={choice.id}
+                      value={choice.id}
+                      disabled={submitted}
+                      className="w-full [&_[data-state]]:hidden"
+                    >
+                      <Flex align="start" gap="3" className="w-full text-left">
+                        <div
+                          className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
+                            ? "border-lime-500 bg-lime-500 text-white"
+                            : "border-gray-300 text-gray-600"
+                            }`}
+                        >
+                          {choice.id}
+                        </div>
+
+                        <Text size="3" className="leading-7 text-slate-900">
+                          <MathDisplay text={choice.text} />
+                        </Text>
+                      </Flex>
+                    </RadioCards.Item>
+                  );
+                })}
+              </RadioCards.Root>
 
               <Flex align="center" justify="between">
-                <Button
-                  type="button"
-                  onClick={onSubmit}
-                  disabled={isSubmitDisabled}
-                  color="lime"
-                  variant="solid"
-                >
-                  {loading ? "Submitting..." : submitted ? "Submitted" : "Submit"}
-                </Button>
 
-                {showContinue ? (
-                  <Button type="button" onClick={onContinue} color="lime">
-                    Continue
-                    <ArrowRightIcon width={16} height={16} />
-                  </Button>
-                ) : <div />}
+                <Button
+                  onClick={onSubmit}
+                  disabled={!selectedChoice || submitted}
+                  color="lime"
+                >
+                  {submitted ? "Submitted" : "Submit"}
+                </Button>
               </Flex>
             </Flex>
-          </Flex>
-        </Card>
+          </Card>
 
-        <Card size="2">
-          <Flex direction="column" gap="3">
-            <Heading size="4">Feedback</Heading>
+          {submitted ? (
+            <div ref={feedbackRef}>
+              <Card size="2">
+                <Flex direction="column" gap="4">
+                  <Heading size="4">Feedback</Heading>
 
-            {loading ? (
-              <Text color="gray">Generating feedback...</Text>
-            ) : feedback ? (
-              <Text size="3" className="whitespace-pre-wrap">
-                {feedback}
-              </Text>
-            ) : (
-              <Text color="gray">
-                Submit your selected question to receive AI feedback.
-              </Text>
-            )}
-          </Flex>
-        </Card>
+                  <Text size="3" className="whitespace-pre-wrap leading-7">
+                    {selectedFeedback}
+                  </Text>
+
+                  <Flex justify="center">
+                    {isCorrectSelection ? (
+                      <Button onClick={onContinue} color="lime">
+                        Continue
+                        <ArrowRightIcon className="" />
+                      </Button>
+                    ) : <Button onClick={onTryAgain} color="lime">
+                      Try Again
+                    </Button>}
+                  </Flex>
+                </Flex>
+              </Card>
+            </div>
+          ) : null}
+        </div>
       </Flex>
     </Card>
   );

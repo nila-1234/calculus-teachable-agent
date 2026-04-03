@@ -1,77 +1,105 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import AuthorQuestionPanel from "../../components/author-question-panel";
+import AuthorQuestionPanel from "@/components/author-question-panel";
 
-const QUESTION_CHOICES = {
-  A: "Which weeks should be treated as especially important because the rate at which profit is changing is zero or is not defined?",
-  B: "Which weeks should be treated as especially important because the profit value itself is zero or is not defined?",
-  C: "Which weeks should be treated as especially important because the profit reaches a local high or a local low?",
-} as const;
+type Choice = {
+  id: string;
+  text: string;
+  correct?: boolean;
+  feedback: string;
+};
 
-type ChoiceId = keyof typeof QUESTION_CHOICES;
+const SCENARIO_PLACEHOLDER = `A startup is reviewing its daily profit over the past month to better understand its overall business performance and decide whether any changes to its current strategy may be needed. The following chart shows the company’s daily profit throughout the month. Based on this chart, which of the following questions would best help the team analyze the trend in profit over time?`;
 
-export default function QuestionPage() {
+const QUESTION_PLACEHOLDER = `Which option is the best choice?`;
+
+const CHOICES: Choice[] = [
+  {
+    id: "A",
+    text: "Use the function \\(f(x)=−2x^2 + 12x + 2\\) to model the company’s profit and find its critical point(s).",
+    correct: true,
+    feedback:
+      "Correct! This is the strongest choice because the function matches the overall shape of the data: the profit rises, reaches a highest point, and then falls. Since this model has a maximum point, finding its critical point is a meaningful way to identify the key point in the company’s profit trend.",
+  },
+  {
+    id: "B",
+    text: "Use the function \\(f(x)=2x^2+12x+2\\) to model the company’s profit and find its critical point(s).",
+    correct: false,
+    feedback:
+      "This choice is less appropriate because the function opens upward, which means it has a minimum point rather than a maximum point. The chart suggests the company’s profit increases and then decreases, so this model does not represent the overall trend very well.",
+  },
+  {
+    id: "C",
+    text: "Use the function \\(f(x)=2x^3+2\\) to model the company’s profit and find its critical point(s).",
+    correct: false,
+    feedback:
+      "This choice is not the best fit because the function is cubic and does not match the single peak shape suggested by the chart. Although it is still a nonlinear function, it does not model the company’s profit trend as clearly as a downward-opening quadratic would.",
+  },
+];
+
+export default function AuthorQuestionPage() {
   const router = useRouter();
-
-  const [selectedChoice, setSelectedChoice] = useState<ChoiceId | "">("");
+  const [selectedChoice, setSelectedChoice] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
-    if (!selectedChoice || loading || submitted) return;
+  const selected = useMemo(
+    () => CHOICES.find((choice) => choice.id === selectedChoice),
+    [selectedChoice]
+  );
 
-    const selectedQuestion = QUESTION_CHOICES[selectedChoice];
-
-    try {
-      setLoading(true);
-
-      const res = await fetch("/api/evaluate-question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          selectedChoice,
-          selectedQuestion,
-        }),
-      });
-
-      const data = await res.json();
-      setFeedback(data.feedback ?? "No feedback returned.");
-      setSubmitted(true);
-    } catch {
-      setFeedback("Something went wrong while generating feedback.");
-    } finally {
-      setLoading(false);
-    }
+  const handleSelectChoice = (id: string) => {
+    if (submitted) return;
+    setSelectedChoice(id);
   };
 
-  const handleContinue = () => {
+  const handleSubmit = () => {
     if (!selectedChoice) return;
+    setSubmitted(true);
+  };
 
-    const selectedQuestion = QUESTION_CHOICES[selectedChoice];
+  const handleTryAgain = () => {
+    setSubmitted(false);
+    setSelectedChoice("");
+  }
 
-    sessionStorage.setItem("studentQuestion", selectedQuestion);
-    sessionStorage.setItem("selectedChoice", selectedChoice);
+  const handleContinue = () => {
+    if (!selected?.correct) return;
 
-    router.push("/ai-student");
+    sessionStorage.setItem("authorScenario", SCENARIO_PLACEHOLDER);
+    sessionStorage.setItem("studentQuestion", QUESTION_PLACEHOLDER);
+    sessionStorage.setItem("selectedChoice", selected.id);
+    sessionStorage.setItem(
+      "selectedChoiceCorrect",
+      selected.correct ? "true" : "false"
+    );
+    sessionStorage.setItem("selectedChoiceFeedback", selected.feedback);
+
+    router.push("/create-rubric");
   };
 
   return (
-    <main className="h-screen bg-plum-200 p-3 flex"
-      style={{ backgroundColor: "var(--lime-8)" }}>
-      <div className="flex-1 min-h-0">
+    <main
+      className="min-h-screen p-3 overflow-y-auto"
+      style={{ backgroundColor: "var(--lime-8)" }}
+    >
+      {/* <div className="flex-1"> */}
         <AuthorQuestionPanel
+          scenario={SCENARIO_PLACEHOLDER}
+          question={QUESTION_PLACEHOLDER}
+          scatterPlotSrc="/data/plot-data.json"
+          choices={CHOICES}
           selectedChoice={selectedChoice}
-          setSelectedChoice={setSelectedChoice}
           submitted={submitted}
-          loading={loading}
+          selectedFeedback={submitted ? selected?.feedback || "" : ""}
+          isCorrectSelection={submitted && Boolean(selected?.correct)}
+          onSelectChoice={handleSelectChoice}
           onSubmit={handleSubmit}
           onContinue={handleContinue}
-          feedback={feedback}
+          onTryAgain={handleTryAgain}
         />
-      </div>
+      {/* </div> */}
     </main>
   );
 }

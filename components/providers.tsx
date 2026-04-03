@@ -10,7 +10,7 @@ export default function Providers({
   return (
     <Theme
       appearance="light"
-      accentColor="cyan"
+      accentColor="lime"
       grayColor="slate"
       radius="large"
       scaling="100%"
