@@ -44,7 +44,7 @@ export default function MathDisplay({
   className = "",
 }: MathDisplayProps) {
   return (
-    <div className={`text-slate-800 space-y-1 ${className}`}>
+    <div className={`text-slate-800 space-y-1 text-sm ${className}`}>
       {parseMath(text)}
     </div>
   );
