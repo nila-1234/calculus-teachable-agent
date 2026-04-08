@@ -2,38 +2,45 @@
 
 import { useEffect, useState } from "react";
 import ApplyRubricPanel, {
-  AnswerEvaluation,
+  AnswerReviewState,
   RubricCriterion,
 } from "@/components/apply-rubric-panel";
-import { RUBRIC_OPTIONS } from "@/lib/question-schema";
+import { RUBRIC_OPTIONS } from "@/lib/question-schema-old";
 import { APPLY_RUBRIC_ANSWERS } from "@/lib/apply-rubric-schema";
 
 export default function ApplyRubricPage() {
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
-  const [answers, setAnswers] = useState<AnswerEvaluation[]>([]);
-  const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState("");
+  const [reviewStates, setReviewStates] = useState<Record<string, AnswerReviewState>>({});
+  const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("selectedRubricIds");
     const ids: string[] = raw ? JSON.parse(raw) : [];
 
-    setRubric(
-      ids.map((id) => {
-        const match = RUBRIC_OPTIONS.find((option) => option.id === id);
-        return {
-          id,
-          label: match?.label || id,
-        };
-      })
+    const selectedRubric = ids.map((id) => {
+      const match = RUBRIC_OPTIONS.find((option) => option.id === id);
+      return {
+        id,
+        label: match?.label || id,
+      };
+    });
+
+    setRubric(selectedRubric);
+
+    const initialReviewStates = Object.fromEntries(
+      APPLY_RUBRIC_ANSWERS.map((answer) => [
+        answer.id,
+        {
+          results: Object.fromEntries(
+            selectedRubric.map((criterion) => [criterion.id, ""])
+          ) as Record<string, "pass" | "fail" | "">,
+          submitted: false,
+          feedback: "",
+        },
+      ])
     );
 
-    setAnswers(
-      APPLY_RUBRIC_ANSWERS.map((answer) => ({
-        ...answer,
-        results: {},
-      }))
-    );
+    setReviewStates(initialReviewStates);
   }, []);
 
   const handleToggleResult = (
@@ -41,46 +48,107 @@ export default function ApplyRubricPage() {
     criterionId: string,
     value: "pass" | "fail"
   ) => {
-    if (submitted) return;
-
-    setAnswers((prev) =>
-      prev.map((answer) =>
-        answer.id === answerId
-          ? {
-            ...answer,
-            results: {
-              ...answer.results,
-              [criterionId]: value,
-            },
-          }
-          : answer
-      )
-    );
+    setReviewStates((prev) => ({
+      ...prev,
+      [answerId]: {
+        ...prev[answerId],
+        results: {
+          ...prev[answerId].results,
+          [criterionId]: value,
+        },
+      },
+    }));
   };
 
-  const handleSubmit = () => {
-    sessionStorage.setItem("appliedRubricResults", JSON.stringify(answers));
-    setFeedback(
-      "Placeholder feedback"
-    );
-    setSubmitted(true);
+  const handleSubmitAnswer = async (answerId: string) => {
+    const review = reviewStates[answerId];
+    const answer = APPLY_RUBRIC_ANSWERS.find((item) => item.id === answerId);
+
+    if (!review || !answer) return;
+
+    try {
+      setLoadingAnswerId(answerId);
+
+      const res = await fetch("/api/apply-rubric-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answerId,
+          answerTitle: answer.title,
+          answerText: answer.text,
+          rubric,
+          results: review.results,
+        }),
+      });
+
+      const data = await res.json();
+
+      setReviewStates((prev) => {
+        const next = {
+          ...prev,
+          [answerId]: {
+            ...prev[answerId],
+            submitted: true,
+            feedback: data.feedback ?? "No feedback returned.",
+          },
+        };
+
+        sessionStorage.setItem("appliedRubricResults", JSON.stringify(next));
+        return next;
+      });
+    } catch {
+      setReviewStates((prev) => {
+        const next = {
+          ...prev,
+          [answerId]: {
+            ...prev[answerId],
+            submitted: true,
+            feedback: "Something went wrong while generating feedback.",
+          },
+        };
+
+        sessionStorage.setItem("appliedRubricResults", JSON.stringify(next));
+        return next;
+      });
+    } finally {
+      setLoadingAnswerId(null);
+    }
   };
 
   return (
     <main
-      className="min-h-screen p-3 overflow-y-auto"
+      className="h-screen p-3"
       style={{ backgroundColor: "var(--lime-8)" }}
     >
-      <div className="flex-1 min-h-0">
+      <div className="h-full min-h-0">
         <ApplyRubricPanel
           rubric={rubric}
-          answers={answers}
-          submitted={submitted}
-          feedback={feedback}
+          answers={APPLY_RUBRIC_ANSWERS}
+          reviewStates={reviewStates}
+          loadingAnswerId={loadingAnswerId}
           onToggleResult={handleToggleResult}
-          onSubmit={handleSubmit}
+          onSubmitAnswer={handleSubmitAnswer}
         />
       </div>
     </main>
   );
 }
+
+//   return (
+//     <main
+//       className="min-h-screen p-3 overflow-y-auto"
+//       style={{ backgroundColor: "var(--lime-8)" }}
+//     >
+//       <div className="flex-1 min-h-0">
+//         <ApplyRubricPanel
+//           rubric={rubric}
+//           answers={APPLY_RUBRIC_ANSWERS}
+//           reviewStates={reviewStates}
+//           loadingAnswerId={loadingAnswerId}
+//           onToggleResult={handleToggleResult}
+//           onSubmitAnswer={handleSubmitAnswer}
+//         />
+//       </div>
+//     </main>
+//   );
+// }

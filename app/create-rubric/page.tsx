@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CreateRubricPanel from "@/components/create-rubric-panel";
-import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/question-schema";
+import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/question-schema-old";
 
 export default function CreateRubricPage() {
   const router = useRouter();

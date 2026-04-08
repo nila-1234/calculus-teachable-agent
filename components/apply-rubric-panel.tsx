@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+} from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
-import { useEffect, useRef } from "react";
 
 export type RubricCriterion = {
   id: string;
@@ -13,144 +17,224 @@ export type AnswerEvaluation = {
   id: string;
   title: string;
   text: string;
+};
+
+export type AnswerReviewState = {
   results: Record<string, "pass" | "fail" | "">;
+  submitted: boolean;
+  feedback: string;
 };
 
 type ApplyRubricPanelProps = {
   rubric: RubricCriterion[];
-  answers: AnswerEvaluation[];
-  submitted: boolean;
-  feedback: string;
+  answers: readonly AnswerEvaluation[];
+  reviewStates: Record<string, AnswerReviewState>;
+  loadingAnswerId?: string | null;
   onToggleResult: (
     answerId: string,
     criterionId: string,
     value: "pass" | "fail"
   ) => void;
-  onSubmit: () => void;
+  onSubmitAnswer: (answerId: string) => void;
 };
 
 export default function ApplyRubricPanel({
   rubric,
   answers,
-  submitted,
-  feedback,
+  reviewStates,
+  loadingAnswerId,
   onToggleResult,
-  onSubmit,
+  onSubmitAnswer,
 }: ApplyRubricPanelProps) {
-  const allFilled = answers.every((answer) =>
-    rubric.every((criterion) => answer.results[criterion.id])
-  );
-
+  const [currentIndex, setCurrentIndex] = useState(0);
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
+  const currentAnswer = answers[currentIndex];
+  const currentState = reviewStates[currentAnswer.id];
+
+  const allFilled = rubric.every(
+    (criterion) => currentState?.results?.[criterion.id]
+  );
+
+  const isLoading = loadingAnswerId === currentAnswer.id;
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex < answers.length - 1;
+
+  const completedCount = useMemo(
+    () => answers.filter((answer) => reviewStates[answer.id]?.submitted).length,
+    [answers, reviewStates]
+  );
 
   useEffect(() => {
-    if (submitted && feedbackRef.current) {
-      feedbackRef.current.scrollIntoView({ behavior: "smooth" });
+    if (currentState?.submitted && feedbackRef.current) {
+      requestAnimationFrame(() => {
+        feedbackRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
     }
-  }, [submitted]);
+  }, [currentAnswer.id, currentState?.submitted]);
 
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
-        <Heading size="6">Apply Rubric</Heading>
+        <Flex align="center" justify="between">
+          <Heading size="6">Apply Rubric</Heading>
+          <Text size="2" color="gray">
+            Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
+          </Text>
+        </Flex>
 
-        <div className="flex-1 space-y-5">
-          {answers.map((answer) => (
-            <Card key={answer.id} size="2">
-              <Flex direction="column" gap="4">
-                <div>
-                  <Heading size="4">{answer.title}</Heading>
-                  <div className="mt-2 text-sm leading-7 text-slate-900">
-                    <MathDisplay text={answer.text} />
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto rounded-2xl border border-gray-200">
-                  <table className="w-full border-collapse">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                          Criterion
-                        </th>
-                        <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                          Decision
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rubric.map((criterion) => {
-                        const current = answer.results[criterion.id] || "";
-
-                        return (
-                          <tr key={criterion.id} className="bg-white">
-                            <td className="border-b border-gray-200 px-4 py-3 text-sm text-slate-900">
-                              <MathDisplay text={criterion.label} />
-                            </td>
-                            <td className="border-b border-gray-200 px-4 py-3">
-                              <div className="flex gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onToggleResult(answer.id, criterion.id, "pass")
-                                  }
-                                  disabled={submitted}
-                                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${current === "pass"
-                                    ? "border-green-500 bg-green-50 text-green-700"
-                                    : "border-gray-200 bg-white text-gray-700"
-                                    } ${submitted ? "cursor-not-allowed opacity-60" : ""}`}
-                                >
-                                  Pass
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    onToggleResult(answer.id, criterion.id, "fail")
-                                  }
-                                  disabled={submitted}
-                                  className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${current === "fail"
-                                    ? "border-red-500 bg-red-50 text-red-700"
-                                    : "border-gray-200 bg-white text-gray-700"
-                                    } ${submitted ? "cursor-not-allowed opacity-60" : ""}`}
-                                >
-                                  Fail
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+        <div className="flex-1 space-y-5 overflow-y-auto">
+          <Card size="2">
+            <Flex direction="column" gap="3">
+              <Flex align="center" justify="between">
+                <Heading size="4">{currentAnswer.title}</Heading>
+                {currentState?.submitted ? (
+                  <Text size="2" color="green">
+                    Submitted
+                  </Text>
+                ) : (
+                  <Text size="2" color="gray">
+                    Not submitted
+                  </Text>
+                )}
               </Flex>
-            </Card>
-          ))}
 
-          <Flex align="center" justify="center">
-            <Button
-              onClick={onSubmit}
-              disabled={!allFilled || submitted}
-              color="cyan"
-            >
-              {submitted ? "Submitted" : "Submit"}
-            </Button>
-          </Flex>
+              <Text size="3" className="whitespace-pre-wrap leading-7">
+                <MathDisplay text={currentAnswer.text} />
+              </Text>
+            </Flex>
+          </Card>
 
-          {feedback ? (
+          <Card size="2">
+            <Flex direction="column" gap="4">
+              <Heading size="4">Evaluate This Answer</Heading>
 
-            <Card size="2" ref={feedbackRef}>
-              <Flex direction="column" gap="3">
-                <Heading size="4">Evaluation Feedback</Heading>
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {feedback}
-                </Text>
+              <div className="overflow-hidden rounded-2xl border border-gray-200">
+                <table className="w-full border-collapse">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                        Criterion
+                      </th>
+                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                        Evaluation
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {rubric.map((criterion) => {
+                      const selectedValue =
+                        currentState?.results?.[criterion.id] ?? "";
+
+                      return (
+                        <tr key={criterion.id} className="bg-white">
+                          <td className="border-b border-gray-200 px-4 py-3 align-top text-sm font-medium text-slate-900">
+                            <MathDisplay text={criterion.label} />
+                          </td>
+
+                          <td className="border-b border-gray-200 px-4 py-3 align-top">
+                            <Flex gap="2">
+                              <Button
+                                type="button"
+                                variant={selectedValue === "pass" ? "solid" : "soft"}
+                                color="green"
+                                disabled={isLoading}
+                                onClick={() =>
+                                  onToggleResult(currentAnswer.id, criterion.id, "pass")
+                                }
+                              >
+                                Pass
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant={selectedValue === "fail" ? "solid" : "soft"}
+                                color="red"
+                                disabled={isLoading}
+                                onClick={() =>
+                                  onToggleResult(currentAnswer.id, criterion.id, "fail")
+                                }
+                              >
+                                Fail
+                              </Button>
+                            </Flex>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <Flex align="center" justify="center">
+
+                <Button
+                  type="button"
+                  onClick={() => onSubmitAnswer(currentAnswer.id)}
+                  disabled={!allFilled || isLoading}
+                  color="lime"
+                >
+                  {isLoading
+                    ? "Submitting..."
+                    : currentState?.submitted
+                      ? "Resubmit"
+                      : "Submit"}
+                </Button>
               </Flex>
-            </Card>
-          ) : null}
+            </Flex>
+          </Card>
 
+          {currentState?.submitted ? (
+            <div ref={feedbackRef}>
+              <Card size="2">
+                <Flex direction="column" gap="3">
+                  <Heading size="4">Feedback for This Answer</Heading>
+
+                  {isLoading ? (
+                    <Text size="3" color="gray">
+                      Generating feedback...
+                    </Text>
+                  ) : currentState?.feedback ? (
+                    <Text size="3" className="whitespace-pre-wrap leading-7">
+                      {currentState.feedback}
+                    </Text>
+                  ) : (
+                    <Text size="3" color="gray">
+                      Submit this answer’s rubric evaluation to receive feedback.
+                    </Text>
+                  )}
+                </Flex>
+              </Card>
+            </div>) : null}
         </div>
+
+        <Flex align="center" justify="between">
+          <Button
+            type="button"
+            variant="soft"
+            color="gray"
+            disabled={!hasPrevious}
+            onClick={() => setCurrentIndex((prev) => prev - 1)}
+          >
+            <ArrowLeftIcon />
+            Previous
+          </Button>
+
+          <Button
+            type="button"
+            variant="soft"
+            color="gray"
+            disabled={!hasNext}
+            onClick={() => setCurrentIndex((prev) => prev + 1)}
+          >
+            Next
+            <ArrowRightIcon />
+          </Button>
+        </Flex>
       </Flex>
     </Card>
   );
