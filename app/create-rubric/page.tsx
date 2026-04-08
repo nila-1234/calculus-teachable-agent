@@ -9,6 +9,8 @@ export default function CreateRubricPage() {
   const router = useRouter();
   const [question, setQuestion] = useState("");
   const [selectedRubricIds, setSelectedRubricIds] = useState<string[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
     setQuestion(
@@ -30,6 +32,13 @@ export default function CreateRubricPage() {
     router.push("/apply-rubric");
   };
 
+  const handleSubmit = () => {
+    setFeedback(
+      "Placeholder feedback"
+    );
+    setSubmitted(true);
+  };
+
   return (
     <main
       className="min-h-screen p-3 overflow-y-auto"
@@ -44,6 +53,9 @@ export default function CreateRubricPage() {
           selectedRubricIds={selectedRubricIds}
           onToggleRubric={handleToggleRubric}
           onContinue={handleContinue}
+          onSubmit={handleSubmit}
+          feedback={feedback}
+          submitted={submitted}
         />
       </div>
     </main>

@@ -2,6 +2,8 @@
 
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
+import { useEffect, useRef } from "react";
+import { ArrowRightIcon } from "@radix-ui/react-icons";
 
 export type RubricOption = {
   id: string;
@@ -20,8 +22,11 @@ type CreateRubricPanelProps = {
   incorrectSample: SampleAnswer;
   rubricOptions: readonly RubricOption[];
   selectedRubricIds: string[];
+  submitted: boolean;
+  feedback: string;
   onToggleRubric: (id: string) => void;
   onContinue: () => void;
+  onSubmit: () => void;
 };
 
 export default function CreateRubricPanel({
@@ -32,7 +37,20 @@ export default function CreateRubricPanel({
   selectedRubricIds,
   onToggleRubric,
   onContinue,
+  onSubmit,
+  feedback,
+  submitted,
 }: CreateRubricPanelProps) {
+
+  const feedbackRef = useRef<HTMLDivElement | null>(null);
+
+
+  useEffect(() => {
+    if (submitted && feedbackRef.current) {
+      feedbackRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [submitted]);
+
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
@@ -114,21 +132,40 @@ export default function CreateRubricPanel({
                 </table>
               </div>
 
-              <Flex align="center" justify="between">
-                <Text size="2" color="gray">
-                  Select one or more rubric criteria.
-                </Text>
-
+              <Flex align="center" justify="start">
                 <Button
-                  onClick={onContinue}
+                  onClick={onSubmit}
                   disabled={selectedRubricIds.length === 0}
-                  color="crimson"
+                  color="lime"
                 >
-                  Continue
+                  Submit
                 </Button>
+
               </Flex>
             </Flex>
           </Card>
+
+          {submitted ? (
+
+            <Card size="2" ref={feedbackRef}>
+              <Flex direction="column" gap="3">
+                <Heading size="4">Rubric Feedback</Heading>
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  {feedback}
+                </Text>
+                <Flex justify="center">
+                  <Button
+                    onClick={onContinue}
+                    disabled={selectedRubricIds.length === 0}
+                    color="lime"
+                  >
+                    Continue
+                    <ArrowRightIcon className="" />
+                  </Button>
+                </Flex>
+              </Flex>
+            </Card>
+          ) : null}
         </div>
       </Flex>
     </Card>
