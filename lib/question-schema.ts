@@ -1,88 +1,221 @@
+export const SCENARIO_PLACEHOLDER = `A company is reviewing its daily profit over the past month to better understand its performance and decide which day’s strategy is worth repeating. The scatter plot below shows the company’s daily profit throughout the month. Which of the following questions would best help the company determine which day produced the highest profit pattern worth mimicking?`;
+
+export const QUESTION_PLACEHOLDER = `Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.`;
+
+export type Choice = {
+  id: string;
+  text: string;
+  correct?: boolean;
+  feedback: string;
+};
+
+export type QuestionPart = {
+  id: string;
+  label: string;
+  options: readonly Choice[];
+};
+
+export const QUESTION_PARTS: {
+  part1: QuestionPart;
+  part2: QuestionPart;
+} = {
+  part1: {
+    id: "function-choice",
+    label: "Select the function",
+    options: [
+      {
+        id: "f1",
+        text: "\\(f(x)=0.05x^3-2x^2+15x+80\\)",
+        correct: true,
+        feedback:
+          "This is the strongest choice because it matches the overall shape of the scatter plot: profit rises early in the month, reaches a high point, then drops before increasing again. This model can produce multiple critical points, which helps identify the company’s best-profit day.",
+      },
+      {
+        id: "f2",
+        text: "\\(f(x)=0.05x^3+2x^2+15x+75\\)",
+        correct: false,
+        feedback:
+          "This choice is less appropriate because the positive quadratic term changes the shape of the graph too much. It does not match the pattern in the scatter plot as well as the correct model.",
+      },
+      {
+        id: "f3",
+        text: "\\(f(x)=0.5x^3-2x^2+15x+80\\)",
+        correct: false,
+        feedback:
+          "This choice is not the best fit because the larger cubic coefficient makes the function change too rapidly. The graph suggests a smoother trend, so this model exaggerates the behavior.",
+      },
+    ],
+  },
+
+  part2: {
+    id: "analysis-choice",
+    label: "Select what to analyze",
+    options: [
+      {
+        id: "a1",
+        text: "critical points",
+        correct: true,
+        feedback:
+          "This is the best choice because critical points identify where profit reaches maximum or minimum values, directly answering the company’s question.",
+      },
+      {
+        id: "a2",
+        text: "average rate of change over the month",
+        correct: false,
+        feedback:
+          "This only describes overall change and does not identify the specific day when profit was highest.",
+      },
+      {
+        id: "a3",
+        text: "intercepts",
+        correct: false,
+        feedback:
+          "Intercepts do not help determine the day of maximum profit.",
+      },
+    ],
+  },
+} as const;
+
 export const RUBRIC_OPTIONS = [
   {
     id: "derivative-correct",
     label: "Derivative of the function is computed correctly",
     description:
-      "Checks whether the derivative expression is found correctly from the original function.",
+      "Checks whether the derivative of the selected function is found correctly.",
   },
   {
     id: "solve-fprime-zero",
     label: "Equation \\(f'(x)=0\\) is solved correctly",
     description:
-      "Checks whether the work correctly solves the derivative equation to find the critical \\(x\\)-value.",
+      "Checks whether the derivative equation is solved correctly to find all critical values.",
   },
   {
-    id: "critical-point-identified",
-    label: "Critical point \\((x, f(x))\\) is identified correctly",
+    id: "all-critical-points-identified",
+    label: "All critical points are identified",
     description:
-      "Checks whether the answer correctly computes and states the critical point as both the \\(x\\)-value and corresponding function value.",
+      "Checks whether the response identifies all critical points rather than only one.",
   },
   {
-    id: "profit-trend-interpretation",
-    label: "Result is interpreted in terms of the profit trend",
+    id: "maximum-profit-identified",
+    label:
+      "The critical point corresponding to maximum profit is identified correctly",
     description:
-      "Checks whether the result is explained in context, such as identifying when profit is highest or what the point means for the trend.",
+      "Checks whether the response determines which critical point represents the highest profit.",
   },
   {
-    id: "derivative-simplified",
-    label: "Derivative expression is simplified before solving",
+    id: "contextual-interpretation",
+    label: "The result is interpreted in context",
     description:
-      "Checks whether the derivative is written in a clean simplified form before setting it equal to zero.",
+      "Checks whether the answer explains what the result means for the company’s performance.",
   },
   {
-    id: "second-derivative-check",
-    label: "Second derivative is used to verify the critical point",
+    id: "graph-reasoning",
+    label: "Graph behavior is used to justify the conclusion",
     description:
-      "Checks whether the answer uses the second derivative or another verification step to justify the nature of the critical point.",
+      "Checks whether the solution connects algebraic work with the scatter plot trend.",
   },
   {
-    id: "multiple-methods",
-    label: "Multiple solution methods are demonstrated and compared",
+    id: "avoids-misinterpretation",
+    label: "Does not confuse larger x-value with larger profit",
     description:
-      "Checks whether the response shows more than one valid approach and compares them meaningfully.",
+      "Checks whether the response avoids assuming that a larger x-value automatically implies higher profit.",
   },
 ] as const;
 
 export const SAMPLE_ANSWERS = {
   correct: {
     title: "Sample AI Answer 1 (Fully Correct)",
-    text: `We are given the function \\(f(x) = -2x^2 + 12x + 2\\).
+    text: `f(x) = 0.05x^3 - 2x^2 + 15x + 80
 
-First, take the derivative:
-\\(f'(x) = -4x + 12\\)
+f'(x) = 0.15x^2 - 4x + 15
 
-Set the derivative equal to 0 to find critical points:
-\\(-4x + 12 = 0\\)
-\\(-4x = -12\\)
-\\(x = 3\\)
+0.15x^2 - 4x + 15 = 0
 
-Now substitute back into the original function:
-\\(f(3) = -2(3)^2 + 12(3) + 2\\)
-\\(= -18 + 36 + 2\\)
-\\(= 20\\)
+3x^2 - 80x + 300 = 0
 
-So the critical point is \\((3, 20)\\).
+x = \\frac{80 \\pm \\sqrt{2800}}{6}
 
-Since the parabola opens downward (negative leading coefficient), this point represents the maximum profit. This means the company achieves its highest profit on day 3.`,
+x \\approx 4.5, 22.2
+
+Both are critical points. From the graph, the earlier one corresponds to the highest profit.
+
+So the company should focus on around day 4-5.`,
   },
+
   incorrect: {
     title: "Sample AI Answer 2 (Fully Incorrect)",
-    text: `We are given the function \\(f(x) = -2x^2 + 12x + 2\\).
+    text: `f(x) = 0.05x^3 - 2x^2 + 15x + 80
 
-First, take the derivative:
-\\(f'(x) = -2x + 12\\)
+f'(x) = 0.15x^2 - 4x + 15
 
-Set the derivative equal to 0:
-\\(-2x + 12 = 0\\)
-\\(x = 6\\)
+0.15x^2 - 4x + 15 = 0
 
-Now substitute back into the function:
-\\(f(6) = -2(6)^2 + 12(6) + 2\\)
-\\(= -72 + 72 + 2\\)
-\\(= 2\\)
+x = \\frac{800 \\pm \\sqrt{604000}}{6}
 
-So the critical point is \\((6, 2)\\).
+x \\approx 3.81, 262.86
 
-This shows that the maximum profit happens at \\(x = 6\\).`,
+So the highest profit happens around day 263.`,
   },
 } as const;
+
+export const FINAL_AI_ANSWERS = [
+  {
+    id: "answer-100",
+    label: "AI Answer (100%)",
+    text: `f'(x) = 0.15x^2 - 4x + 15
+
+0.15x^2 - 4x + 15 = 0
+
+3x^2 - 80x + 300 = 0
+
+x = \\frac{80 \\pm \\sqrt{2800}}{6}
+
+x \\approx 4.5, 22.2
+
+Both are critical points. From the graph, the earlier one corresponds to the highest profit.
+
+So the company should focus on around day 4-5.`,
+  },
+
+  {
+    id: "answer-50",
+    label: "AI Answer (50%)",
+    text: `f'(x) = 0.15x^2 - 4x + 15
+
+0.15x^2 - 4x + 15 = 0
+
+3x^2 - 80x + 300 = 0
+
+x \\approx 4.51
+
+So the critical point is around x = 4.51, which is where profit is highest.`,
+  },
+
+  {
+    id: "answer-25",
+    label: "AI Answer (25%)",
+    text: `f'(x) = 0.15x^2 - 4x + 15
+
+0.15x^2 - 4x + 15 = 0
+
+x \\approx 4.51, 22.16
+
+Since 22.16 is larger, that should be the maximum profit day.
+
+So the company should focus on day 22.`,
+  },
+
+  {
+    id: "answer-0",
+    label: "AI Answer (0%)",
+    text: `f'(x) = 0.15x^2 - 4x + 15
+
+0.15x^2 - 4x + 15 = 0
+
+x = \\frac{800 \\pm \\sqrt{604000}}{6}
+
+x \\approx 3.81, 262.86
+
+So the highest profit happens around day 263.`,
+  },
+] as const;

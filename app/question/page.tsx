@@ -3,78 +3,87 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
-
-type Choice = {
-  id: string;
-  text: string;
-  correct?: boolean;
-  feedback: string;
-};
-
-const SCENARIO_PLACEHOLDER = `A startup is reviewing its daily profit over the past month to better understand its overall business performance and decide whether any changes to its current strategy may be needed. The following chart shows the company’s daily profit throughout the month. Based on this chart, which of the following questions would best help the team analyze the trend in profit over time?`;
-
-const QUESTION_PLACEHOLDER = `Which option is the best choice?`;
-
-const CHOICES: Choice[] = [
-  {
-    id: "A",
-    text: "Use the function \\(f(x)=−2x^2 + 12x + 2\\) to model the company’s profit and find its critical point(s).",
-    correct: true,
-    feedback:
-      "Correct! This is the strongest choice because the function matches the overall shape of the data: the profit rises, reaches a highest point, and then falls. Since this model has a maximum point, finding its critical point is a meaningful way to identify the key point in the company’s profit trend.",
-  },
-  {
-    id: "B",
-    text: "Use the function \\(f(x)=2x^2+12x+2\\) to model the company’s profit and find its critical point(s).",
-    correct: false,
-    feedback:
-      "This choice is less appropriate because the function opens upward, which means it has a minimum point rather than a maximum point. The chart suggests the company’s profit increases and then decreases, so this model does not represent the overall trend very well.",
-  },
-  {
-    id: "C",
-    text: "Use the function \\(f(x)=2x^3+2\\) to model the company’s profit and find its critical point(s).",
-    correct: false,
-    feedback:
-      "This choice is not the best fit because the function is cubic and does not match the single peak shape suggested by the chart. Although it is still a nonlinear function, it does not model the company’s profit trend as clearly as a downward-opening quadratic would.",
-  },
-];
+import {
+  SCENARIO_PLACEHOLDER,
+  QUESTION_PLACEHOLDER,
+  QUESTION_PARTS,
+} from "@/lib/question-schema";
 
 export default function AuthorQuestionPage() {
   const router = useRouter();
-  const [selectedChoice, setSelectedChoice] = useState("");
+
+  const [selectedPart1, setSelectedPart1] = useState("");
+  const [selectedPart2, setSelectedPart2] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  const selected = useMemo(
-    () => CHOICES.find((choice) => choice.id === selectedChoice),
-    [selectedChoice]
+  const selectedChoice1 = useMemo(
+    () =>
+      QUESTION_PARTS.part1.options.find((choice) => choice.id === selectedPart1),
+    [selectedPart1]
   );
 
-  const handleSelectChoice = (id: string) => {
+  const selectedChoice2 = useMemo(
+    () =>
+      QUESTION_PARTS.part2.options.find((choice) => choice.id === selectedPart2),
+    [selectedPart2]
+  );
+
+  const isFullyCorrect = Boolean(
+    selectedChoice1?.correct && selectedChoice2?.correct
+  );
+
+  const composedQuestion = useMemo(() => {
+    if (!selectedChoice1 || !selectedChoice2) return "";
+
+    return `Use the function ${selectedChoice1.text} to model the company’s profit and analyse the company’s situation by finding its ${selectedChoice2.text}.`;
+  }, [selectedChoice1, selectedChoice2]);
+
+  const handleSelectPart1 = (id: string) => {
     if (submitted) return;
-    setSelectedChoice(id);
+    setSelectedPart1(id);
+  };
+
+  const handleSelectPart2 = (id: string) => {
+    if (submitted) return;
+    setSelectedPart2(id);
   };
 
   const handleSubmit = () => {
-    if (!selectedChoice) return;
+    if (!selectedPart1 || !selectedPart2) return;
     setSubmitted(true);
   };
 
   const handleTryAgain = () => {
     setSubmitted(false);
-    setSelectedChoice("");
-  }
+    setSelectedPart1("");
+    setSelectedPart2("");
+  };
 
   const handleContinue = () => {
-    if (!selected?.correct) return;
+    if (!isFullyCorrect || !selectedChoice1 || !selectedChoice2) return;
 
     sessionStorage.setItem("authorScenario", SCENARIO_PLACEHOLDER);
-    sessionStorage.setItem("studentQuestion", selected.text);
-    sessionStorage.setItem("selectedChoice", selected.id);
+    sessionStorage.setItem("studentQuestion", composedQuestion);
+
+    sessionStorage.setItem("selectedPart1", selectedChoice1.id);
+    sessionStorage.setItem("selectedPart2", selectedChoice2.id);
+
+    sessionStorage.setItem(
+      "selectedPart1Correct",
+      selectedChoice1.correct ? "true" : "false"
+    );
+    sessionStorage.setItem(
+      "selectedPart2Correct",
+      selectedChoice2.correct ? "true" : "false"
+    );
+
+    sessionStorage.setItem("selectedPart1Feedback", selectedChoice1.feedback);
+    sessionStorage.setItem("selectedPart2Feedback", selectedChoice2.feedback);
+
     sessionStorage.setItem(
       "selectedChoiceCorrect",
-      selected.correct ? "true" : "false"
+      isFullyCorrect ? "true" : "false"
     );
-    sessionStorage.setItem("selectedChoiceFeedback", selected.feedback);
 
     router.push("/create-rubric");
   };
@@ -84,22 +93,24 @@ export default function AuthorQuestionPage() {
       className="min-h-screen p-3 overflow-y-auto"
       style={{ backgroundColor: "var(--lime-8)" }}
     >
-      {/* <div className="flex-1"> */}
-        <AuthorQuestionPanel
-          scenario={SCENARIO_PLACEHOLDER}
-          question={QUESTION_PLACEHOLDER}
-          scatterPlotSrc="/data/plot-data.json"
-          choices={CHOICES}
-          selectedChoice={selectedChoice}
-          submitted={submitted}
-          selectedFeedback={submitted ? selected?.feedback || "" : ""}
-          isCorrectSelection={submitted && Boolean(selected?.correct)}
-          onSelectChoice={handleSelectChoice}
-          onSubmit={handleSubmit}
-          onContinue={handleContinue}
-          onTryAgain={handleTryAgain}
-        />
-      {/* </div> */}
+      <AuthorQuestionPanel
+        scenario={SCENARIO_PLACEHOLDER}
+        question={QUESTION_PLACEHOLDER}
+        scatterPlotSrc="/data/plot-data.json"
+        part1={QUESTION_PARTS.part1}
+        part2={QUESTION_PARTS.part2}
+        selectedPart1={selectedPart1}
+        selectedPart2={selectedPart2}
+        submitted={submitted}
+        selectedFeedbackPart1={submitted ? selectedChoice1?.feedback || "" : ""}
+        selectedFeedbackPart2={submitted ? selectedChoice2?.feedback || "" : ""}
+        isCorrectSelection={submitted && isFullyCorrect}
+        onSelectPart1={handleSelectPart1}
+        onSelectPart2={handleSelectPart2}
+        onSubmit={handleSubmit}
+        onContinue={handleContinue}
+        onTryAgain={handleTryAgain}
+      />
     </main>
   );
 }
