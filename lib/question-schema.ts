@@ -2,6 +2,8 @@ export const SCENARIO_PLACEHOLDER = `A company is reviewing its daily profit ove
 
 export const QUESTION_PLACEHOLDER = `Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.`;
 
+export const PLOT_DATA_SRC = `/data/plot-data.json`
+
 export type Choice = {
   id: string;
   text: string;
@@ -15,11 +17,8 @@ export type QuestionPart = {
   options: readonly Choice[];
 };
 
-export const QUESTION_PARTS: {
-  part1: QuestionPart;
-  part2: QuestionPart;
-} = {
-  part1: {
+export const QUESTION_PARTS: readonly QuestionPart[] = [
+  {
     id: "1",
     label: "Select the function",
     options: [
@@ -46,8 +45,7 @@ export const QUESTION_PARTS: {
       },
     ],
   },
-
-  part2: {
+  {
     id: "2",
     label: "Select what to analyze",
     options: [
@@ -74,7 +72,68 @@ export const QUESTION_PARTS: {
       },
     ],
   },
-} as const;
+] as const;
+
+// export const QUESTION_PARTS: {
+//   part1: QuestionPart;
+//   part2: QuestionPart;
+// } = {
+//   part1: {
+//     id: "1",
+//     label: "Select the function",
+//     options: [
+//       {
+//         id: "f1",
+//         text: "\\(f(x)=0.05x^3-2x^2+15x+80\\)",
+//         correct: true,
+//         feedback:
+//           "This is the strongest choice because it matches the overall shape of the scatter plot: profit rises early in the month, reaches a high point, then drops before increasing again. This model can produce multiple critical points, which helps identify the company’s best-profit day.",
+//       },
+//       {
+//         id: "f2",
+//         text: "\\(f(x)=0.05x^3+2x^2+15x+75\\)",
+//         correct: false,
+//         feedback:
+//           "This choice is less appropriate because the positive quadratic term changes the shape of the graph too much. It does not match the pattern in the scatter plot as well as the correct model.",
+//       },
+//       {
+//         id: "f3",
+//         text: "\\(f(x)=0.5x^3-2x^2+15x+80\\)",
+//         correct: false,
+//         feedback:
+//           "This choice is not the best fit because the larger cubic coefficient makes the function change too rapidly. The graph suggests a smoother trend, so this model exaggerates the behavior.",
+//       },
+//     ],
+//   },
+
+//   part2: {
+//     id: "2",
+//     label: "Select what to analyze",
+//     options: [
+//       {
+//         id: "a1",
+//         text: "critical points",
+//         correct: true,
+//         feedback:
+//           "This is the best choice because critical points identify where profit reaches maximum or minimum values, directly answering the company’s question.",
+//       },
+//       {
+//         id: "a2",
+//         text: "average rate of change over the month",
+//         correct: false,
+//         feedback:
+//           "This only describes overall change and does not identify the specific day when profit was highest.",
+//       },
+//       {
+//         id: "a3",
+//         text: "intercepts",
+//         correct: false,
+//         feedback:
+//           "Intercepts do not help determine the day of maximum profit.",
+//       },
+//     ],
+//   },
+// } as const;
 
 export const RUBRIC_OPTIONS = [
   {

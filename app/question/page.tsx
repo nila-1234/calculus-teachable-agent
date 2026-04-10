@@ -7,78 +7,80 @@ import {
   SCENARIO_PLACEHOLDER,
   QUESTION_PLACEHOLDER,
   QUESTION_PARTS,
+  PLOT_DATA_SRC,
 } from "@/lib/question-schema";
 
 export default function AuthorQuestionPage() {
   const router = useRouter();
 
-  const [selectedPart1, setSelectedPart1] = useState("");
-  const [selectedPart2, setSelectedPart2] = useState("");
+  const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const selectedChoice1 = useMemo(
-    () =>
-      QUESTION_PARTS.part1.options.find((choice) => choice.id === selectedPart1),
-    [selectedPart1]
+  const selectedChoices = useMemo(() => {
+    return QUESTION_PARTS.map((part) => {
+      const selectedId = selectedParts[part.id];
+      return part.options.find((opt) => opt.id === selectedId);
+    });
+  }, [selectedParts]);
+
+  const allAnswered = QUESTION_PARTS.every(
+    (part) => selectedParts[part.id]
   );
 
-  const selectedChoice2 = useMemo(
-    () =>
-      QUESTION_PARTS.part2.options.find((choice) => choice.id === selectedPart2),
-    [selectedPart2]
-  );
-
-  const isFullyCorrect = Boolean(
-    selectedChoice1?.correct && selectedChoice2?.correct
+  const isFullyCorrect = allAnswered && selectedChoices.every(
+    (choice) => choice?.correct
   );
 
   const composedQuestion = useMemo(() => {
-    if (!selectedChoice1 || !selectedChoice2) return "";
+    if (!allAnswered) return "";
 
-    return `Use the function ${selectedChoice1.text} to model the company’s profit and analyse the company’s situation by finding its ${selectedChoice2.text}.`;
-  }, [selectedChoice1, selectedChoice2]);
+    let result = QUESTION_PLACEHOLDER;
 
-  const handleSelectPart1 = (id: string) => {
+    selectedChoices.forEach((choice, index) => {
+      if (!choice) return;
+      result = result.replace(`__(${index + 1})__`, choice.text);
+    });
+
+    return result;
+  }, [selectedChoices, allAnswered]);
+
+  const handleSelectPart = (partId: string, choiceId: string) => {
     if (submitted) return;
-    setSelectedPart1(id);
-  };
 
-  const handleSelectPart2 = (id: string) => {
-    if (submitted) return;
-    setSelectedPart2(id);
+    setSelectedParts((prev) => ({
+      ...prev,
+      [partId]: choiceId,
+    }));
   };
 
   const handleSubmit = () => {
-    if (!selectedPart1 || !selectedPart2) return;
+    if (!allAnswered) return;
     setSubmitted(true);
   };
 
   const handleTryAgain = () => {
     setSubmitted(false);
-    setSelectedPart1("");
-    setSelectedPart2("");
+    setSelectedParts({});
   };
 
   const handleContinue = () => {
-    if (!isFullyCorrect || !selectedChoice1 || !selectedChoice2) return;
+    if (!isFullyCorrect || !allAnswered) return;
 
     sessionStorage.setItem("authorScenario", SCENARIO_PLACEHOLDER);
     sessionStorage.setItem("studentQuestion", composedQuestion);
 
-    sessionStorage.setItem("selectedPart1", selectedChoice1.id);
-    sessionStorage.setItem("selectedPart2", selectedChoice2.id);
+    sessionStorage.setItem("selectedParts", JSON.stringify(selectedParts));
 
     sessionStorage.setItem(
-      "selectedPart1Correct",
-      selectedChoice1.correct ? "true" : "false"
+      "selectedPartsMeta",
+      JSON.stringify(
+        selectedChoices.map((choice) => ({
+          id: choice?.id,
+          correct: choice?.correct,
+          feedback: choice?.feedback,
+        }))
+      )
     );
-    sessionStorage.setItem(
-      "selectedPart2Correct",
-      selectedChoice2.correct ? "true" : "false"
-    );
-
-    sessionStorage.setItem("selectedPart1Feedback", selectedChoice1.feedback);
-    sessionStorage.setItem("selectedPart2Feedback", selectedChoice2.feedback);
 
     sessionStorage.setItem(
       "selectedChoiceCorrect",
@@ -96,17 +98,12 @@ export default function AuthorQuestionPage() {
       <AuthorQuestionPanel
         scenario={SCENARIO_PLACEHOLDER}
         question={QUESTION_PLACEHOLDER}
-        scatterPlotSrc="/data/plot-data.json"
-        part1={QUESTION_PARTS.part1}
-        part2={QUESTION_PARTS.part2}
-        selectedPart1={selectedPart1}
-        selectedPart2={selectedPart2}
+        scatterPlotSrc={PLOT_DATA_SRC}
+        parts={QUESTION_PARTS}
+        selectedParts={selectedParts}
         submitted={submitted}
-        selectedFeedbackPart1={submitted ? selectedChoice1?.feedback || "" : ""}
-        selectedFeedbackPart2={submitted ? selectedChoice2?.feedback || "" : ""}
         isCorrectSelection={submitted && isFullyCorrect}
-        onSelectPart1={handleSelectPart1}
-        onSelectPart2={handleSelectPart2}
+        onSelectPart={handleSelectPart}
         onSubmit={handleSubmit}
         onContinue={handleContinue}
         onTryAgain={handleTryAgain}

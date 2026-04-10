@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Button,
   Card,
@@ -30,16 +30,11 @@ type AuthorQuestionPanelProps = {
   scenario: string;
   question: string;
   scatterPlotSrc: string;
-  part1: QuestionPart;
-  part2: QuestionPart;
-  selectedPart1: string;
-  selectedPart2: string;
+  parts: readonly QuestionPart[];
+  selectedParts: Record<string, string>;
   submitted: boolean;
-  selectedFeedbackPart1: string;
-  selectedFeedbackPart2: string;
   isCorrectSelection: boolean;
-  onSelectPart1: (id: string) => void;
-  onSelectPart2: (id: string) => void;
+  onSelectPart: (partId: string, choiceId: string) => void;
   onSubmit: () => void;
   onContinue: () => void;
   onTryAgain: () => void;
@@ -83,9 +78,9 @@ function OptionCards({
             >
               <Flex align="start" gap="3" className="w-full text-left">
                 <div
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
-                      ? "border-lime-500 bg-lime-500 text-white"
-                      : "border-gray-300 text-gray-600"
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
+                    ? "border-lime-500 bg-lime-500 text-white"
+                    : "border-gray-300 text-gray-600"
                     }`}
                 >
                   {badge}
@@ -107,16 +102,11 @@ export default function AuthorQuestionPanel({
   scenario,
   question,
   scatterPlotSrc,
-  part1,
-  part2,
-  selectedPart1,
-  selectedPart2,
+  parts,
+  selectedParts,
   submitted,
-  selectedFeedbackPart1,
-  selectedFeedbackPart2,
   isCorrectSelection,
-  onSelectPart1,
-  onSelectPart2,
+  onSelectPart,
   onSubmit,
   onContinue,
   onTryAgain,
@@ -129,7 +119,23 @@ export default function AuthorQuestionPanel({
     }
   }, [submitted]);
 
-  const allSelected = Boolean(selectedPart1 && selectedPart2);
+  // const allSelected = parts.every((part) => selectedParts[part.id]);
+
+  const allSelected = useMemo(() => {
+    return parts.every((part) => Boolean(selectedParts[part.id]));
+  }, [parts, selectedParts]);
+
+  const selectedFeedback = useMemo(() => {
+    return parts.map((part) => {
+      const selectedId = selectedParts[part.id];
+      const selectedChoice = part.options.find((choice) => choice.id === selectedId);
+
+      return {
+        partId: part.id,
+        feedback: selectedChoice?.feedback || "",
+      };
+    });
+  }, [parts, selectedParts]);
 
   return (
     <Card size="3" className="h-full">
@@ -163,21 +169,16 @@ export default function AuthorQuestionPanel({
                 {question}
               </Text>
 
-              <OptionCards
-                title={`(${part1.id})`}
-                options={part1.options}
-                selectedValue={selectedPart1}
-                submitted={submitted}
-                onChange={onSelectPart1}
-              />
-
-              <OptionCards
-                title={`(${part2.id})`}
-                options={part2.options}
-                selectedValue={selectedPart2}
-                submitted={submitted}
-                onChange={onSelectPart2}
-              />
+              {parts.map((part) => (
+                <OptionCards
+                  key={part.id}
+                  title={`(${part.id})`}
+                  options={part.options}
+                  selectedValue={selectedParts[part.id] || ""}
+                  submitted={submitted}
+                  onChange={(choiceId) => onSelectPart(part.id, choiceId)}
+                />
+              ))}
 
               <Flex align="center" justify="center">
                 <Button
@@ -198,23 +199,16 @@ export default function AuthorQuestionPanel({
                   <Heading size="4">Feedback</Heading>
 
                   <div className="space-y-4">
-                    <div>
-                      <Text as="div" weight="bold" size="2" className="mb-1">
-                        (1)
-                      </Text>
-                      <Text size="3" className="whitespace-pre-wrap leading-7">
-                        {selectedFeedbackPart1}
-                      </Text>
-                    </div>
-
-                    <div>
-                      <Text as="div" weight="bold" size="2" className="mb-1">
-                        (2)
-                      </Text>
-                      <Text size="3" className="whitespace-pre-wrap leading-7">
-                        {selectedFeedbackPart2}
-                      </Text>
-                    </div>
+                    {selectedFeedback.map((item) => (
+                      <div key={item.partId}>
+                        <Text as="div" weight="bold" size="2" className="mb-1">
+                          ({item.partId})
+                        </Text>
+                        <Text size="3" className="whitespace-pre-wrap leading-7">
+                          {item.feedback}
+                        </Text>
+                      </div>
+                    ))}
                   </div>
 
                   <Flex justify="center">
