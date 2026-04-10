@@ -125,17 +125,17 @@ export const RUBRIC_OPTIONS = [
 export const SAMPLE_ANSWERS = {
   correct: {
     title: "Sample AI Answer 1 (Fully Correct)",
-    text: `f(x) = 0.05x^3 - 2x^2 + 15x + 80
+    text: `\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)
 
-f'(x) = 0.15x^2 - 4x + 15
+\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-3x^2 - 80x + 300 = 0
+\\(3x^2 - 80x + 300 = 0\\)
 
-x = \\frac{80 \\pm \\sqrt{2800}}{6}
+\\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)
 
-x \\approx 4.5, 22.2
+\\(x \\approx 4.5, 22.2\\)
 
 Both are critical points. From the graph, the earlier one corresponds to the highest profit.
 
@@ -144,15 +144,15 @@ So the company should focus on around day 4-5.`,
 
   incorrect: {
     title: "Sample AI Answer 2 (Fully Incorrect)",
-    text: `f(x) = 0.05x^3 - 2x^2 + 15x + 80
+    text: `\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)
 
-f'(x) = 0.15x^2 - 4x + 15
+\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-x = \\frac{800 \\pm \\sqrt{604000}}{6}
+\\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)
 
-x \\approx 3.81, 262.86
+\\(x \\approx 3.81, 262.86\\)
 
 So the highest profit happens around day 263.`,
   },
@@ -162,15 +162,15 @@ export const FINAL_AI_ANSWERS = [
   {
     id: "answer-100",
     label: "AI Answer (100%)",
-    text: `f'(x) = 0.15x^2 - 4x + 15
+    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-3x^2 - 80x + 300 = 0
+\\(3x^2 - 80x + 300 = 0\\)
 
-x = \\frac{80 \\pm \\sqrt{2800}}{6}
+\\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)
 
-x \\approx 4.5, 22.2
+\\(x \\approx 4.5, 22.2\\)
 
 Both are critical points. From the graph, the earlier one corresponds to the highest profit.
 
@@ -180,13 +180,13 @@ So the company should focus on around day 4-5.`,
   {
     id: "answer-50",
     label: "AI Answer (50%)",
-    text: `f'(x) = 0.15x^2 - 4x + 15
+    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-3x^2 - 80x + 300 = 0
+\\(3x^2 - 80x + 300 = 0\\)
 
-x \\approx 4.51
+\\(x \\approx 4.51\\)
 
 So the critical point is around x = 4.51, which is where profit is highest.`,
   },
@@ -194,11 +194,11 @@ So the critical point is around x = 4.51, which is where profit is highest.`,
   {
     id: "answer-25",
     label: "AI Answer (25%)",
-    text: `f'(x) = 0.15x^2 - 4x + 15
+    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-x \\approx 4.51, 22.16
+\\(x \\approx 4.51, 22.16\\)
 
 Since 22.16 is larger, that should be the maximum profit day.
 
@@ -208,13 +208,13 @@ So the company should focus on day 22.`,
   {
     id: "answer-0",
     label: "AI Answer (0%)",
-    text: `f'(x) = 0.15x^2 - 4x + 15
+    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-0.15x^2 - 4x + 15 = 0
+\\(0.15x^2 - 4x + 15 = 0\\)
 
-x = \\frac{800 \\pm \\sqrt{604000}}{6}
+\\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)
 
-x \\approx 3.81, 262.86
+\\(x \\approx 3.81, 262.86\\)
 
 So the highest profit happens around day 263.`,
   },

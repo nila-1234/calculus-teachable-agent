@@ -61,7 +61,7 @@ export default function ApplyRubricPanel({
   const hasNext = currentIndex < answers.length - 1;
 
   const completedCount = useMemo(
-    () => answers.filter((answer) => reviewStates[answer.id]?.submitted).length,
+    () => answers.filter((a) => reviewStates[a.id]?.submitted).length,
     [answers, reviewStates]
   );
 
@@ -79,14 +79,17 @@ export default function ApplyRubricPanel({
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
+        {/* Header */}
         <Flex align="center" justify="between">
           <Heading size="6">Apply Rubric</Heading>
           <Text size="2" color="gray">
-            Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
+            Answer {currentIndex + 1} of {answers.length} ·{" "}
+            {completedCount} submitted
           </Text>
         </Flex>
 
         <div className="flex-1 space-y-5 overflow-y-auto">
+          {/* Answer */}
           <Card size="2">
             <Flex direction="column" gap="3">
               <Flex align="center" justify="between">
@@ -108,6 +111,7 @@ export default function ApplyRubricPanel({
             </Flex>
           </Card>
 
+          {/* Rubric Table */}
           <Card size="2">
             <Flex direction="column" gap="4">
               <Heading size="4">Evaluate This Answer</Heading>
@@ -140,11 +144,17 @@ export default function ApplyRubricPanel({
                             <Flex gap="2">
                               <Button
                                 type="button"
-                                variant={selectedValue === "pass" ? "solid" : "soft"}
+                                variant={
+                                  selectedValue === "pass" ? "solid" : "soft"
+                                }
                                 color="green"
                                 disabled={isLoading}
                                 onClick={() =>
-                                  onToggleResult(currentAnswer.id, criterion.id, "pass")
+                                  onToggleResult(
+                                    currentAnswer.id,
+                                    criterion.id,
+                                    "pass"
+                                  )
                                 }
                               >
                                 Pass
@@ -152,11 +162,17 @@ export default function ApplyRubricPanel({
 
                               <Button
                                 type="button"
-                                variant={selectedValue === "fail" ? "solid" : "soft"}
+                                variant={
+                                  selectedValue === "fail" ? "solid" : "soft"
+                                }
                                 color="red"
                                 disabled={isLoading}
                                 onClick={() =>
-                                  onToggleResult(currentAnswer.id, criterion.id, "fail")
+                                  onToggleResult(
+                                    currentAnswer.id,
+                                    criterion.id,
+                                    "fail"
+                                  )
                                 }
                               >
                                 Fail
@@ -170,8 +186,8 @@ export default function ApplyRubricPanel({
                 </table>
               </div>
 
-              <Flex align="center" justify="center">
-
+              {/* Submit */}
+              <Flex justify="center">
                 <Button
                   type="button"
                   onClick={() => onSubmitAnswer(currentAnswer.id)}
@@ -188,6 +204,7 @@ export default function ApplyRubricPanel({
             </Flex>
           </Card>
 
+          {/* Feedback */}
           {currentState?.submitted ? (
             <div ref={feedbackRef}>
               <Card size="2">
@@ -209,9 +226,11 @@ export default function ApplyRubricPanel({
                   )}
                 </Flex>
               </Card>
-            </div>) : null}
+            </div>
+          ) : null}
         </div>
 
+        {/* Navigation */}
         <Flex align="center" justify="between">
           <Button
             type="button"

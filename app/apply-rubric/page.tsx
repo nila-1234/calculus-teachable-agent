@@ -5,12 +5,14 @@ import ApplyRubricPanel, {
   AnswerReviewState,
   RubricCriterion,
 } from "@/components/apply-rubric-panel";
-import { RUBRIC_OPTIONS } from "@/lib/question-schema-old";
+import { RUBRIC_OPTIONS } from "@/lib/question-schema";
 import { APPLY_RUBRIC_ANSWERS } from "@/lib/apply-rubric-schema";
 
 export default function ApplyRubricPage() {
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
-  const [reviewStates, setReviewStates] = useState<Record<string, AnswerReviewState>>({});
+  const [reviewStates, setReviewStates] = useState<
+    Record<string, AnswerReviewState>
+  >({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -133,22 +135,3 @@ export default function ApplyRubricPage() {
     </main>
   );
 }
-
-//   return (
-//     <main
-//       className="min-h-screen p-3 overflow-y-auto"
-//       style={{ backgroundColor: "var(--lime-8)" }}
-//     >
-//       <div className="flex-1 min-h-0">
-//         <ApplyRubricPanel
-//           rubric={rubric}
-//           answers={APPLY_RUBRIC_ANSWERS}
-//           reviewStates={reviewStates}
-//           loadingAnswerId={loadingAnswerId}
-//           onToggleResult={handleToggleResult}
-//           onSubmitAnswer={handleSubmitAnswer}
-//         />
-//       </div>
-//     </main>
-//   );
-// }

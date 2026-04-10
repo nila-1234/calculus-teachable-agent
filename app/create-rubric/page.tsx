@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CreateRubricPanel from "@/components/create-rubric-panel";
-import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/question-schema-old";
+import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/question-schema";
 
 export default function CreateRubricPage() {
   const router = useRouter();
@@ -33,9 +33,7 @@ export default function CreateRubricPage() {
   };
 
   const handleSubmit = () => {
-    setFeedback(
-      "Placeholder feedback"
-    );
+    setFeedback("Placeholder feedback");
     setSubmitted(true);
   };
 

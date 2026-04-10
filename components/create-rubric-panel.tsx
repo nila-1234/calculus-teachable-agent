@@ -41,9 +41,7 @@ export default function CreateRubricPanel({
   feedback,
   submitted,
 }: CreateRubricPanelProps) {
-
   const feedbackRef = useRef<HTMLDivElement | null>(null);
-
 
   useEffect(() => {
     if (submitted && feedbackRef.current) {
@@ -57,6 +55,7 @@ export default function CreateRubricPanel({
         <Heading size="6">Create Rubric</Heading>
 
         <div className="flex-1 space-y-5 overflow-y-auto">
+          {/* Question */}
           <Card size="2">
             <Flex direction="column" gap="3">
               <Heading size="4">Question</Heading>
@@ -66,6 +65,7 @@ export default function CreateRubricPanel({
             </Flex>
           </Card>
 
+          {/* Sample Answers */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card size="2">
               <Flex direction="column" gap="3">
@@ -86,6 +86,7 @@ export default function CreateRubricPanel({
             </Card>
           </div>
 
+          {/* Rubric Selection */}
           <Card size="2">
             <Flex direction="column" gap="4">
               <Heading size="4">Select Rubric Criteria</Heading>
@@ -105,6 +106,7 @@ export default function CreateRubricPanel({
                       </th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {rubricOptions.map((option) => {
                       const selected = selectedRubricIds.includes(option.id);
@@ -116,12 +118,15 @@ export default function CreateRubricPanel({
                               type="checkbox"
                               checked={selected}
                               onChange={() => onToggleRubric(option.id)}
-                              className="mt-1 h-4 w-4"
+                              className="mt-1 h-4 w-4 cursor-pointer"
+                              disabled={submitted}
                             />
                           </td>
+
                           <td className="border-b border-gray-200 px-4 py-3 align-top text-sm font-medium text-slate-900">
                             <MathDisplay text={option.label} />
                           </td>
+
                           <td className="border-b border-gray-200 px-4 py-3 align-top text-sm text-slate-700">
                             <MathDisplay text={option.description} />
                           </td>
@@ -132,27 +137,32 @@ export default function CreateRubricPanel({
                 </table>
               </div>
 
-              <Flex align="center" justify="start">
+              <Flex align="center" justify="between">
+                <Text size="2" color="gray">
+                  Select criteria that define a strong solution.
+                </Text>
+
                 <Button
                   onClick={onSubmit}
-                  disabled={selectedRubricIds.length === 0}
+                  disabled={selectedRubricIds.length === 0 || submitted}
                   color="lime"
                 >
-                  Submit
+                  {submitted ? "Submitted" : "Submit"}
                 </Button>
-
               </Flex>
             </Flex>
           </Card>
 
+          {/* Feedback */}
           {submitted ? (
-
             <Card size="2" ref={feedbackRef}>
               <Flex direction="column" gap="3">
                 <Heading size="4">Rubric Feedback</Heading>
+
                 <Text size="3" className="whitespace-pre-wrap leading-7">
                   {feedback}
                 </Text>
+
                 <Flex justify="center">
                   <Button
                     onClick={onContinue}
@@ -160,7 +170,7 @@ export default function CreateRubricPanel({
                     color="lime"
                   >
                     Continue
-                    <ArrowRightIcon className="" />
+                    <ArrowRightIcon />
                   </Button>
                 </Flex>
               </Flex>

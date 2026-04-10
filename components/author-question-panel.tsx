@@ -179,11 +179,7 @@ export default function AuthorQuestionPanel({
                 onChange={onSelectPart2}
               />
 
-              <Flex align="center" justify="between">
-                <Text size="2" color="gray">
-                  Select one option for each blank.
-                </Text>
-
+              <Flex align="center" justify="center">
                 <Button
                   onClick={onSubmit}
                   disabled={!allSelected || submitted}
