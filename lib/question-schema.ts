@@ -20,7 +20,7 @@ export const QUESTION_PARTS: {
   part2: QuestionPart;
 } = {
   part1: {
-    id: "function-choice",
+    id: "1",
     label: "Select the function",
     options: [
       {
@@ -48,7 +48,7 @@ export const QUESTION_PARTS: {
   },
 
   part2: {
-    id: "analysis-choice",
+    id: "2",
     label: "Select what to analyze",
     options: [
       {

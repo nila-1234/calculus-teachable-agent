@@ -164,7 +164,7 @@ export default function AuthorQuestionPanel({
               </Text>
 
               <OptionCards
-                title="Blank (1)"
+                title={`(${part1.id})`}
                 options={part1.options}
                 selectedValue={selectedPart1}
                 submitted={submitted}
@@ -172,7 +172,7 @@ export default function AuthorQuestionPanel({
               />
 
               <OptionCards
-                title="Blank (2)"
+                title={`(${part2.id})`}
                 options={part2.options}
                 selectedValue={selectedPart2}
                 submitted={submitted}
@@ -200,7 +200,7 @@ export default function AuthorQuestionPanel({
                   <div className="space-y-4">
                     <div>
                       <Text as="div" weight="bold" size="2" className="mb-1">
-                        Blank (1)
+                        (1)
                       </Text>
                       <Text size="3" className="whitespace-pre-wrap leading-7">
                         {selectedFeedbackPart1}
@@ -209,7 +209,7 @@ export default function AuthorQuestionPanel({
 
                     <div>
                       <Text as="div" weight="bold" size="2" className="mb-1">
-                        Blank (2)
+                        (2)
                       </Text>
                       <Text size="3" className="whitespace-pre-wrap leading-7">
                         {selectedFeedbackPart2}
