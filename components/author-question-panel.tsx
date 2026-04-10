@@ -119,6 +119,24 @@ export default function AuthorQuestionPanel({
     }
   }, [submitted]);
 
+  const selectedEquation = useMemo(() => {
+    const firstPart = parts[0];
+    if (!firstPart) return "";
+
+    const selectedId = selectedParts[firstPart.id];
+    const selectedChoice = firstPart.options.find(
+      (choice) => choice.id === selectedId
+    );
+
+    if (!selectedChoice) return "";
+
+    return selectedChoice.text
+      .replace(/^\\\(/, "")
+      .replace(/\\\)$/, "")
+      .replace(/^f\(x\)\s*=\s*/, "y=")
+      .replace(/\s+/g, "");
+  }, [parts, selectedParts]);
+
   // const allSelected = parts.every((part) => selectedParts[part.id]);
 
   const allSelected = useMemo(() => {
@@ -153,7 +171,7 @@ export default function AuthorQuestionPanel({
 
               <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
                 {scatterPlotSrc ? (
-                  <ScatterPlot filePath={scatterPlotSrc} equation="y=0.05*x^3-2*x^2+15*x+80" />
+                  <ScatterPlot filePath={scatterPlotSrc} equation={selectedEquation} />
                 ) : (
                   <Text color="gray">Scatter plot placeholder</Text>
                 )}
