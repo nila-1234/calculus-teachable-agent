@@ -147,7 +147,7 @@ export default function AuthorQuestionPanel({
 
               <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
                 {scatterPlotSrc ? (
-                  <ScatterPlot filePath={scatterPlotSrc} />
+                  <ScatterPlot filePath={scatterPlotSrc} equation="y=0.05*x^3-2*x^2+15*x+80" />
                 ) : (
                   <Text color="gray">Scatter plot placeholder</Text>
                 )}
