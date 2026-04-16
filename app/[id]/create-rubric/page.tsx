@@ -3,22 +3,33 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CreateRubricPanel from "@/components/create-rubric-panel";
-import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/scenarios/1/question-schema";
+import { getScenario } from "@/lib/scenarios/registry";
+import { parseScenarioId } from "@/lib/scenarios/utils";
 
 export default function CreateRubricPage() {
   const router = useRouter();
+  const params = useParams();
+
+  const scenarioId = parseScenarioId(params.id);
+  const scenario = scenarioId ? getScenario(scenarioId) : null;
+
+  if (!scenarioId || !scenario) {
+    return <main className="p-6">Scenario not found.</main>;
+  }
+
+  const { RUBRIC_OPTIONS, SAMPLE_ANSWERS } = scenario.schema;
+
   const [question, setQuestion] = useState("");
   const [selectedRubricIds, setSelectedRubricIds] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
 
-  const params = useParams();
-
   useEffect(() => {
     setQuestion(
-      sessionStorage.getItem("studentQuestion") || "Question placeholder"
+      sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) ||
+      "Question placeholder"
     );
-  }, []);
+  }, [scenarioId]);
 
   const handleToggleRubric = (id: string) => {
     setSelectedRubricIds((prev) =>
@@ -28,11 +39,10 @@ export default function CreateRubricPage() {
 
   const handleContinue = () => {
     sessionStorage.setItem(
-      "selectedRubricIds",
+      `scenario:${scenarioId}:selectedRubricIds`,
       JSON.stringify(selectedRubricIds)
     );
-    
-    router.push(`/${params.id}/apply-rubric`);
+    router.push(`/${scenarioId}/apply-rubric`);
   };
 
   const handleSubmit = () => {

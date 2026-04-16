@@ -1,13 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import ApplyRubricPanel, {
   AnswerReviewState,
   RubricCriterion,
 } from "@/components/apply-rubric-panel";
-import { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } from "@/lib/scenarios/1/question-schema";
+import { getScenario } from "@/lib/scenarios/registry";
+import { parseScenarioId } from "@/lib/scenarios/utils";
 
 export default function ApplyRubricPage() {
+  const params = useParams();
+
+  const scenarioId = parseScenarioId(params.id);
+  const scenario = scenarioId ? getScenario(scenarioId) : null;
+
+  if (!scenarioId || !scenario) {
+    return <main className="p-6">Scenario not found.</main>;
+  }
+
+  const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } = scenario.schema;
+
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
   const [reviewStates, setReviewStates] = useState<
     Record<string, AnswerReviewState>
@@ -15,7 +28,9 @@ export default function ApplyRubricPage() {
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
 
   useEffect(() => {
-    const raw = sessionStorage.getItem("selectedRubricIds");
+    const raw = sessionStorage.getItem(
+      `scenario:${scenarioId}:selectedRubricIds`
+    );
     const ids: string[] = raw ? JSON.parse(raw) : [];
 
     const selectedRubric = ids.map((id) => {
@@ -42,7 +57,7 @@ export default function ApplyRubricPage() {
     );
 
     setReviewStates(initialReviewStates);
-  }, []);
+  }, [RUBRIC_OPTIONS, FINAL_AI_ANSWERS, scenarioId]);
 
   const handleToggleResult = (
     answerId: string,
@@ -74,8 +89,9 @@ export default function ApplyRubricPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          scenarioId,
           answerId,
-          answerTitle: answer.title,
+          answerTitle: answer.label,
           answerText: answer.text,
           rubric,
           results: review.results,
@@ -94,7 +110,10 @@ export default function ApplyRubricPage() {
           },
         };
 
-        sessionStorage.setItem("appliedRubricResults", JSON.stringify(next));
+        sessionStorage.setItem(
+          `scenario:${scenarioId}:appliedRubricResults`,
+          JSON.stringify(next)
+        );
         return next;
       });
     } catch {
@@ -108,7 +127,10 @@ export default function ApplyRubricPage() {
           },
         };
 
-        sessionStorage.setItem("appliedRubricResults", JSON.stringify(next));
+        sessionStorage.setItem(
+          `scenario:${scenarioId}:appliedRubricResults`,
+          JSON.stringify(next)
+        );
         return next;
       });
     } finally {

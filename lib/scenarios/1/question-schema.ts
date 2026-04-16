@@ -159,7 +159,7 @@ So the highest profit happens around day 263.`,
 export const FINAL_AI_ANSWERS = [
   {
     id: "answer-50",
-    title: "AI Answer 1",
+    label: "AI Answer 1",
     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
 \\(0.15x^2 - 4x + 15 = 0\\)
@@ -173,7 +173,7 @@ So the critical point is around x = 4.51, which is where profit is highest.`,
 
   {
     id: "answer-25",
-    title: "AI Answer 2",
+    label: "AI Answer 2",
     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
 \\(0.15x^2 - 4x + 15 = 0\\)

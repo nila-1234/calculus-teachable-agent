@@ -7,16 +7,11 @@ import {
   ArrowRightIcon,
 } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
+import { FinalAiAnswer } from "@/lib/scenarios/types";
 
 export type RubricCriterion = {
   id: string;
   label: string;
-};
-
-export type AnswerEvaluation = {
-  id: string;
-  title: string;
-  text: string;
 };
 
 export type AnswerReviewState = {
@@ -27,7 +22,7 @@ export type AnswerReviewState = {
 
 type ApplyRubricPanelProps = {
   rubric: RubricCriterion[];
-  answers: readonly AnswerEvaluation[];
+  answers: readonly FinalAiAnswer[];
   reviewStates: Record<string, AnswerReviewState>;
   loadingAnswerId?: string | null;
   onToggleResult: (
@@ -93,7 +88,7 @@ export default function ApplyRubricPanel({
           <Card size="2">
             <Flex direction="column" gap="3">
               <Flex align="center" justify="between">
-                <Heading size="4">{currentAnswer.title}</Heading>
+                <Heading size="4">{currentAnswer.label}</Heading>
                 {currentState?.submitted ? (
                   <Text size="2" color="green">
                     Submitted

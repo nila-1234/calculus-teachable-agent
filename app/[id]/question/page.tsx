@@ -3,16 +3,26 @@
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
-import {
-  SCENARIO_PLACEHOLDER,
-  QUESTION_PLACEHOLDER,
-  QUESTION_PARTS,
-  PLOT_DATA_SRC,
-} from "@/lib/scenarios/2/question-schema";
+import { getScenario } from "@/lib/scenarios/registry";
+import { parseScenarioId } from "@/lib/scenarios/utils";
 
 export default function AuthorQuestionPage() {
-  const params = useParams();
   const router = useRouter();
+  const params = useParams();
+
+  const scenarioId = parseScenarioId(params.id);
+  const scenario = scenarioId ? getScenario(scenarioId) : null;
+
+  if (!scenarioId || !scenario) {
+    return <main className="p-6">Scenario not found.</main>;
+  }
+
+  const {
+    SCENARIO_PLACEHOLDER,
+    QUESTION_PLACEHOLDER,
+    QUESTION_PARTS,
+    PLOT_DATA_SRC,
+  } = scenario.schema;
 
   const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -22,15 +32,12 @@ export default function AuthorQuestionPage() {
       const selectedId = selectedParts[part.id];
       return part.options.find((opt) => opt.id === selectedId);
     });
-  }, [selectedParts]);
+  }, [QUESTION_PARTS, selectedParts]);
 
-  const allAnswered = QUESTION_PARTS.every(
-    (part) => selectedParts[part.id]
-  );
+  const allAnswered = QUESTION_PARTS.every((part) => selectedParts[part.id]);
 
-  const isFullyCorrect = allAnswered && selectedChoices.every(
-    (choice) => choice?.correct
-  );
+  const isFullyCorrect =
+    allAnswered && selectedChoices.every((choice) => choice?.correct);
 
   const composedQuestion = useMemo(() => {
     if (!allAnswered) return "";
@@ -43,37 +50,25 @@ export default function AuthorQuestionPage() {
     });
 
     return result;
-  }, [selectedChoices, allAnswered]);
-
-  const handleSelectPart = (partId: string, choiceId: string) => {
-    if (submitted) return;
-
-    setSelectedParts((prev) => ({
-      ...prev,
-      [partId]: choiceId,
-    }));
-  };
-
-  const handleSubmit = () => {
-    if (!allAnswered) return;
-    setSubmitted(true);
-  };
-
-  const handleTryAgain = () => {
-    setSubmitted(false);
-    setSelectedParts({});
-  };
+  }, [QUESTION_PLACEHOLDER, selectedChoices, allAnswered]);
 
   const handleContinue = () => {
     if (!isFullyCorrect || !allAnswered) return;
 
-    sessionStorage.setItem("authorScenario", SCENARIO_PLACEHOLDER);
-    sessionStorage.setItem("studentQuestion", composedQuestion);
-
-    sessionStorage.setItem("selectedParts", JSON.stringify(selectedParts));
-
     sessionStorage.setItem(
-      "selectedPartsMeta",
+      `scenario:${scenarioId}:authorScenario`,
+      SCENARIO_PLACEHOLDER
+    );
+    sessionStorage.setItem(
+      `scenario:${scenarioId}:studentQuestion`,
+      composedQuestion
+    );
+    sessionStorage.setItem(
+      `scenario:${scenarioId}:selectedParts`,
+      JSON.stringify(selectedParts)
+    );
+    sessionStorage.setItem(
+      `scenario:${scenarioId}:selectedPartsMeta`,
       JSON.stringify(
         selectedChoices.map((choice) => ({
           id: choice?.id,
@@ -82,13 +77,12 @@ export default function AuthorQuestionPage() {
         }))
       )
     );
-
     sessionStorage.setItem(
-      "selectedChoiceCorrect",
+      `scenario:${scenarioId}:selectedChoiceCorrect`,
       isFullyCorrect ? "true" : "false"
     );
 
-    router.push(`/${params.id}/create-rubric`);
+    router.push(`/${scenarioId}/create-rubric`);
   };
 
   return (
@@ -104,10 +98,22 @@ export default function AuthorQuestionPage() {
         selectedParts={selectedParts}
         submitted={submitted}
         isCorrectSelection={submitted && isFullyCorrect}
-        onSelectPart={handleSelectPart}
-        onSubmit={handleSubmit}
+        onSelectPart={(partId, choiceId) => {
+          if (submitted) return;
+          setSelectedParts((prev) => ({
+            ...prev,
+            [partId]: choiceId,
+          }));
+        }}
+        onSubmit={() => {
+          if (!allAnswered) return;
+          setSubmitted(true);
+        }}
         onContinue={handleContinue}
-        onTryAgain={handleTryAgain}
+        onTryAgain={() => {
+          setSubmitted(false);
+          setSelectedParts({});
+        }}
       />
     </main>
   );
