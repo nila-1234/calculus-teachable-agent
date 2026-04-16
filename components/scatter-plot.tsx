@@ -63,14 +63,10 @@ function buildEquationEvaluator(equation: string) {
   }
 
   const allowedFunctions = ["sin", "exp"];
-  const identifiers =
-    normalized.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? [];
+  const identifiers = normalized.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? [];
 
   const invalidIdentifiers = identifiers.filter(
-    (name) =>
-      name !== "x" &&
-      name !== "X" &&
-      !allowedFunctions.includes(name)
+    (name) => name !== "x" && name !== "X" && !allowedFunctions.includes(name)
   );
 
   if (invalidIdentifiers.length > 0) {
@@ -106,7 +102,10 @@ function buildCombinedData(
 ): ChartPoint[] {
   const xValues = data
     .map((point) => point[xKey])
-    .filter((value): value is number => typeof value === "number" && !Number.isNaN(value));
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && !Number.isNaN(value)
+    );
 
   if (xValues.length === 0) return [];
 
@@ -174,7 +173,9 @@ export default function ScatterPlot({
         const keys = Object.keys(firstPoint);
 
         if (keys.length < 2) {
-          throw new Error("Each data point must contain at least two numeric fields.");
+          throw new Error(
+            "Each data point must contain at least two numeric fields."
+          );
         }
 
         const [xKey, yKey] = keys;
@@ -281,25 +282,32 @@ export default function ScatterPlot({
             {showZeroLine ? <ReferenceLine y={0} stroke="#444" /> : null}
 
             <Tooltip
-              formatter={(value, name) => [
-                value ?? "",
-                name === "scatterY"
-                  ? plot.yAxisLabel
-                  : name === "equationY"
-                    ? "Equation"
-                    : String(name),
-              ]}
               labelFormatter={(label) => `${plot.xAxisLabel}: ${label}`}
+              formatter={(value, name) => {
+                const y =
+                  typeof value === "number" ? value.toFixed(2) : String(value);
+
+                if (name === "scatterY") {
+                  return [y, `${plot.yAxisLabel} (scatter)`];
+                }
+
+                if (name === "equationY") {
+                  return [y, `${plot.yAxisLabel} (equation)`];
+                }
+
+                return [y, String(name)];
+              }}
             />
 
-            <Scatter dataKey="scatterY" fill="#43a047" />
+            <Scatter dataKey="scatterY" name="Scatter" fill="#e70497" />
 
             {equation.trim() ? (
               <Line
                 type="monotone"
                 dataKey="equationY"
-                stroke="red"
-                strokeWidth={2}
+                name="Equation"
+                stroke="#75c406"
+                strokeWidth={3}
                 dot={false}
                 connectNulls={false}
                 isAnimationActive={false}
