@@ -8,7 +8,7 @@ import {
   QUESTION_PLACEHOLDER,
   QUESTION_PARTS,
   PLOT_DATA_SRC,
-} from "@/lib/scenarios/1/question-schema";
+} from "@/lib/scenarios/2/question-schema";
 
 export default function AuthorQuestionPage() {
   const params = useParams();

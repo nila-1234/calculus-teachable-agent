@@ -131,9 +131,29 @@ export default function AuthorQuestionPanel({
     if (!selectedChoice) return "";
 
     return selectedChoice.text
+      // remove \( ... \)
       .replace(/^\\\(/, "")
       .replace(/\\\)$/, "")
+
+      // convert leading f(x)= to y=
       .replace(/^f\(x\)\s*=\s*/, "y=")
+
+      // convert \sin to sin
+      .replace(/\\sin/g, "sin")
+
+      // convert x^{3} -> x^3
+      .replace(/\^\{(\d+)\}/g, "^$1")
+
+      // convert e^{...} -> exp(...)
+      .replace(/e\^\{([^}]+)\}/g, "exp($1)")
+
+      // convert implicit multiplication: 2x -> 2*x
+      .replace(/(\d)(x)/g, "$1*$2")
+
+      // convert implicit multiplication: 2sin(...) -> 2*sin(...)
+      .replace(/(\d)(sin\()/g, "$1*$2")
+
+      // remove spaces
       .replace(/\s+/g, "");
   }, [parts, selectedParts]);
 
