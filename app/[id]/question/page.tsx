@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import {
   SCENARIO_PLACEHOLDER,
   QUESTION_PLACEHOLDER,
   QUESTION_PARTS,
   PLOT_DATA_SRC,
-} from "@/lib/question-schema";
+} from "@/lib/scenarios/1/question-schema";
 
 export default function AuthorQuestionPage() {
+  const params = useParams();
   const router = useRouter();
 
   const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
@@ -87,7 +88,7 @@ export default function AuthorQuestionPage() {
       isFullyCorrect ? "true" : "false"
     );
 
-    router.push("/create-rubric");
+    router.push(`/${params.id}/create-rubric`);
   };
 
   return (

@@ -5,8 +5,7 @@ import ApplyRubricPanel, {
   AnswerReviewState,
   RubricCriterion,
 } from "@/components/apply-rubric-panel";
-import { RUBRIC_OPTIONS } from "@/lib/question-schema";
-import { APPLY_RUBRIC_ANSWERS } from "@/lib/apply-rubric-schema";
+import { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } from "@/lib/scenarios/1/question-schema";
 
 export default function ApplyRubricPage() {
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
@@ -30,7 +29,7 @@ export default function ApplyRubricPage() {
     setRubric(selectedRubric);
 
     const initialReviewStates = Object.fromEntries(
-      APPLY_RUBRIC_ANSWERS.map((answer) => [
+      FINAL_AI_ANSWERS.map((answer) => [
         answer.id,
         {
           results: Object.fromEntries(
@@ -64,7 +63,7 @@ export default function ApplyRubricPage() {
 
   const handleSubmitAnswer = async (answerId: string) => {
     const review = reviewStates[answerId];
-    const answer = APPLY_RUBRIC_ANSWERS.find((item) => item.id === answerId);
+    const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
 
     if (!review || !answer) return;
 
@@ -125,7 +124,7 @@ export default function ApplyRubricPage() {
       <div className="h-full min-h-0">
         <ApplyRubricPanel
           rubric={rubric}
-          answers={APPLY_RUBRIC_ANSWERS}
+          answers={FINAL_AI_ANSWERS}
           reviewStates={reviewStates}
           loadingAnswerId={loadingAnswerId}
           onToggleResult={handleToggleResult}

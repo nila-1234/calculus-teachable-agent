@@ -2,7 +2,7 @@ export const SCENARIO_PLACEHOLDER = `A company is reviewing its daily profit ove
 
 export const QUESTION_PLACEHOLDER = `Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.`;
 
-export const PLOT_DATA_SRC = `/data/plot-data.json`
+export const PLOT_DATA_SRC = `/data/scenarios/1/plot-data.json`
 
 export type Choice = {
   id: string;
@@ -218,27 +218,27 @@ So the highest profit happens around day 263.`,
 } as const;
 
 export const FINAL_AI_ANSWERS = [
-  {
-    id: "answer-100",
-    label: "AI Answer (100%)",
-    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
+//   {
+//     id: "answer-100",
+//     title: "AI Answer 1",
+//     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-\\(0.15x^2 - 4x + 15 = 0\\)
+// \\(0.15x^2 - 4x + 15 = 0\\)
 
-\\(3x^2 - 80x + 300 = 0\\)
+// \\(3x^2 - 80x + 300 = 0\\)
 
-\\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)
+// \\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)
 
-\\(x \\approx 4.5, 22.2\\)
+// \\(x \\approx 4.5, 22.2\\)
 
-Both are critical points. From the graph, the earlier one corresponds to the highest profit.
+// Both are critical points. From the graph, the earlier one corresponds to the highest profit.
 
-So the company should focus on around day 4-5.`,
-  },
+// So the company should focus on around day 4-5.`,
+//   },
 
   {
     id: "answer-50",
-    label: "AI Answer (50%)",
+    title: "AI Answer 2",
     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
 \\(0.15x^2 - 4x + 15 = 0\\)
@@ -252,7 +252,7 @@ So the critical point is around x = 4.51, which is where profit is highest.`,
 
   {
     id: "answer-25",
-    label: "AI Answer (25%)",
+    title: "AI Answer 3",
     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
 \\(0.15x^2 - 4x + 15 = 0\\)
@@ -264,17 +264,17 @@ Since 22.16 is larger, that should be the maximum profit day.
 So the company should focus on day 22.`,
   },
 
-  {
-    id: "answer-0",
-    label: "AI Answer (0%)",
-    text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
+//   {
+//     id: "answer-0",
+//     title: "AI Answer (0%)",
+//     text: `\\(f'(x) = 0.15x^2 - 4x + 15\\)
 
-\\(0.15x^2 - 4x + 15 = 0\\)
+// \\(0.15x^2 - 4x + 15 = 0\\)
 
-\\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)
+// \\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)
 
-\\(x \\approx 3.81, 262.86\\)
+// \\(x \\approx 3.81, 262.86\\)
 
-So the highest profit happens around day 263.`,
-  },
+// So the highest profit happens around day 263.`,
+//   },
 ] as const;

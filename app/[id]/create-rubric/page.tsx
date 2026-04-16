@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import CreateRubricPanel from "@/components/create-rubric-panel";
-import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/question-schema";
+import { RUBRIC_OPTIONS, SAMPLE_ANSWERS } from "@/lib/scenarios/1/question-schema";
 
 export default function CreateRubricPage() {
   const router = useRouter();
@@ -11,6 +11,8 @@ export default function CreateRubricPage() {
   const [selectedRubricIds, setSelectedRubricIds] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
+
+  const params = useParams();
 
   useEffect(() => {
     setQuestion(
@@ -29,7 +31,8 @@ export default function CreateRubricPage() {
       "selectedRubricIds",
       JSON.stringify(selectedRubricIds)
     );
-    router.push("/apply-rubric");
+    
+    router.push(`/${params.id}/apply-rubric`);
   };
 
   const handleSubmit = () => {
