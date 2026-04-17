@@ -25,7 +25,9 @@ type CreateRubricPanelProps = {
   selectedRubricIds: string[];
   submitted: boolean;
   feedback: string;
+  isPerfect: boolean;
   onToggleRubric: (id: string) => void;
+  onTryAgain: () => void;
   onContinue: () => void;
   onSubmit: () => void;
 };
@@ -41,6 +43,8 @@ export default function CreateRubricPanel({
   onSubmit,
   feedback,
   submitted,
+  isPerfect,
+  onTryAgain,
 }: CreateRubricPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
@@ -163,7 +167,7 @@ export default function CreateRubricPanel({
           </Card>
 
           {/* Feedback */}
-          {submitted ? (
+          {/* {submitted ? (
             <Card size="2" ref={feedbackRef}>
               <Flex direction="column" gap="3">
                 <Heading size="4">Rubric Feedback</Heading>
@@ -181,6 +185,31 @@ export default function CreateRubricPanel({
                     Continue
                     <ArrowRightIcon />
                   </Button>
+                </Flex>
+              </Flex>
+            </Card>
+          ) : null} */}
+          {/* Feedback */}
+          {submitted ? (
+            <Card size="2" ref={feedbackRef}>
+              <Flex direction="column" gap="3">
+                <Heading size="4">Rubric Feedback</Heading>
+
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  {feedback}
+                </Text>
+
+                <Flex justify="center" gap="3">
+                  {isPerfect ? (
+                    <Button onClick={onContinue} color="lime">
+                      Continue
+                      <ArrowRightIcon />
+                    </Button>
+                  ) : (
+                    <Button onClick={onTryAgain} variant="soft" color="gray">
+                      Try Again
+                    </Button>
+                  )}
                 </Flex>
               </Flex>
             </Card>

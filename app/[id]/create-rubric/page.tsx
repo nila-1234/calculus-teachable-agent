@@ -23,6 +23,7 @@ export default function CreateRubricPage() {
   const [selectedRubricIds, setSelectedRubricIds] = useState<string[]>([]);
   const [submitted, setSubmitted] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [isPerfect, setIsPerfect] = useState(false);
 
   useEffect(() => {
     setQuestion(
@@ -45,6 +46,12 @@ export default function CreateRubricPage() {
     router.push(`/${scenarioId}/apply-rubric`);
   };
 
+  const handleTryAgain = () => {
+    setSubmitted(false);
+    setFeedback("");
+    setIsPerfect(false);
+  };
+
   // const handleSubmit = () => {
   //   setFeedback("Placeholder feedback");
   //   setSubmitted(true);
@@ -62,6 +69,9 @@ export default function CreateRubricPage() {
     const allCorrectOptions = RUBRIC_OPTIONS.filter((o) => o.correct);
 
     const parts: string[] = [];
+    const isPerfectSelection =
+      incorrectSelections.length === 0 &&
+      correctSelections.length === allCorrectOptions.length;
 
     if (
       incorrectSelections.length === 0 &&
@@ -94,6 +104,7 @@ export default function CreateRubricPage() {
       );
     }
 
+    setIsPerfect(isPerfectSelection);
     setFeedback(parts.join("\n\n"));
     setSubmitted(true);
   };
@@ -114,7 +125,9 @@ export default function CreateRubricPage() {
           onContinue={handleContinue}
           onSubmit={handleSubmit}
           feedback={feedback}
+          onTryAgain={handleTryAgain}
           submitted={submitted}
+          isPerfect={isPerfect}
         />
       </div>
     </main>
