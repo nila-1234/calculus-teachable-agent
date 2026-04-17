@@ -54,6 +54,12 @@ export default function CreateRubricPanel({
       <Flex direction="column" gap="5" className="h-full">
         <Heading size="6">Create Rubric</Heading>
 
+        <Text size="3" color="gray">
+          In this step, you will create a grading rubric by selecting the criteria that define a strong solution.
+          Focus on what must be correct for the answer to be considered complete and accurate.
+          You will use this rubric in the next phase to evaluate the AI students' responses.
+        </Text>
+
         <div className="flex-1 space-y-5 overflow-y-auto">
           {/* Question */}
           <Card size="2">
@@ -64,6 +70,13 @@ export default function CreateRubricPanel({
               </Text>
             </Flex>
           </Card>
+
+          <div className="mb-4">
+            <Text size="2" color="gray">
+              Compare the sample answers to understand what a correct solution includes and what is missing in an incorrect one.
+              Use this comparison to choose rubric criteria that clearly separate strong and weak responses.
+            </Text>
+          </div>
 
           {/* Sample Answers */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -90,6 +103,12 @@ export default function CreateRubricPanel({
           <Card size="2">
             <Flex direction="column" gap="4">
               <Heading size="4">Select Rubric Criteria</Heading>
+
+              <Text size="2" color="gray">
+                Select the criteria that should be used to evaluate a student's solution.
+                Choose only those that are essential for correctly identifying critical numbers and interpreting the result.
+                Avoid selecting criteria that are helpful but not required.
+              </Text>
 
               <div className="overflow-hidden rounded-2xl border border-gray-200">
                 <table className="w-full border-collapse">
@@ -137,11 +156,7 @@ export default function CreateRubricPanel({
                 </table>
               </div>
 
-              <Flex align="center" justify="between">
-                <Text size="2" color="gray">
-                  Select criteria that define a strong solution.
-                </Text>
-
+              <Flex align="center" justify="center">
                 <Button
                   onClick={onSubmit}
                   disabled={selectedRubricIds.length === 0 || submitted}

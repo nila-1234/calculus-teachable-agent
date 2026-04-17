@@ -200,8 +200,12 @@ export default function AuthorQuestionPanel({
           </Card>
 
           <Card size="2">
-            <Flex direction="column" gap="5">
+            <Flex direction="column" gap="4">
               <Heading size="4">Question</Heading>
+
+              <Text size="2" color="gray">
+                Complete the statement by selecting the correct option for each blank.
+              </Text>
 
               <Text size="3" className="whitespace-pre-wrap leading-7">
                 {question}

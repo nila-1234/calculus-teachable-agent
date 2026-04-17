@@ -83,6 +83,11 @@ export default function ApplyRubricPanel({
           </Text>
         </Flex>
 
+        <Text size="3" color="gray">
+          In this step, you will apply your rubric to evaluate AI-generated answers.
+          For each criterion, decide whether the answer meets the requirement (Pass) or does not (Fail).
+        </Text>
+
         <div className="flex-1 space-y-5 overflow-y-auto">
           {/* Answer */}
           <Card size="2">
@@ -110,6 +115,11 @@ export default function ApplyRubricPanel({
           <Card size="2">
             <Flex direction="column" gap="4">
               <Heading size="4">Evaluate This Answer</Heading>
+
+              <Text size="2" color="gray">
+                Review the AI answer above and evaluate it against each selected criterion.
+                Mark “Pass” only if the criterion is fully satisfied, and “Fail” if it is missing, incorrect, or incomplete.
+              </Text>
 
               <div className="overflow-hidden rounded-2xl border border-gray-200">
                 <table className="w-full border-collapse">
