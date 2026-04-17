@@ -167,7 +167,7 @@ export default function ApplyRubricPage() {
 
   return (
     <main
-      className="h-screen p-3"
+      className="min-h-screen p-3 overflow-y-auto"
       style={{ backgroundColor: "var(--lime-8)" }}
     >
       <div className="h-full min-h-0">

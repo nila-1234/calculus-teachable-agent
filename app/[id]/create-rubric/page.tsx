@@ -45,8 +45,56 @@ export default function CreateRubricPage() {
     router.push(`/${scenarioId}/apply-rubric`);
   };
 
+  // const handleSubmit = () => {
+  //   setFeedback("Placeholder feedback");
+  //   setSubmitted(true);
+  // };
+
   const handleSubmit = () => {
-    setFeedback("Placeholder feedback");
+    const selectedOptions = RUBRIC_OPTIONS.filter((option) =>
+      selectedRubricIds.includes(option.id)
+    );
+
+    if (selectedOptions.length === 0) return;
+
+    const correctSelections = selectedOptions.filter((o) => o.correct);
+    const incorrectSelections = selectedOptions.filter((o) => !o.correct);
+    const allCorrectOptions = RUBRIC_OPTIONS.filter((o) => o.correct);
+
+    const parts: string[] = [];
+
+    if (
+      incorrectSelections.length === 0 &&
+      correctSelections.length === allCorrectOptions.length
+    ) {
+      parts.push(
+        "Perfect. You selected all and only the essential rubric criteria."
+      );
+    } else if (incorrectSelections.length === 0) {
+      parts.push(
+        "Good selection. All chosen criteria are correct, but some essential ones are missing."
+      );
+    } else {
+      parts.push(
+        "Some selected criteria are not essential and should be reconsidered."
+      );
+    }
+
+    if (correctSelections.length > 0) {
+      parts.push(
+        "Correct criteria:\n" +
+        correctSelections.map((option) => `- ${option.feedback}`).join("\n")
+      );
+    }
+
+    if (incorrectSelections.length > 0) {
+      parts.push(
+        "Incorrect criteria:\n" +
+        incorrectSelections.map((option) => `- ${option.feedback}`).join("\n")
+      );
+    }
+
+    setFeedback(parts.join("\n\n"));
     setSubmitted(true);
   };
 

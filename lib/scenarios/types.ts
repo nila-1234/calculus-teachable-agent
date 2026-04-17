@@ -14,7 +14,8 @@ export type QuestionPart = {
 export type RubricOption = {
   id: string;
   label: string;
-  description: string;
+  correct: boolean;
+  feedback: string;
 };
 
 export type SampleAnswer = {

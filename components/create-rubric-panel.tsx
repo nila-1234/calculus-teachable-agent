@@ -4,12 +4,13 @@ import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
 import { useEffect, useRef } from "react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
+import { RubricOption } from "@/lib/scenarios/types";
 
-export type RubricOption = {
-  id: string;
-  label: string;
-  description: string;
-};
+// export type RubricOption = {
+//   id: string;
+//   label: string;
+//   description: string;
+// };
 
 type SampleAnswer = {
   title: string;
@@ -114,14 +115,11 @@ export default function CreateRubricPanel({
                 <table className="w-full border-collapse">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                      <th className="w-24 border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
                         Select
                       </th>
                       <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
                         Criterion
-                      </th>
-                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                        Description
                       </th>
                     </tr>
                   </thead>
@@ -144,10 +142,6 @@ export default function CreateRubricPanel({
 
                           <td className="border-b border-gray-200 px-4 py-3 align-top text-sm font-medium text-slate-900">
                             <MathDisplay text={option.label} />
-                          </td>
-
-                          <td className="border-b border-gray-200 px-4 py-3 align-top text-sm text-slate-700">
-                            <MathDisplay text={option.description} />
                           </td>
                         </tr>
                       );

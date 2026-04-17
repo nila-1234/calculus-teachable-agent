@@ -85,44 +85,51 @@ export const RUBRIC_OPTIONS = [
   {
     id: "derivative-correct",
     label: "Derivative of the function is computed correctly",
-    description:
+    correct: true,
+    feedback:
       "This is an essential criterion because a correct derivative is required to find critical points accurately.",
   },
   {
     id: "solve-fprime-zero",
     label: "Equation \\(f'(x)=0\\) is solved correctly to find all critical numbers",
-    description:
+    correct: true,
+    feedback:
       "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers.",
   },
   {
     id: "all-critical-points-identified",
     label: "All critical points are correctly identified",
-    description:
+    correct: true,
+    feedback:
       "This is an essential criterion because missing any critical point would lead to an incomplete or incorrect analysis.",
   },
   {
     id: "connects-critical-points-to-context",
     label:
       "Correctly connects the critical points to important changes in the company’s profit during the month",
-    description:
+    correct: true,
+    feedback:
       "This is an essential criterion because the goal is to identify and explain the day of highest profit.",
   },
   {
     id: "whole-number-simplification",
     label: "The equation is simplified into whole-number coefficients before solving",
-    description:
+    correct: false,
+    feedback:
       "This is not required, since simplifying the equation can help but is not necessary for obtaining the correct answer.",
   },
   {
     id: "graph-verification",
     label: "The behavior of the function is verified using a graph or visual inspection",
-    description:
+    correct: false,
+    feedback:
       "This is not required, because visual checking may support the answer but does not determine its correctness.",
   },
   {
     id: "nearby-point-check",
     label: "Values of the derivative are checked at nearby points to confirm the result",
-    description:
+    correct: false,
+    feedback:
       "This is not required, since checking nearby values is optional and not needed to correctly solve the problem.",
   },
 ] as const;
