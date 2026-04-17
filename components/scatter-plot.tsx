@@ -282,20 +282,30 @@ export default function ScatterPlot({
             {showZeroLine ? <ReferenceLine y={0} stroke="#444" /> : null}
 
             <Tooltip
-              labelFormatter={(label) => `${plot.xAxisLabel}: ${label}`}
-              formatter={(value, name) => {
-                const y =
-                  typeof value === "number" ? value.toFixed(2) : String(value);
+              content={({ active, payload }) => {
+                if (!active || !payload || payload.length === 0) return null;
 
-                if (name === "scatterY") {
-                  return [y, `${plot.yAxisLabel} (scatter)`];
-                }
+                const x = payload[0]?.payload?.[plot.xKey];
+                const xText = typeof x === "number" ? x.toFixed(2) : String(x);
 
-                if (name === "equationY") {
-                  return [y, `${plot.yAxisLabel} (equation)`];
-                }
+                const scatterEntry = payload.find((item) => item.dataKey === "scatterY");
+                const equationEntry = payload.find((item) => item.dataKey === "equationY");
 
-                return [y, String(name)];
+                return (
+                  <div className="rounded-md border border-gray-300 bg-white px-3 py-2 shadow-sm">
+                    {scatterEntry?.value != null ? (
+                      <p className="text-pink-600">
+                        Scatterplot: ({xText}, {Number(scatterEntry.value).toFixed(2)})
+                      </p>
+                    ) : null}
+
+                    {equationEntry?.value != null ? (
+                      <p className="text-lime-600">
+                        Equation: ({xText}, {Number(equationEntry.value).toFixed(2)})
+                      </p>
+                    ) : null}
+                  </div>
+                );
               }}
             />
 
