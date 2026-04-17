@@ -179,7 +179,7 @@ So the company’s most important profit change happens before the month even be
 export const FINAL_AI_ANSWERS = [
   {
     id: "answer-50",
-    label: "AI Answer (50%)",
+    label: "AI Student 1",
     text: `\\(f'(x)=-0.03x^2+0.9x-4\\)
 
 \\(-0.03x^2+0.9x-4=0\\)
@@ -196,7 +196,7 @@ The derivative is computed correctly and the equation is set up correctly, but t
   },
   {
     id: "answer-25",
-    label: "AI Answer (25%)",
+    label: "AI Student 2",
     text: `\\(f'(x)=-0.03x^2+0.9x-4\\)
 
 \\(-0.03x^2+0.9x-4=0\\)
