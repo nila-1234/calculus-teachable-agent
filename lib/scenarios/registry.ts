@@ -1,10 +1,22 @@
-import * as schema1 from "./1/question-schema";
-import * as schema2 from "./2/question-schema";
-import type { ScenarioModule } from "./types";
+import schema1Json from "../../public/data/scenarios/1/module.json";
+import schema2Json from "../../public/data/scenarios/2/module.json";
+import type { QuestionSchema, ScenarioModule } from "./types";
+
+function mapJsonToSchema(json: any): QuestionSchema {
+  return {
+    SCENARIO_PLACEHOLDER: json.scenario,
+    QUESTION_PLACEHOLDER: json.question,
+    PLOT_DATA_SRC: json.plotDataSrc,
+    QUESTION_PARTS: json.questionParts,
+    RUBRIC_OPTIONS: json.rubricOptions,
+    SAMPLE_ANSWERS: json.sampleAnswers,
+    FINAL_AI_ANSWERS: json.finalAiAnswers,
+  };
+}
 
 const scenarioRegistry: Record<number, ScenarioModule> = {
-  1: { id: 1, schema: schema1 },
-  2: { id: 2, schema: schema2 },
+  1: { id: 1, schema: mapJsonToSchema(schema1Json) },
+  2: { id: 2, schema: mapJsonToSchema(schema2Json) },
 };
 
 export function getScenario(id: number): ScenarioModule | null {
