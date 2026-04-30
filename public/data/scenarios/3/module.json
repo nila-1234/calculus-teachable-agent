@@ -62,30 +62,6 @@
           "feedback": "Incorrect! Average rate of change compares the inflow rate at two times. It does not calculate the total amount of water entering the reservoir."
         }
       ]
-    },
-    {
-      "id": "3",
-      "label": "Select the conclusion",
-      "options": [
-        {
-          "id": "c1",
-          "text": "will overflow because about 109.33 thousand gallons enter, bringing the total to about 559.33 thousand gallons",
-          "correct": true,
-          "feedback": "Correct! The integral from 0 to 4 is about 109.33 thousand gallons. Adding this to the initial 450 thousand gallons gives about 559.33 thousand gallons, which is greater than the 500 thousand gallon capacity."
-        },
-        {
-          "id": "c2",
-          "text": "will not overflow because only about 32 thousand gallons enter during the first 4 hours",
-          "correct": false,
-          "feedback": "Incorrect! \\(R(4)=32\\) is the inflow rate at hour 4, not the total amount of water that entered during the first 4 hours."
-        },
-        {
-          "id": "c3",
-          "text": "will not overflow because the reservoir reaches exactly 500 thousand gallons",
-          "correct": false,
-          "feedback": "Incorrect! The accumulated water is about 109.33 thousand gallons, so the total amount is about 559.33 thousand gallons, not exactly 500 thousand gallons."
-        }
-      ]
     }
   ],
   "rubricOptions": [
