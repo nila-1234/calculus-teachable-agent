@@ -26,7 +26,9 @@ function parseMath(text: string) {
 
     // Inline math
     if (part.startsWith("\\(") && part.endsWith("\\)")) {
-      const math = part.slice(2, -2);
+      let math = part.slice(2, -2);
+      // Convert x/y to \frac{x}{y}
+      math = math.replace(/(\d+|[xtXT])\/(\d+|[xtXT])/g, "\\frac{$1}{$2}");
       return <InlineMath key={i} math={math} />;
     }
 

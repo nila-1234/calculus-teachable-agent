@@ -9,27 +9,27 @@
       "options": [
         {
           "id": "f1",
-          "text": "\\(R(t)=20+5t-\\frac{1}{2}t^{2}\\)",
+          "text": "\\(R(t)=20+5t-1/2t^2\\)",
           "correct": true,
           "feedback": "Correct! This function matches the reservoir inflow model in the scenario. It starts at 20 thousand gallons per hour, increases during the early storm, and then bends downward because of the negative quadratic term."
         },
         {
           "id": "f2",
-          "text": "\\(R(t)=20+4t-\\frac{1}{2}t^{2}\\)",
+          "text": "\\(R(t)=20+4t-1/2t^2\\)",
           "correct": false,
           "feedback": "Incorrect! This function changes the linear coefficient from 5 to 4, so the inflow rate increases too slowly compared with the model in the scenario."
         },
         {
           "id": "f3",
-          "text": "\\(R(t)=18+5t-\\frac{1}{2}t^{2}\\)",
+          "text": "\\(R(t)=18+5t-1/2t^2\\)",
           "correct": false,
           "feedback": "Incorrect! This function changes the initial inflow rate from 20 to 18 thousand gallons per hour, so it does not match the scenario."
         },
         {
           "id": "f4",
-          "text": "\\(R(t)=20+5t-t^{2}\\)",
+          "text": "\\(R(t)=20+5t-t^2\\)",
           "correct": false,
-          "feedback": "Incorrect! This function changes the quadratic coefficient from \\(-\\frac{1}{2}\\) to \\(-1\\), making the rate bend downward too sharply."
+          "feedback": "Incorrect! This function changes the quadratic coefficient from -0.5 to -1, making the rate bend downward too sharply."
         }
       ]
     },

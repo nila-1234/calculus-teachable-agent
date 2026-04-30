@@ -43,13 +43,14 @@ function normalizeEquation(equation: string) {
   return equation
     .trim()
     .replace(/\s+/g, "")
-    .replace(/^y=/i, "")
+    .replace(/^[a-z]\([xt]\)=/i, "")
+    .replace(/^[a-z]=/i, "")
     .replace(/\^/g, "**")
-    .replace(/(\d)(x)/gi, "$1*$2")
+    .replace(/(\d)([xt])/gi, "$1*$2")
     .replace(/(\d)(sin\()/gi, "$1*$2")
     .replace(/(\d)(exp\()/gi, "$1*$2")
-    .replace(/(\))(x)/gi, "$1*$2")
-    .replace(/(x)(\d)/gi, "$1*$2");
+    .replace(/(\))([xt\d])/gi, "$1*$2")
+    .replace(/([xt])(\d)/gi, "$1*$2");
 }
 
 function buildEquationEvaluator(equation: string) {
@@ -57,20 +58,26 @@ function buildEquationEvaluator(equation: string) {
 
   if (!normalized) return null;
 
-  const isSafe = /^[0-9xX+\-*/().,a-zA-Z*]+$/.test(normalized);
+  const isSafe = /^[0-9xtXT+\-*/().,a-zA-Z*]+$/.test(normalized);
   if (!isSafe) {
-    throw new Error("Equation contains unsupported characters.");
+    const offenders = normalized.match(/[^0-9xtXT+\-*/().,a-zA-Z*]/g);
+    throw new Error(`Equation contains unsupported characters: ${offenders?.join(" ")}`);
   }
 
   const allowedFunctions = ["sin", "exp"];
   const identifiers = normalized.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? [];
 
   const invalidIdentifiers = identifiers.filter(
-    (name) => name !== "x" && name !== "X" && !allowedFunctions.includes(name)
+    (name) =>
+      name !== "x" &&
+      name !== "X" &&
+      name !== "t" &&
+      name !== "T" &&
+      !allowedFunctions.includes(name)
   );
 
   if (invalidIdentifiers.length > 0) {
-    throw new Error("Equation contains unsupported functions.");
+    throw new Error(`Equation contains unsupported functions or variables: ${invalidIdentifiers.join(", ")}`);
   }
 
   try {
@@ -78,16 +85,21 @@ function buildEquationEvaluator(equation: string) {
       .replace(/\bsin\(/g, "Math.sin(")
       .replace(/\bexp\(/g, "Math.exp(");
 
-    const fn = new Function("x", `return ${jsExpression};`) as (
-      x: number
+    const fn = new Function("x", "t", `return ${jsExpression};`) as (
+      x: number,
+      t: number
     ) => number;
 
-    return (x: number) => {
-      const y = fn(x);
-      if (typeof y !== "number" || Number.isNaN(y) || !Number.isFinite(y)) {
+    return (val: number) => {
+      try {
+        const y = fn(val, val);
+        if (typeof y !== "number" || Number.isNaN(y) || !Number.isFinite(y)) {
+          return null;
+        }
+        return y;
+      } catch {
         return null;
       }
-      return y;
     };
   } catch {
     throw new Error("Invalid equation format.");
