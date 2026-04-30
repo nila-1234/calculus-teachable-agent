@@ -1,6 +1,6 @@
 {
-  "scenario": "A company is reviewing its daily profit over the past month to better understand an unusual change in performance. Over the past year, the company’s profit has generally been declining, but during this month it went down at first, then rose sharply, and later began to decrease again. The company recently made a change in its marketing strategy, which may have contributed to this fluctuation. The company wants to choose a function that best models this month’s data. The goal is to identify the most important features of this month’s profit pattern so the company can decide which parts of the month deserve closer investigation.",
-  "question": "Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.",
+  "scenario": "A company is reviewing its daily profit over the past month to better understand an unusual change in performance. Over the past year, the company’s profit has generally been declining, but during this month it started going up, but later began to decrease again. The company recently made a change in its marketing strategy, which may have contributed to this fluctuation. The company wants to choose a function that best models this month’s data. The goal is to identify the most important features of this month’s profit pattern so the company can decide which parts of the month deserve closer investigation.",
+  "question": "Use the function __(1)__ to model the company’s profit. Analyse the company’s situation by finding its __(2)__.",
   "plotDataSrc": "/data/scenarios/2/plot-data.json",
   "questionParts": [
     {
@@ -23,7 +23,7 @@
           "id": "f3",
           "text": "\\(f(x)=18\\sin(0.16x-2.4)+88\\)",
           "correct": false,
-          "feedback": "Incorrect! This graph may look similar to the data over part of the month because it rises and falls in a comparable way, but a sine function represents a repeating periodic pattern. That means it suggests the company’s profit would continue to move up and down in regular cycles. In this scenario, the fluctuation is connected to a recent strategy change, so a repeating sinusoidal model is less appropriate than a cubic model. The shape may look convincing locally, but the function type does not fit the situation as well."
+          "feedback": "Incorrect! This graph may look similar to the data over the month because it rises and falls in a comparable way, but a sine function represents a repeating periodic pattern. That means it suggests the company’s profit would continue to move up and down in regular cycles. In this scenario, the fluctuation is connected to a recent strategy change, so a repeating sinusoidal model is less appropriate than a cubic model. The shape may look convincing locally, but the function type does not fit the situation as well."
         },
         {
           "id": "f4",
