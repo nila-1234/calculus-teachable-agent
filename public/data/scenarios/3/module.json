@@ -1,0 +1,157 @@
+{
+  "scenario": "During a heavy rainstorm, water flows into a city reservoir. The rate of water flow into the reservoir is modeled in thousands of gallons per hour, where t is the number of hours since the storm began. The reservoir has a maximum capacity of 500 thousand gallons, and at the start of the storm, it already contains 450 thousand gallons. The city engineers need to determine whether the reservoir will overflow during the first 4 hours of the storm.",
+  "question": "Use the function __(1)__ to model the reservoir inflow rate. To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__ and conclude that the reservoir __(3)__.",
+  "plotDataSrc": "/data/scenarios/3/plot-data.json",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Select the function",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(R(t)=20+5t-\\frac{1}{2}t^{2}\\)",
+          "correct": true,
+          "feedback": "Correct! This function matches the reservoir inflow model in the scenario. It starts at 20 thousand gallons per hour, increases during the early storm, and then bends downward because of the negative quadratic term."
+        },
+        {
+          "id": "f2",
+          "text": "\\(R(t)=20+4t-\\frac{1}{2}t^{2}\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function changes the linear coefficient from 5 to 4, so the inflow rate increases too slowly compared with the model in the scenario."
+        },
+        {
+          "id": "f3",
+          "text": "\\(R(t)=18+5t-\\frac{1}{2}t^{2}\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function changes the initial inflow rate from 20 to 18 thousand gallons per hour, so it does not match the scenario."
+        },
+        {
+          "id": "f4",
+          "text": "\\(R(t)=20+5t-t^{2}\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function changes the quadratic coefficient from \\(-\\frac{1}{2}\\) to \\(-1\\), making the rate bend downward too sharply."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "Select the calculus operation",
+      "options": [
+        {
+          "id": "op1",
+          "text": "integration",
+          "correct": true,
+          "feedback": "Correct! Since \\(R(t)\\) is a rate of water flow, integration over \\([0,4]\\) gives the accumulated amount of water that entered the reservoir."
+        },
+        {
+          "id": "op2",
+          "text": "differentiation",
+          "correct": false,
+          "feedback": "Incorrect! Differentiation would describe how the inflow rate itself is changing, which is useful for finding the peak flow rate, but not for finding total accumulated water."
+        },
+        {
+          "id": "op3",
+          "text": "finding an intercept",
+          "correct": false,
+          "feedback": "Incorrect! Intercepts show when a function equals zero. The goal here is to find total water added over time, so an accumulation method is needed."
+        },
+        {
+          "id": "op4",
+          "text": "finding an average rate of change",
+          "correct": false,
+          "feedback": "Incorrect! Average rate of change compares the inflow rate at two times. It does not calculate the total amount of water entering the reservoir."
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "label": "Select the conclusion",
+      "options": [
+        {
+          "id": "c1",
+          "text": "will overflow because about 109.33 thousand gallons enter, bringing the total to about 559.33 thousand gallons",
+          "correct": true,
+          "feedback": "Correct! The integral from 0 to 4 is about 109.33 thousand gallons. Adding this to the initial 450 thousand gallons gives about 559.33 thousand gallons, which is greater than the 500 thousand gallon capacity."
+        },
+        {
+          "id": "c2",
+          "text": "will not overflow because only about 32 thousand gallons enter during the first 4 hours",
+          "correct": false,
+          "feedback": "Incorrect! \\(R(4)=32\\) is the inflow rate at hour 4, not the total amount of water that entered during the first 4 hours."
+        },
+        {
+          "id": "c3",
+          "text": "will not overflow because the reservoir reaches exactly 500 thousand gallons",
+          "correct": false,
+          "feedback": "Incorrect! The accumulated water is about 109.33 thousand gallons, so the total amount is about 559.33 thousand gallons, not exactly 500 thousand gallons."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "identifies-integration",
+      "label": "Correctly identifies integration as the needed operation for accumulated water",
+      "correct": true,
+      "feedback": "This is an essential criterion because the task asks for total water added from a rate over a time interval."
+    },
+    {
+      "id": "sets-integral-bounds",
+      "label": "Sets up the definite integral \\(\\int_{0}^{4} R(t)\\,dt\\) with correct bounds",
+      "correct": true,
+      "feedback": "This is an essential criterion because the accumulated water must be calculated over the first 4 hours of the storm."
+    },
+    {
+      "id": "computes-antiderivative",
+      "label": "Computes the antiderivative of \\(20+5t-\\frac{1}{2}t^2\\) correctly",
+      "correct": true,
+      "feedback": "This is an essential criterion because an incorrect antiderivative leads to an incorrect accumulated amount."
+    },
+    {
+      "id": "calculates-accumulated-water",
+      "label": "Calculates the accumulated water as approximately 109.33 thousand gallons",
+      "correct": true,
+      "feedback": "This is an essential criterion because the numerical accumulation is needed to decide whether the reservoir overflows."
+    },
+    {
+      "id": "compares-to-capacity",
+      "label": "Adds the accumulated water to the initial 450 thousand gallons and compares the result to the 500 thousand gallon capacity",
+      "correct": true,
+      "feedback": "This is an essential criterion because the final decision depends on comparing the total reservoir amount to capacity."
+    },
+    {
+      "id": "finds-peak-rate",
+      "label": "Finds the time when the inflow rate is maximized",
+      "correct": false,
+      "feedback": "This is not required for Goal A. It is relevant to Goal B, but Goal A asks for accumulated water during the first 4 hours."
+    },
+    {
+      "id": "uses-graph-only",
+      "label": "Uses the graph or scatter plot alone to estimate the answer",
+      "correct": false,
+      "feedback": "This is not sufficient because the task asks for a calculus-based calculation of accumulated water, not only a visual estimate."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "Because \\(R(t)\\) is measured in thousands of gallons per hour, I need integration to find the total amount of water that enters during the first 4 hours.\n\n\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)\n\n\\(=\\left[20t+\\frac{5}{2}t^2-\\frac{1}{6}t^3\\right]_{0}^{4}\\)\n\n\\(=80+40-\\frac{64}{6}\\)\n\n\\(\\approx109.33\\)\n\nSo about 109.33 thousand gallons enter the reservoir during the first 4 hours.\n\nThe reservoir started with 450 thousand gallons, so the total is:\n\n\\(450+109.33=559.33\\)\n\nSince \\(559.33>500\\), the reservoir will overflow."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "I need to differentiate because the problem gives a function involving time.\n\n\\(R'(t)=5-t\\)\n\nAt \\(t=4\\):\n\n\\(R'(4)=1\\)\n\nSo 1 thousand gallons entered the reservoir during the first 4 hours.\n\nThe reservoir has \\(450+1=451\\) thousand gallons, so it will not overflow."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "Since \\(R(t)\\) is a rate, I should integrate it from 0 to 4.\n\n\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)\n\n\\(=\\left[20t+5t^2-\\frac{1}{2}t^3\\right]_{0}^{4}\\)\n\n\\(=80+80-32\\)\n\n\\(=128\\)\n\nSo 128 thousand gallons enter the reservoir. Since \\(450+128=578\\), the reservoir will overflow.\n\nThis answer chooses the correct operation and conclusion, but the antiderivative is incorrect, so the accumulated water value is too large."
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "To find the amount of water added, I will use the rate at 4 hours.\n\n\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)\n\nSo 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow.\n\nThis answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water."
+    }
+  ]
+}

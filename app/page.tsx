@@ -24,23 +24,17 @@ export default function HomePage() {
             </Text> */}
 
             <Flex direction="column" gap="3" className="w-full">
-              <Button
-                size="3"
-                color="lime"
-                variant="soft"
-                onClick={() => router.push("/1/question")}
-              >
-                Scenario 1
-              </Button>
-
-              <Button
-                size="3"
-                color="lime"
-                variant="soft"
-                onClick={() => router.push("/2/question")}
-              >
-                Scenario 2
-              </Button>
+              {[1, 2, 3].map((id) => (
+                <Button
+                  key={id}
+                  size="3"
+                  color="lime"
+                  variant="soft"
+                  onClick={() => router.push(`/${id}/question`)}
+                >
+                  Scenario {id}
+                </Button>
+              ))}
             </Flex>
           </Flex>
         </Card>

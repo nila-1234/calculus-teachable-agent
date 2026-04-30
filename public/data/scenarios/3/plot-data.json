@@ -1,0 +1,51 @@
+{
+  "title": "Scatter Plot of Reservoir Inflow Rate",
+  "xAxisLabel": "Hours Since Storm Began",
+  "yAxisLabel": "Inflow Rate (thousands of gallons per hour)",
+  "data": [
+    {
+      "hour": 0,
+      "rate": 20.0
+    },
+    {
+      "hour": 1,
+      "rate": 24.5
+    },
+    {
+      "hour": 2,
+      "rate": 28.0
+    },
+    {
+      "hour": 3,
+      "rate": 30.5
+    },
+    {
+      "hour": 4,
+      "rate": 32.0
+    },
+    {
+      "hour": 5,
+      "rate": 32.5
+    },
+    {
+      "hour": 6,
+      "rate": 32.0
+    },
+    {
+      "hour": 7,
+      "rate": 30.5
+    },
+    {
+      "hour": 8,
+      "rate": 28.0
+    },
+    {
+      "hour": 9,
+      "rate": 24.5
+    },
+    {
+      "hour": 10,
+      "rate": 20.0
+    }
+  ]
+}
