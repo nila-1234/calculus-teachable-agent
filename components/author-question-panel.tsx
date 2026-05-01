@@ -8,6 +8,7 @@ import {
   Heading,
   RadioCards,
   Text,
+  TextArea,
 } from "@radix-ui/themes";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
@@ -32,9 +33,11 @@ type AuthorQuestionPanelProps = {
   scatterPlotSrc: string;
   parts: readonly QuestionPart[];
   selectedParts: Record<string, string>;
+  explanations: Record<string, string>;
   submitted: boolean;
   isCorrectSelection: boolean;
   onSelectPart: (partId: string, choiceId: string) => void;
+  onExplanationChange: (partId: string, value: string) => void;
   onSubmit: () => void;
   onContinue: () => void;
   onTryAgain: () => void;
@@ -45,55 +48,127 @@ type OptionCardsProps = {
   options: readonly Choice[];
   selectedValue: string;
   submitted: boolean;
+  explanation: string;
   onChange: (id: string) => void;
+  onExplanationChange: (value: string) => void;
 };
+
+// function OptionCards({
+//   title,
+//   options,
+//   selectedValue,
+//   submitted,
+//   onChange,
+//   onExplanationChange
+// }: OptionCardsProps) {
+//   return (
+//     <Flex direction="column" gap="3">
+//       <Heading size="3">{title}</Heading>
+
+//       <RadioCards.Root
+//         value={selectedValue}
+//         onValueChange={onChange}
+//         columns="1"
+//         className="w-full"
+//       >
+//         {options.map((choice, index) => {
+//           const isSelected = selectedValue === choice.id;
+//           const badge = String(index + 1);
+
+//           return (
+//             <RadioCards.Item
+//               key={choice.id}
+//               value={choice.id}
+//               disabled={submitted}
+//               className="w-full [&_[data-state]]:hidden"
+//             >
+//               <Flex align="start" gap="3" className="w-full text-left">
+//                 <div
+//                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
+//                     ? "border-lime-500 bg-lime-500 text-white"
+//                     : "border-gray-300 text-gray-600"
+//                     }`}
+//                 >
+//                   {badge}
+//                 </div>
+
+//                 <div className="min-w-0 flex-1">
+//                   <MathDisplay text={choice.text} />
+//                 </div>
+//               </Flex>
+//             </RadioCards.Item>
+//           );
+//         })}
+//       </RadioCards.Root>
+//     </Flex>
+//   );
+// }
 
 function OptionCards({
   title,
   options,
   selectedValue,
+  explanation,
   submitted,
   onChange,
+  onExplanationChange,
 }: OptionCardsProps) {
   return (
     <Flex direction="column" gap="3">
       <Heading size="3">{title}</Heading>
 
-      <RadioCards.Root
-        value={selectedValue}
-        onValueChange={onChange}
-        columns="1"
-        className="w-full"
-      >
-        {options.map((choice, index) => {
-          const isSelected = selectedValue === choice.id;
-          const badge = String(index + 1);
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+        <RadioCards.Root
+          value={selectedValue}
+          onValueChange={onChange}
+          columns="1"
+          className="w-full"
+        >
+          {options.map((choice, index) => {
+            const isSelected = selectedValue === choice.id;
+            const badge = String(index + 1);
 
-          return (
-            <RadioCards.Item
-              key={choice.id}
-              value={choice.id}
-              disabled={submitted}
-              className="w-full [&_[data-state]]:hidden"
-            >
-              <Flex align="start" gap="3" className="w-full text-left">
-                <div
-                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
-                    ? "border-lime-500 bg-lime-500 text-white"
-                    : "border-gray-300 text-gray-600"
-                    }`}
-                >
-                  {badge}
-                </div>
+            return (
+              <RadioCards.Item
+                key={choice.id}
+                value={choice.id}
+                disabled={submitted}
+                className="w-full [&_[data-state]]:hidden"
+              >
+                <Flex align="start" gap="3" className="w-full text-left">
+                  <div
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
+                        ? "border-lime-500 bg-lime-500 text-white"
+                        : "border-gray-300 text-gray-600"
+                      }`}
+                  >
+                    {badge}
+                  </div>
 
-                <div className="min-w-0 flex-1">
-                  <MathDisplay text={choice.text} />
-                </div>
-              </Flex>
-            </RadioCards.Item>
-          );
-        })}
-      </RadioCards.Root>
+                  <div className="min-w-0 flex-1">
+                    <MathDisplay text={choice.text} />
+                  </div>
+                </Flex>
+              </RadioCards.Item>
+            );
+          })}
+        </RadioCards.Root>
+
+        <div className="rounded-xl border-2 border-lime-400 bg-lime-50/50 p-3">
+          <Text as="div" size="2" weight="medium" className="mb-2 pb-2">
+            Explain your selection
+          </Text>
+
+          <TextArea
+            value={explanation}
+            onChange={(e) => onExplanationChange(e.target.value)}
+            disabled={submitted}
+            placeholder="Why did you choose this option?"
+            rows={7}
+            className="w-full border-1 border-gray-300"
+          />
+        </div>
+      </div>
     </Flex>
   );
 }
@@ -110,6 +185,8 @@ export default function AuthorQuestionPanel({
   onSubmit,
   onContinue,
   onTryAgain,
+  explanations,
+  onExplanationChange,
 }: AuthorQuestionPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
@@ -217,8 +294,10 @@ export default function AuthorQuestionPanel({
                   title={`(${part.id})`}
                   options={part.options}
                   selectedValue={selectedParts[part.id] || ""}
+                  explanation={explanations[part.id] || ""}
                   submitted={submitted}
                   onChange={(choiceId) => onSelectPart(part.id, choiceId)}
+                  onExplanationChange={(value) => onExplanationChange(part.id, value)}
                 />
               ))}
 

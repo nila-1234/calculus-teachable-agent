@@ -35,6 +35,14 @@ export default function AuthorQuestionPage() {
   }, [QUESTION_PARTS, selectedParts]);
 
   const allAnswered = QUESTION_PARTS.every((part) => selectedParts[part.id]);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
+
+  const handleExplanationChange = (partId: string, value: string) => {
+    setExplanations((prev) => ({
+      ...prev,
+      [partId]: value,
+    }));
+  };
 
   const isFullyCorrect =
     allAnswered && selectedChoices.every((choice) => choice?.correct);
@@ -113,7 +121,10 @@ export default function AuthorQuestionPage() {
         onTryAgain={() => {
           setSubmitted(false);
           setSelectedParts({});
+          setExplanations({});
         }}
+        explanations={explanations}
+        onExplanationChange={handleExplanationChange}
       />
     </main>
   );
