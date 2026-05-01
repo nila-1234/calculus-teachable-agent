@@ -54,6 +54,62 @@ export default function CreateRubricPanel({
     }
   }, [submitted]);
 
+  function formatFeedback(text: string) {
+    const lines = text.split("\n").map((l) => l.trim());
+
+    const blocks: React.ReactNode[] = [];
+    let listItems: string[] = [];
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        blocks.push(
+          <ul key={blocks.length} className="list-disc pl-5 space-y-1">
+            {listItems.map((item, i) => (
+              <li key={i} className="text-slate-800">
+                {item}
+              </li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+    };
+
+    lines.forEach((line) => {
+      if (!line) return;
+
+      // bullet line
+      if (line.startsWith("- ")) {
+        listItems.push(line.replace("- ", ""));
+        return;
+      }
+
+      // flush any existing list before adding new block
+      flushList();
+
+      // section header
+      if (line.endsWith(":")) {
+        blocks.push(
+          <p key={blocks.length} className="font-semibold text-slate-900 mt-3">
+            {line}
+          </p>
+        );
+        return;
+      }
+
+      // normal paragraph
+      blocks.push(
+        <p key={blocks.length} className="text-slate-800">
+          {line}
+        </p>
+      );
+    });
+
+    flushList();
+
+    return blocks;
+  }
+
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
@@ -105,7 +161,7 @@ export default function CreateRubricPanel({
           </div>
 
           {/* Rubric Selection */}
-          <Card size="2">
+          {/* <Card size="2">
             <Flex direction="column" gap="4">
               <Heading size="4">Select Rubric Criteria</Heading>
 
@@ -164,31 +220,120 @@ export default function CreateRubricPanel({
                 </Button>
               </Flex>
             </Flex>
+          </Card> */}
+
+          {/* Rubric Selection */}
+          <Card size="2">
+            <Flex direction="column" gap="4">
+              <Heading size="4">Select Rubric Criteria</Heading>
+
+              <Text size="2" color="gray">
+                Drag each criterion into the category where it belongs. Include only the
+                criteria that are essential for evaluating the student's solution.
+              </Text>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {[
+                  {
+                    title: "Include Criteria",
+                    description: "Essential criteria for a correct solution.",
+                    ids: selectedRubricIds,
+                    empty: "Drag required criteria here.",
+                    variant: "include",
+                  },
+                  {
+                    title: "Exclude Criteria",
+                    description: "Incorrect or unnecessary criteria.",
+                    ids: rubricOptions
+                      .map((option) => option.id)
+                      .filter((id) => !selectedRubricIds.includes(id)),
+                    empty: "Drag excluded criteria here.",
+                    variant: "exclude",
+                  },
+                ].map((column) => (
+                  <div
+                    key={column.variant}
+                    onDragOver={(event) => {
+                      if (!submitted) event.preventDefault();
+                    }}
+                    onDrop={(event) => {
+                      if (submitted) return;
+
+                      const id = event.dataTransfer.getData("text/plain");
+                      const isSelected = selectedRubricIds.includes(id);
+
+                      if (column.variant === "include" && !isSelected) {
+                        onToggleRubric(id);
+                      }
+
+                      if (column.variant === "exclude" && isSelected) {
+                        onToggleRubric(id);
+                      }
+                    }}
+                    className={`min-h-72 rounded-2xl border-2 border p-4 ${column.variant === "include"
+                        ? "border-2 border-lime-300 bg-lime-50/70"
+                        : "border-2 border-gray-300 bg-gray-50/70"
+                      }`}
+                  >
+                    <Flex direction="column" gap="3">
+                      <div>
+                        <Heading size="3">{column.title}</Heading>
+                        <Text size="2" color="gray">
+                          {column.description}
+                        </Text>
+                      </div>
+
+                      {column.ids.length === 0 ? (
+                        <div className="flex min-h-40 items-center justify-center rounded-xl border border-gray-300 bg-white/70 px-4 py-8 text-center">
+                          <Text size="2" color="gray">
+                            {column.empty}
+                          </Text>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {column.ids.map((id) => {
+                            const option = rubricOptions.find((item) => item.id === id);
+                            if (!option) return null;
+
+                            return (
+                              <div
+                                key={option.id}
+                                draggable={!submitted}
+                                onDragStart={(event) => {
+                                  event.dataTransfer.setData("text/plain", option.id);
+                                  event.dataTransfer.effectAllowed = "move";
+                                }}
+                                className={`cursor-grab rounded-xl border-2 border-gray-300 bg-white p-3 text-sm transition active:cursor-grabbing ${submitted
+                                    ? "cursor-not-allowed opacity-70"
+                                    : "hover:border-lime-300 hover:shadow-md"
+                                  }`}
+                              >
+                                <div className="font-medium text-slate-900">
+                                  <MathDisplay text={option.label} />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </Flex>
+                  </div>
+                ))}
+              </div>
+
+              <Flex align="center" justify="center">
+                <Button
+                  onClick={onSubmit}
+                  disabled={selectedRubricIds.length === 0 || submitted}
+                  color="lime"
+                >
+                  {submitted ? "Submitted" : "Submit"}
+                </Button>
+              </Flex>
+            </Flex>
           </Card>
 
-          {/* Feedback */}
-          {/* {submitted ? (
-            <Card size="2" ref={feedbackRef}>
-              <Flex direction="column" gap="3">
-                <Heading size="4">Rubric Feedback</Heading>
 
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {feedback}
-                </Text>
-
-                <Flex justify="center">
-                  <Button
-                    onClick={onContinue}
-                    disabled={selectedRubricIds.length === 0}
-                    color="lime"
-                  >
-                    Continue
-                    <ArrowRightIcon />
-                  </Button>
-                </Flex>
-              </Flex>
-            </Card>
-          ) : null} */}
           {/* Feedback */}
           {submitted ? (
             <Card size="2" ref={feedbackRef}>
@@ -196,7 +341,7 @@ export default function CreateRubricPanel({
                 <Heading size="4">Rubric Feedback</Heading>
 
                 <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {feedback}
+                  {formatFeedback(feedback)}
                 </Text>
 
                 <Flex justify="center" gap="3">
