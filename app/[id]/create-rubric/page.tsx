@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import CreateRubricPanel from "@/components/create-rubric-panel";
+import CreateRubricPanel, {
+  RubricDecision,
+} from "@/components/create-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 
@@ -20,9 +22,10 @@ export default function CreateRubricPage() {
   const { RUBRIC_OPTIONS, SAMPLE_ANSWERS } = scenario.schema;
 
   const [question, setQuestion] = useState("");
-  const [selectedRubricIds, setSelectedRubricIds] = useState<string[]>([]);
+  const [rubricDecisions, setRubricDecisions] = useState<
+    Record<string, RubricDecision>
+  >({});
   const [submitted, setSubmitted] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const [isPerfect, setIsPerfect] = useState(false);
 
   useEffect(() => {
@@ -32,10 +35,24 @@ export default function CreateRubricPage() {
     );
   }, [scenarioId]);
 
-  const handleToggleRubric = (id: string) => {
-    setSelectedRubricIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+  const selectedRubricIds = useMemo(
+    () =>
+      RUBRIC_OPTIONS.filter((option) => rubricDecisions[option.id] === "include")
+        .map((option) => option.id),
+    [RUBRIC_OPTIONS, rubricDecisions]
+  );
+
+  const allCriteriaDecided = RUBRIC_OPTIONS.every(
+    (option) => rubricDecisions[option.id]
+  );
+
+  const handleSetRubricDecision = (id: string, decision: RubricDecision) => {
+    if (submitted) return;
+
+    setRubricDecisions((prev) => ({
+      ...prev,
+      [id]: decision,
+    }));
   };
 
   const handleContinue = () => {
@@ -43,69 +60,31 @@ export default function CreateRubricPage() {
       `scenario:${scenarioId}:selectedRubricIds`,
       JSON.stringify(selectedRubricIds)
     );
+
     router.push(`/${scenarioId}/apply-rubric`);
   };
 
   const handleTryAgain = () => {
     setSubmitted(false);
-    setFeedback("");
     setIsPerfect(false);
   };
 
-  // const handleSubmit = () => {
-  //   setFeedback("Placeholder feedback");
-  //   setSubmitted(true);
-  // };
-
   const handleSubmit = () => {
-    const selectedOptions = RUBRIC_OPTIONS.filter((option) =>
-      selectedRubricIds.includes(option.id)
+    if (!allCriteriaDecided) return;
+
+    const includedOptions = RUBRIC_OPTIONS.filter(
+      (option) => rubricDecisions[option.id] === "include"
     );
 
-    if (selectedOptions.length === 0) return;
+    const wronglyIncluded = includedOptions.filter((option) => !option.correct);
+    const missedEssential = RUBRIC_OPTIONS.filter(
+      (option) => option.correct && rubricDecisions[option.id] === "exclude"
+    );
 
-    const correctSelections = selectedOptions.filter((o) => o.correct);
-    const incorrectSelections = selectedOptions.filter((o) => !o.correct);
-    const allCorrectOptions = RUBRIC_OPTIONS.filter((o) => o.correct);
-
-    const parts: string[] = [];
     const isPerfectSelection =
-      incorrectSelections.length === 0 &&
-      correctSelections.length === allCorrectOptions.length;
-
-    if (
-      incorrectSelections.length === 0 &&
-      correctSelections.length === allCorrectOptions.length
-    ) {
-      parts.push(
-        "Perfect. You selected all and only the essential rubric criteria."
-      );
-    } else if (incorrectSelections.length === 0) {
-      parts.push(
-        "Good selection. All chosen criteria are correct, but some essential ones are missing."
-      );
-    } else {
-      parts.push(
-        "Some selected criteria are not essential and should be reconsidered."
-      );
-    }
-
-    if (correctSelections.length > 0) {
-      parts.push(
-        "Correct criteria:\n" +
-        correctSelections.map((option) => `- ${option.feedback}`).join("\n")
-      );
-    }
-
-    if (incorrectSelections.length > 0) {
-      parts.push(
-        "Incorrect criteria:\n" +
-        incorrectSelections.map((option) => `- ${option.feedback}`).join("\n")
-      );
-    }
+      wronglyIncluded.length === 0 && missedEssential.length === 0;
 
     setIsPerfect(isPerfectSelection);
-    setFeedback(parts.join("\n\n"));
     setSubmitted(true);
   };
 
@@ -120,14 +99,14 @@ export default function CreateRubricPage() {
           correctSample={SAMPLE_ANSWERS.correct}
           incorrectSample={SAMPLE_ANSWERS.incorrect}
           rubricOptions={RUBRIC_OPTIONS}
-          selectedRubricIds={selectedRubricIds}
-          onToggleRubric={handleToggleRubric}
-          onContinue={handleContinue}
-          onSubmit={handleSubmit}
-          feedback={feedback}
-          onTryAgain={handleTryAgain}
+          rubricDecisions={rubricDecisions}
           submitted={submitted}
           isPerfect={isPerfect}
+          allCriteriaDecided={allCriteriaDecided}
+          onSetRubricDecision={handleSetRubricDecision}
+          onContinue={handleContinue}
+          onSubmit={handleSubmit}
+          onTryAgain={handleTryAgain}
         />
       </div>
     </main>

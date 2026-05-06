@@ -1,16 +1,12 @@
 "use client";
 
-import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, RadioGroup, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
 import { useEffect, useRef } from "react";
 import { ArrowRightIcon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
 
-// export type RubricOption = {
-//   id: string;
-//   label: string;
-//   description: string;
-// };
+export type RubricDecision = "include" | "exclude";
 
 type SampleAnswer = {
   title: string;
@@ -22,11 +18,11 @@ type CreateRubricPanelProps = {
   correctSample: SampleAnswer;
   incorrectSample: SampleAnswer;
   rubricOptions: readonly RubricOption[];
-  selectedRubricIds: string[];
+  rubricDecisions: Record<string, RubricDecision>;
   submitted: boolean;
-  feedback: string;
   isPerfect: boolean;
-  onToggleRubric: (id: string) => void;
+  allCriteriaDecided: boolean;
+  onSetRubricDecision: (id: string, decision: RubricDecision) => void;
   onTryAgain: () => void;
   onContinue: () => void;
   onSubmit: () => void;
@@ -37,13 +33,13 @@ export default function CreateRubricPanel({
   correctSample,
   incorrectSample,
   rubricOptions,
-  selectedRubricIds,
-  onToggleRubric,
-  onContinue,
-  onSubmit,
-  feedback,
+  rubricDecisions,
   submitted,
   isPerfect,
+  allCriteriaDecided,
+  onSetRubricDecision,
+  onContinue,
+  onSubmit,
   onTryAgain,
 }: CreateRubricPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
@@ -54,75 +50,19 @@ export default function CreateRubricPanel({
     }
   }, [submitted]);
 
-  function formatFeedback(text: string) {
-    const lines = text.split("\n").map((l) => l.trim());
-
-    const blocks: React.ReactNode[] = [];
-    let listItems: string[] = [];
-
-    const flushList = () => {
-      if (listItems.length > 0) {
-        blocks.push(
-          <ul key={blocks.length} className="list-disc pl-5 space-y-1">
-            {listItems.map((item, i) => (
-              <li key={i} className="text-slate-800">
-                {item}
-              </li>
-            ))}
-          </ul>
-        );
-        listItems = [];
-      }
-    };
-
-    lines.forEach((line) => {
-      if (!line) return;
-
-      // bullet line
-      if (line.startsWith("- ")) {
-        listItems.push(line.replace("- ", ""));
-        return;
-      }
-
-      // flush any existing list before adding new block
-      flushList();
-
-      // section header
-      if (line.endsWith(":")) {
-        blocks.push(
-          <p key={blocks.length} className="font-semibold text-slate-900 mt-3">
-            {line}
-          </p>
-        );
-        return;
-      }
-
-      // normal paragraph
-      blocks.push(
-        <p key={blocks.length} className="text-slate-800">
-          {line}
-        </p>
-      );
-    });
-
-    flushList();
-
-    return blocks;
-  }
-
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
         <Heading size="6">Create Rubric</Heading>
 
         <Text size="3" color="gray">
-          In this step, you will create a grading rubric by selecting the criteria that define a strong solution.
-          Focus on what must be correct for the answer to be considered complete and accurate.
-          You will use this rubric in the next phase to evaluate the AI students' responses.
+          In this step, you will create a grading rubric by deciding whether each
+          criterion should be included or excluded. Use the sample answers to
+          decide which criteria are essential for evaluating the student&apos;s
+          solution.
         </Text>
 
         <div className="flex-1 space-y-5 overflow-y-auto">
-          {/* Question */}
           <Card size="2">
             <Flex direction="column" gap="3">
               <Heading size="4">Question</Heading>
@@ -132,14 +72,11 @@ export default function CreateRubricPanel({
             </Flex>
           </Card>
 
-          <div className="mb-4">
-            <Text size="2" color="gray">
-              Compare the sample answers to understand what a correct solution includes and what is missing in an incorrect one.
-              Use this comparison to choose rubric criteria that clearly separate strong and weak responses.
-            </Text>
-          </div>
+          <Text size="2" color="gray">
+            Compare the sample answers to identify what a correct solution must
+            include and what should not be required.
+          </Text>
 
-          {/* Sample Answers */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card size="2">
               <Flex direction="column" gap="3">
@@ -160,49 +97,106 @@ export default function CreateRubricPanel({
             </Card>
           </div>
 
-          {/* Rubric Selection */}
-          {/* <Card size="2">
+          <Card size="2">
             <Flex direction="column" gap="4">
-              <Heading size="4">Select Rubric Criteria</Heading>
+              <div>
+                <Heading size="4">Select Rubric Criteria</Heading>
+                <Text size="2" color="gray">
+                  For each criterion, choose whether it should be included in the
+                  rubric or excluded. You must make a choice for every row before
+                  submitting.
+                </Text>
+              </div>
 
-              <Text size="2" color="gray">
-                Select the criteria that should be used to evaluate a student's solution.
-                Choose only those that are essential for correctly identifying critical numbers and interpreting the result.
-                Avoid selecting criteria that are helpful but not required.
-              </Text>
-
-              <div className="overflow-hidden rounded-2xl border border-gray-200">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gray-50">
+              <div className="overflow-hidden rounded-2xl border border-gray-300 bg-white">
+                <table className="w-full border-collapse text-sm">
+                  <thead className="bg-lime-50">
                     <tr>
-                      <th className="w-24 border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                        Select
+                      <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
+                        Criteria
                       </th>
-                      <th className="border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                        Criterion
+                      <th className="w-36 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
+                        Include
                       </th>
+                      <th className="w-36 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
+                        Exclude
+                      </th>
+                      {submitted ? (
+                        <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
+                          Feedback
+                        </th>
+                      ) : null}
                     </tr>
                   </thead>
 
                   <tbody>
                     {rubricOptions.map((option) => {
-                      const selected = selectedRubricIds.includes(option.id);
+                      const decision = rubricDecisions[option.id];
+                      const included = decision === "include";
+                      const excluded = decision === "exclude";
+
+                      const isCorrectDecision =
+                        (option.correct && included) ||
+                        (!option.correct && excluded);
 
                       return (
-                        <tr key={option.id} className="bg-white">
-                          <td className="border-b border-gray-200 px-4 py-3 align-top">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              onChange={() => onToggleRubric(option.id)}
-                              className="mt-1 h-4 w-4 cursor-pointer"
-                              disabled={submitted}
-                            />
-                          </td>
-
-                          <td className="border-b border-gray-200 px-4 py-3 align-top text-sm font-medium text-slate-900">
+                        <tr key={option.id} className="align-top">
+                          <td className="border-b border-gray-200 px-4 py-4 font-medium text-slate-900">
                             <MathDisplay text={option.label} />
                           </td>
+
+                          <td className="border-b border-gray-200 px-4 py-4 text-center">
+                            <RadioGroup.Root
+                              value={decision ?? ""}
+                              onValueChange={(value) =>
+                                onSetRubricDecision(
+                                  option.id,
+                                  value as RubricDecision
+                                )
+                              }
+                              disabled={submitted}
+                            >
+                              <Flex justify="center">
+                                <RadioGroup.Item value="include" />
+                              </Flex>
+                            </RadioGroup.Root>
+                          </td>
+
+                          <td className="border-b border-gray-200 px-4 py-4 text-center">
+                            <RadioGroup.Root
+                              value={decision ?? ""}
+                              onValueChange={(value) =>
+                                onSetRubricDecision(
+                                  option.id,
+                                  value as RubricDecision
+                                )
+                              }
+                              disabled={submitted}
+                            >
+                              <Flex justify="center">
+                                <RadioGroup.Item value="exclude" />
+                              </Flex>
+                            </RadioGroup.Root>
+                          </td>
+
+                          {submitted ? (
+                            <td className="border-b border-gray-200 px-4 py-4">
+                              <div
+                                className={`rounded-xl border px-4 py-3 ${isCorrectDecision
+                                    ? "border-lime-300 bg-lime-50 text-slate-900"
+                                    : "border-red-200 bg-red-50 text-slate-900"
+                                  }`}
+                              >
+                                {/* <Text size="2" weight="bold">
+                                  {isCorrectDecision ? "Correct choice" : "Review this choice"}
+                                </Text> */}
+                                <div className="mt-1 text-sm leading-6 text-slate-700">
+                                  {/* {isCorrectDecision ? "Correct!" : "Incorrect!"} */}
+                                  <MathDisplay text={option.feedback} />
+                                </div>
+                              </div>
+                            </td>
+                          ) : null}
                         </tr>
                       );
                     })}
@@ -210,121 +204,16 @@ export default function CreateRubricPanel({
                 </table>
               </div>
 
-              <Flex align="center" justify="center">
-                <Button
-                  onClick={onSubmit}
-                  disabled={selectedRubricIds.length === 0 || submitted}
-                  color="lime"
-                >
-                  {submitted ? "Submitted" : "Submit"}
-                </Button>
-              </Flex>
-            </Flex>
-          </Card> */}
-
-          {/* Rubric Selection */}
-          <Card size="2">
-            <Flex direction="column" gap="4">
-              <Heading size="4">Select Rubric Criteria</Heading>
-
-              <Text size="2" color="gray">
-                Drag each criterion into the category where it belongs. Include only the
-                criteria that are essential for evaluating the student's solution.
-              </Text>
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {[
-                  {
-                    title: "Include Criteria",
-                    description: "Essential criteria for a correct solution.",
-                    ids: selectedRubricIds,
-                    empty: "Drag required criteria here.",
-                    variant: "include",
-                  },
-                  {
-                    title: "Exclude Criteria",
-                    description: "Incorrect or unnecessary criteria.",
-                    ids: rubricOptions
-                      .map((option) => option.id)
-                      .filter((id) => !selectedRubricIds.includes(id)),
-                    empty: "Drag excluded criteria here.",
-                    variant: "exclude",
-                  },
-                ].map((column) => (
-                  <div
-                    key={column.variant}
-                    onDragOver={(event) => {
-                      if (!submitted) event.preventDefault();
-                    }}
-                    onDrop={(event) => {
-                      if (submitted) return;
-
-                      const id = event.dataTransfer.getData("text/plain");
-                      const isSelected = selectedRubricIds.includes(id);
-
-                      if (column.variant === "include" && !isSelected) {
-                        onToggleRubric(id);
-                      }
-
-                      if (column.variant === "exclude" && isSelected) {
-                        onToggleRubric(id);
-                      }
-                    }}
-                    className={`min-h-72 rounded-2xl border-2 border p-4 ${column.variant === "include"
-                        ? "border-2 border-lime-300 bg-lime-50/70"
-                        : "border-2 border-gray-300 bg-gray-50/70"
-                      }`}
-                  >
-                    <Flex direction="column" gap="3">
-                      <div>
-                        <Heading size="3">{column.title}</Heading>
-                        <Text size="2" color="gray">
-                          {column.description}
-                        </Text>
-                      </div>
-
-                      {column.ids.length === 0 ? (
-                        <div className="flex min-h-40 items-center justify-center rounded-xl border border-gray-300 bg-white/70 px-4 py-8 text-center">
-                          <Text size="2" color="gray">
-                            {column.empty}
-                          </Text>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {column.ids.map((id) => {
-                            const option = rubricOptions.find((item) => item.id === id);
-                            if (!option) return null;
-
-                            return (
-                              <div
-                                key={option.id}
-                                draggable={!submitted}
-                                onDragStart={(event) => {
-                                  event.dataTransfer.setData("text/plain", option.id);
-                                  event.dataTransfer.effectAllowed = "move";
-                                }}
-                                className={`cursor-grab rounded-xl border-2 border-gray-300 bg-white p-3 text-sm transition active:cursor-grabbing ${submitted
-                                    ? "cursor-not-allowed opacity-70"
-                                    : "hover:border-lime-300 hover:shadow-md"
-                                  }`}
-                              >
-                                <div className="font-medium text-slate-900">
-                                  <MathDisplay text={option.label} />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </Flex>
-                  </div>
-                ))}
-              </div>
+              {!allCriteriaDecided && !submitted ? (
+                <Text size="2" color="gray">
+                  Select include or exclude for every criterion to enable submit.
+                </Text>
+              ) : null}
 
               <Flex align="center" justify="center">
                 <Button
                   onClick={onSubmit}
-                  disabled={selectedRubricIds.length === 0 || submitted}
+                  disabled={!allCriteriaDecided || submitted}
                   color="lime"
                 >
                   {submitted ? "Submitted" : "Submit"}
@@ -333,15 +222,15 @@ export default function CreateRubricPanel({
             </Flex>
           </Card>
 
-
-          {/* Feedback */}
           {submitted ? (
             <Card size="2" ref={feedbackRef}>
               <Flex direction="column" gap="3">
-                <Heading size="4">Rubric Feedback</Heading>
+                <Heading size="4">Overall Rubric Feedback</Heading>
 
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {formatFeedback(feedback)}
+                <Text size="3" className="leading-7">
+                  {isPerfect
+                    ? "Perfect. You included all essential criteria and excluded all unnecessary criteria."
+                    : "Some criteria need revision. Review the row-level feedback above and try again."}
                 </Text>
 
                 <Flex justify="center" gap="3">
