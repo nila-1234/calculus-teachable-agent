@@ -84,12 +84,6 @@
       "feedback": "This is an essential criterion because the goal is to identify and explain the day of highest profit."
     },
     {
-      "id": "whole-number-simplification",
-      "label": "The equation is simplified into whole-number coefficients before solving",
-      "correct": false,
-      "feedback": "This is not required, since simplifying the equation can help but is not necessary for obtaining the correct answer."
-    },
-    {
       "id": "graph-verification",
       "label": "The behavior of the function is verified using a graph or visual inspection",
       "correct": false,
