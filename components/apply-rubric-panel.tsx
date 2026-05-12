@@ -86,8 +86,8 @@ export default function ApplyRubricPanel({
         </Flex>
 
         <Text size="3" color="gray">
-          In this step, you will apply your rubric to evaluate AI-generated answers.
-          For each criterion, decide whether the answer meets the requirement or does not.
+          In this step, you will apply your rubric to evaluate a fresh set of AI-generated answers.
+          Review each answer carefully and use the criteria you defined to assess whether it meets the requirements.
         </Text>
 
         <div className="flex-1 space-y-5 overflow-y-auto">
