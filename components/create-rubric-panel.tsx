@@ -115,17 +115,17 @@ export default function CreateRubricPanel({
                       <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
                         Criteria
                       </th>
-                      <th className="w-36 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
+                      <th className="w-20 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
                         Include
                       </th>
-                      <th className="w-36 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
+                      <th className="w-20 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
                         Exclude
                       </th>
-                      {submitted ? (
-                        <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
-                          Feedback
-                        </th>
-                      ) : null}
+                      {/* {submitted ? ( */}
+                      <th className="w-[52%] border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
+                        {submitted ? "Feedback" : ""}
+                      </th>
+                      {/* ) : null} */}
                     </tr>
                   </thead>
 
@@ -179,24 +179,22 @@ export default function CreateRubricPanel({
                             </RadioGroup.Root>
                           </td>
 
-                          {submitted ? (
-                            <td className="border-b border-gray-200 px-4 py-4">
+                          <td className="w-[52%] border-b border-gray-200 px-4 py-3">
+                            {submitted ? (
                               <div
-                                className={`rounded-xl border px-4 py-3 ${isCorrectDecision
-                                    ? "border-lime-300 bg-lime-50 text-slate-900"
-                                    : "border-red-200 bg-red-50 text-slate-900"
+                                className={`rounded-xl border-2 px-3 py-2 ${isCorrectDecision
+                                  ? "border-lime-300 bg-lime-50 text-slate-900"
+                                  : "border-red-200 bg-red-50 text-slate-900"
                                   }`}
                               >
-                                {/* <Text size="2" weight="bold">
-                                  {isCorrectDecision ? "Correct choice" : "Review this choice"}
-                                </Text> */}
-                                <div className="mt-1 text-sm leading-6 text-slate-700">
-                                  {/* {isCorrectDecision ? "Correct!" : "Incorrect!"} */}
+                                <div className="text-sm leading-6 text-slate-700">
                                   <MathDisplay text={option.feedback} />
                                 </div>
                               </div>
-                            </td>
-                          ) : null}
+                            ) : (
+                              <div className="min-h-[64px]" />
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -204,11 +202,11 @@ export default function CreateRubricPanel({
                 </table>
               </div>
 
-              {!allCriteriaDecided && !submitted ? (
+              {/* {!allCriteriaDecided && !submitted ? (
                 <Text size="2" color="gray">
                   Select include or exclude for every criterion to enable submit.
                 </Text>
-              ) : null}
+              ) : null} */}
 
               <Flex align="center" justify="center">
                 <Button
@@ -225,13 +223,27 @@ export default function CreateRubricPanel({
           {submitted ? (
             <Card size="2" ref={feedbackRef}>
               <Flex direction="column" gap="3">
-                <Heading size="4">Overall Rubric Feedback</Heading>
 
-                <Text size="3" className="leading-7">
-                  {isPerfect
-                    ? "Perfect. You included all essential criteria and excluded all unnecessary criteria."
-                    : "Some criteria need revision. Review the row-level feedback above and try again."}
-                </Text>
+                {isPerfect ? (
+                  <>
+                    <Heading size="4">Perfect!</Heading>
+
+                    <Text size="3" className="leading-7">
+
+                      "Perfect! You included all essential criteria."
+                    </Text>
+                  </>) : (
+                  <>
+                    <Heading size="4">Not Quite!</Heading>
+
+                    <Text size="3" className="leading-7">
+                      Your rubric is almost there. Review the feedback for each
+                      criterion and try again.
+                    </Text>
+                  </>
+                )}
+
+
 
                 <Flex justify="center" gap="3">
                   {isPerfect ? (
