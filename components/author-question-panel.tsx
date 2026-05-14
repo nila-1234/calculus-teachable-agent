@@ -41,6 +41,8 @@ type AuthorQuestionPanelProps = {
   onSubmit: () => void;
   onContinue: () => void;
   onTryAgain: () => void;
+  questionFeedbackByPart: Record<string, string>;
+  questionFeedbackLoading: boolean;
 };
 
 type OptionCardsProps = {
@@ -138,8 +140,8 @@ function OptionCards({
                 <Flex align="start" gap="3" className="w-full text-left">
                   <div
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
-                        ? "border-lime-500 bg-lime-500 text-white"
-                        : "border-gray-300 text-gray-600"
+                      ? "border-lime-500 bg-lime-500 text-white"
+                      : "border-gray-300 text-gray-600"
                       }`}
                   >
                     {badge}
@@ -185,6 +187,8 @@ export default function AuthorQuestionPanel({
   onSubmit,
   onContinue,
   onTryAgain,
+  questionFeedbackByPart,
+  questionFeedbackLoading,
   explanations,
   onExplanationChange,
 }: AuthorQuestionPanelProps) {
@@ -320,16 +324,33 @@ export default function AuthorQuestionPanel({
                   <Heading size="4">Feedback</Heading>
 
                   <div className="space-y-4">
-                    {selectedFeedback.map((item) => (
-                      <div key={item.partId}>
-                        <Text as="div" weight="bold" size="2" className="mb-1">
-                          ({item.partId})
-                        </Text>
-                        <Text size="3" className="whitespace-pre-wrap leading-7">
-                          {item.feedback}
-                        </Text>
-                      </div>
-                    ))}
+                    {questionFeedbackLoading ? (
+                      <Text size="3" color="gray" className="italic">
+                        Loading feedback...
+                      </Text>
+                    ) : (
+                      selectedFeedback.map((item) => (
+                        <div key={item.partId}>
+                          <Text as="div" weight="bold" size="2" className="mb-1">
+                            ({item.partId})
+                          </Text>
+
+                          <Text size="3" className="whitespace-pre-wrap leading-7">
+                            {item.feedback}
+                          </Text>
+
+                          <div className="mt-3 rounded-xl border border-lime-200 bg-lime-50/60 p-3">
+                            <Text as="div" size="2" weight="bold" className="mb-1">
+                              Your explanation:
+                            </Text>
+
+                            <Text size="3" className="whitespace-pre-wrap leading-7">
+                              {questionFeedbackByPart[item.partId] || "No explanation feedback returned."}
+                            </Text>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <Flex justify="center">

@@ -24,6 +24,11 @@ export default function AuthorQuestionPage() {
     PLOT_DATA_SRC,
   } = scenario.schema;
 
+  const [questionFeedbackByPart, setQuestionFeedbackByPart] = useState<
+    Record<string, string>
+  >({});
+  const [questionFeedbackLoading, setQuestionFeedbackLoading] = useState(false);
+
   const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
 
@@ -113,15 +118,58 @@ export default function AuthorQuestionPage() {
             [partId]: choiceId,
           }));
         }}
-        onSubmit={() => {
+        // onSubmit={() => {
+        //   if (!allAnswered) return;
+        //   setSubmitted(true);
+        // }}
+        onSubmit={async () => {
           if (!allAnswered) return;
+
           setSubmitted(true);
+          setQuestionFeedbackLoading(true);
+
+          try {
+            const responses = QUESTION_PARTS.map((part) => {
+              const selectedId = selectedParts[part.id];
+              const selectedChoice = part.options.find((opt) => opt.id === selectedId);
+
+              return {
+                partId: part.id,
+                partLabel: part.label,
+                selectedChoiceId: selectedChoice?.id || "",
+                selectedChoiceText: selectedChoice?.text || "",
+                selectedChoiceCorrect: selectedChoice?.correct,
+                hardcodedFeedback: selectedChoice?.feedback || "",
+                explanation: explanations[part.id] || "",
+              };
+            });
+
+            const res = await fetch("/api/question-feedback", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                scenario: SCENARIO_PLACEHOLDER,
+                question: QUESTION_PLACEHOLDER,
+                responses,
+              }),
+            });
+
+            const data = await res.json();
+            setQuestionFeedbackByPart(data.feedbackByPart || {});
+          } catch {
+            setQuestionFeedbackByPart({});
+          } finally {
+            setQuestionFeedbackLoading(false);
+          }
         }}
+        questionFeedbackByPart={questionFeedbackByPart}
+        questionFeedbackLoading={questionFeedbackLoading}
         onContinue={handleContinue}
         onTryAgain={() => {
           setSubmitted(false);
           setSelectedParts({});
           setExplanations({});
+          setQuestionFeedbackByPart({});
         }}
         explanations={explanations}
         onExplanationChange={handleExplanationChange}
