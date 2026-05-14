@@ -1,0 +1,127 @@
+{
+  "scenario": "A manufacturing company uses an automated monitoring system to review machine risk during an 8-hour shift. The system flagged the middle of the shift as a possible important point and suggested that the manager should inspect the machine around that time. Before changing the inspection schedule, the company wants to check whether the system’s claim is mathematically valid. The company collected risk-score data from the shift.",
+  "question": "Use the function __(1)__ to model the machine’s estimated risk score. Determine whether __(2)__.",
+  "plotDataSrc": "/data/scenarios/3/plot-data.json",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Select the function",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)",
+          "correct": true,
+          "feedback": "Correct! This function best matches the overall pattern of the scatter plot, where the risk score becomes much higher near the middle of the shift and lower farther away from that time. The denominator approaches zero near \\(t=4\\), which creates the sharp increase shown in the data."
+        },
+        {
+          "id": "f2",
+          "text": "\\(R(t)=90-(t-4)^2\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function creates a smooth rounded peak near the middle of the shift, but the scatter plot suggests the values rise much more sharply near \\(t=4\\). The overall shape does not match the steep increase shown in the data."
+        },
+        {
+          "id": "f3",
+          "text": "\\(R(t)=2t+70\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function only increases over time, but the scatter plot does not show one consistent increasing trend across the whole shift. The risk score rises sharply near the middle and then decreases afterward."
+        },
+        {
+          "id": "f4",
+          "text": "\\(R(t)=70+2e^{0.3t}\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function increases exponentially in one direction, but it does not match the pattern of high values near the middle of the shift and lower values farther away. The graph does not capture the sharp behavior around \\(t=4\\)."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "Select what must be checked",
+      "options": [
+        {
+          "id": "c1",
+          "text": "\\(R(4)\\) exists and \\(R'(4)=0\\) or \\(R'(4)\\) does not exist",
+          "correct": true,
+          "feedback": "Correct! To determine whether \\(t=4\\) is a critical point, the function value must exist and the derivative must either equal zero or be undefined."
+        },
+        {
+          "id": "c2",
+          "text": "\\(R'(4)\\) does not exist",
+          "correct": false,
+          "feedback": "Incorrect! This is not enough by itself. A critical point also requires the original function value to exist at that input."
+        },
+        {
+          "id": "c3",
+          "text": "\\(R(t)\\) becomes very large near \\(t=4\\)",
+          "correct": false,
+          "feedback": "Incorrect! Large nearby values do not prove that \\(t=4\\) is a critical point. The function itself must exist at that point."
+        },
+        {
+          "id": "c4",
+          "text": "\\(R(0)=R(8)\\)",
+          "correct": false,
+          "feedback": "Incorrect! Equal endpoint values do not determine whether \\(t=4\\) is a critical point."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "checks-r4-exists",
+      "label": "Checks whether \\(R(4)\\) exists",
+      "correct": true,
+      "feedback": "This is an essential criterion because a critical point must belong to the original function. The answer must check whether the model gives a valid value at \\(t=4\\)."
+    },
+    {
+      "id": "identifies-r4-undefined",
+      "label": "Correctly identifies that \\(R(4)\\) is undefined",
+      "correct": true,
+      "feedback": "This is an essential criterion because the denominator becomes zero at \\(t=4\\), making the function undefined."
+    },
+    {
+      "id": "applies-critical-point-definition",
+      "label": "Correctly applies the full definition of a critical point",
+      "correct": true,
+      "feedback": "This is an essential criterion because an undefined derivative alone is not sufficient. The function value must also exist."
+    },
+    {
+      "id": "concludes-not-critical",
+      "label": "Correctly concludes that \\(t=4\\) is not a critical point",
+      "correct": true,
+      "feedback": "This is an essential criterion because the system’s claim is incorrect. Since \\(R(4)\\) does not exist, \\(t=4\\) cannot be a critical point."
+    },
+    {
+      "id": "solves-derivative-zero",
+      "label": "Solves \\(R'(t)=0\\) to search for possible critical numbers",
+      "correct": false,
+      "feedback": "This is not sufficient for this problem. While solving \\(R'(t)=0\\) is part of finding critical numbers in general, the key issue here is whether the function exists at \\(t=4\\)."
+    },
+    {
+      "id": "compares-nearby-values",
+      "label": "Compares nearby risk scores before and after \\(t=4\\)",
+      "correct": false,
+      "feedback": "This is not required. Nearby behavior may help visualize the model, but it does not determine whether \\(t=4\\) is a valid critical point."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)\n\nTo determine whether \\(t=4\\) is a critical point, first check whether \\(R(4)\\) exists.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\n\\(R(4)=70+\\frac{8}{0}\\)\n\nDivision by zero is undefined, so \\(R(4)\\) does not exist.\n\nA critical point must satisfy two conditions:\n- the function value exists\n- and the derivative is zero or undefined\n\nSince \\(R(4)\\) does not exist, \\(t=4\\) is not a critical point.\n\nTherefore, the monitoring system’s claim is not mathematically valid."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)\n\nAs \\(t\\) approaches 4, the denominator becomes very small, so the graph rises sharply.\n\nBecause the graph becomes very large near \\(t=4\\), this means \\(t=4\\) is a critical point.\n\nTherefore, the system is correct."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\nThe denominator becomes zero, so \\(R(4)\\) is undefined.\n\nAlso, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point.\n\nThe response correctly checks whether \\(R(4)\\) exists, but it incorrectly concludes that \\(t=4\\) is a critical point even though the function value does not exist there."
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.\n\nSince the graph changes direction around \\(t=4\\), that must be a critical point.\n\nTherefore, the system’s claim is correct.\n\nThe response discusses nearby behavior but does not check whether \\(R(4)\\) exists or apply the definition of a critical point correctly."
+    }
+  ]
+}

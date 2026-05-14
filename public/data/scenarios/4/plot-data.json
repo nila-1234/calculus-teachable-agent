@@ -1,0 +1,24 @@
+{
+  "title": "Scatter Plot of Machine Risk Score Data",
+  "xAxisLabel": "Hours After Shift Begins",
+  "yAxisLabel": "Risk Score",
+  "data": [
+    { "time": 0, "risk": 70.6 },
+    { "time": 0.5, "risk": 70.9 },
+    { "time": 1, "risk": 71.1 },
+    { "time": 1.5, "risk": 71.8 },
+    { "time": 2, "risk": 72.3 },
+    { "time": 2.5, "risk": 74.9 },
+    { "time": 3, "risk": 77.6 },
+    { "time": 3.5, "risk": 101.4 },
+    { "time": 4, "risk": null },
+    { "time": 4.5, "risk": 98.7 },
+    { "time": 5, "risk": 78.9 },
+    { "time": 5.5, "risk": 74.3 },
+    { "time": 6, "risk": 72.6 },
+    { "time": 6.5, "risk": 71.7 },
+    { "time": 7, "risk": 71.2 },
+    { "time": 7.5, "risk": 70.8 },
+    { "time": 8, "risk": 70.4 }
+  ]
+}
