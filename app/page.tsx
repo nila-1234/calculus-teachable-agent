@@ -24,7 +24,7 @@ export default function HomePage() {
             </Text> */}
 
             <Flex direction="column" gap="3" className="w-full">
-              {[1, 2, 3].map((id) => (
+              {[1, 2, 3, 4].map((id) => (
                 <Button
                   key={id}
                   size="3"

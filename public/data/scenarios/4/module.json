@@ -1,7 +1,7 @@
 {
   "scenario": "A manufacturing company uses an automated monitoring system to review machine risk during an 8-hour shift. The system flagged the middle of the shift as a possible important point and suggested that the manager should inspect the machine around that time. Before changing the inspection schedule, the company wants to check whether the system’s claim is mathematically valid. The company collected risk-score data from the shift.",
   "question": "Use the function __(1)__ to model the machine’s estimated risk score. Determine whether __(2)__.",
-  "plotDataSrc": "/data/scenarios/3/plot-data.json",
+  "plotDataSrc": "/data/scenarios/4/plot-data.json",
   "questionParts": [
     {
       "id": "1",
