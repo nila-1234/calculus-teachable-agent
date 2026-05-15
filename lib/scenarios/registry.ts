@@ -2,6 +2,7 @@ import schema1Json from "../../public/data/scenarios/1/module.json";
 import schema2Json from "../../public/data/scenarios/2/module.json";
 import schema3Json from "../../public/data/scenarios/3/module.json";
 import schema4Json from "../../public/data/scenarios/4/module.json";
+import schema5Json from "../../public/data/scenarios/5/module.json";
 
 import type { QuestionSchema, ScenarioModule } from "./types";
 
@@ -21,7 +22,8 @@ const scenarioRegistry: Record<number, ScenarioModule> = {
   1: { id: 1, schema: mapJsonToSchema(schema1Json) },
   2: { id: 2, schema: mapJsonToSchema(schema2Json) },
   3: { id: 3, schema: mapJsonToSchema(schema3Json) },
-  4: { id: 4, schema: mapJsonToSchema(schema4Json) }
+  4: { id: 4, schema: mapJsonToSchema(schema4Json) },
+  5: { id: 5, schema: mapJsonToSchema(schema5Json) },
 };
 
 export function getScenario(id: number): ScenarioModule | null {
