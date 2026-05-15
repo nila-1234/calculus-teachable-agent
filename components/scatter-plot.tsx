@@ -39,18 +39,53 @@ type LoadedPlot = {
 
 type ChartPoint = Record<string, number | null>;
 
+// function normalizeEquation(equation: string) {
+//   return equation
+//     .trim()
+//     .replace(/\s+/g, "")
+//     .replace(/^[a-z]\([xt]\)=/i, "")
+//     .replace(/^[a-z]=/i, "")
+//     .replace(/\^/g, "**")
+//     .replace(/(\d)([xt])/gi, "$1*$2")
+//     .replace(/(\d)(sin\()/gi, "$1*$2")
+//     .replace(/(\d)(exp\()/gi, "$1*$2")
+//     .replace(/(\))([xt\d])/gi, "$1*$2")
+//     .replace(/([xt])(\d)/gi, "$1*$2");
+// }
+
 function normalizeEquation(equation: string) {
   return equation
     .trim()
+    .replace(/\\\(|\\\)/g, "")
+
+    // \frac{a}{b}
+    .replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, "(($1)/($2))")
+
+    // e^{0.3x}
+    .replace(/e\^\{([^{}]+)\}/g, "exp($1)")
+
+    // absolute value |x|
+    .replace(/\|([^|]+)\|/g, "abs($1)")
+
+    // remove remaining latex braces
+    .replace(/\{([^{}]+)\}/g, "$1")
+
     .replace(/\s+/g, "")
+
+    // remove function name
     .replace(/^[a-z]\([xt]\)=/i, "")
     .replace(/^[a-z]=/i, "")
+
+    // x^2 → x**2
     .replace(/\^/g, "**")
+
+    // implicit multiplication
+    .replace(/(\d|\))(\()/g, "$1*$2")
     .replace(/(\d)([xt])/gi, "$1*$2")
-    .replace(/(\d)(sin\()/gi, "$1*$2")
-    .replace(/(\d)(exp\()/gi, "$1*$2")
+    .replace(/([xt])\(/gi, "$1*(")
     .replace(/(\))([xt\d])/gi, "$1*$2")
-    .replace(/([xt])(\d)/gi, "$1*$2");
+    .replace(/(\d)(exp\()/gi, "$1*$2")
+    .replace(/(\d)(abs\()/gi, "$1*$2");
 }
 
 function buildEquationEvaluator(equation: string) {
@@ -64,7 +99,7 @@ function buildEquationEvaluator(equation: string) {
     throw new Error(`Equation contains unsupported characters: ${offenders?.join(" ")}`);
   }
 
-  const allowedFunctions = ["sin", "exp"];
+  const allowedFunctions = ["sin", "exp", "abs"];
   const identifiers = normalized.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? [];
 
   const invalidIdentifiers = identifiers.filter(
@@ -83,7 +118,8 @@ function buildEquationEvaluator(equation: string) {
   try {
     const jsExpression = normalized
       .replace(/\bsin\(/g, "Math.sin(")
-      .replace(/\bexp\(/g, "Math.exp(");
+      .replace(/\bexp\(/g, "Math.exp(")
+      .replace(/\babs\(/g, "Math.abs(");
 
     const fn = new Function("x", "t", `return ${jsExpression};`) as (
       x: number,

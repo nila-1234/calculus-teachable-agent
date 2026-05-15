@@ -27,7 +27,7 @@
         },
         {
           "id": "f4",
-          "text": "\\(C(x)=18e^(-0.1x)+10\\)",
+          "text": "\\(C(x)=18*e^{-0.1x}+10\\)",
           "correct": false,
           "feedback": "Incorrect! This exponential function mostly decreases and then levels off. It does not capture the pattern in the scatter plot, where the data decreases and later increases again. So the overall function family is not a good fit for this situation."
         }
