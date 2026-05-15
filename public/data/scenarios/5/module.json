@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Select the function",
+      "label": "Use the function __(1)__ to model the company’s extra delivery cost.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "Select what to analyze",
+      "label": "Analyse the company’s situation by finding its __(2)__.",
       "options": [
         {
           "id": "a1",

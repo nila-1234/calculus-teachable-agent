@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Select the function",
+      "label": "Use the function __(1)__ to model the machine’s estimated risk score.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "Select what must be checked",
+      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether __(2)__.",
       "options": [
         {
           "id": "c1",

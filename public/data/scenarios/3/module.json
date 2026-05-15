@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Select the function",
+      "label": "Use the function __(1)__ to model the reservoir inflow rate.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "Select the calculus operation",
+      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__ and conclude that the reservoir __(3)__.",
       "options": [
         {
           "id": "op1",
