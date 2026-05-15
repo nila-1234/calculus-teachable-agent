@@ -6,12 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:scenarios": "tsx scripts/seed-scenarios.ts"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/themes": "^3.3.0",
     "katex": "^0.16.38",
+    "mongodb": "^7.2.0",
     "next": "^16.2.1",
     "openai": "^6.27.0",
     "react": "19.2.3",
@@ -25,9 +27,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-katex": "^3.0.4",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.0",
     "typescript": "^5"
   }
 }
