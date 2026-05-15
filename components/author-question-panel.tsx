@@ -55,57 +55,6 @@ type OptionCardsProps = {
   onExplanationChange: (value: string) => void;
 };
 
-// function OptionCards({
-//   title,
-//   options,
-//   selectedValue,
-//   submitted,
-//   onChange,
-//   onExplanationChange
-// }: OptionCardsProps) {
-//   return (
-//     <Flex direction="column" gap="3">
-//       <Heading size="3">{title}</Heading>
-
-//       <RadioCards.Root
-//         value={selectedValue}
-//         onValueChange={onChange}
-//         columns="1"
-//         className="w-full"
-//       >
-//         {options.map((choice, index) => {
-//           const isSelected = selectedValue === choice.id;
-//           const badge = String(index + 1);
-
-//           return (
-//             <RadioCards.Item
-//               key={choice.id}
-//               value={choice.id}
-//               disabled={submitted}
-//               className="w-full [&_[data-state]]:hidden"
-//             >
-//               <Flex align="start" gap="3" className="w-full text-left">
-//                 <div
-//                   className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
-//                     ? "border-lime-500 bg-lime-500 text-white"
-//                     : "border-gray-300 text-gray-600"
-//                     }`}
-//                 >
-//                   {badge}
-//                 </div>
-
-//                 <div className="min-w-0 flex-1">
-//                   <MathDisplay text={choice.text} />
-//                 </div>
-//               </Flex>
-//             </RadioCards.Item>
-//           );
-//         })}
-//       </RadioCards.Root>
-//     </Flex>
-//   );
-// }
-
 function OptionCards({
   title,
   options,
@@ -119,7 +68,7 @@ function OptionCards({
     <Flex direction="column" gap="3">
       <Heading size="3">{title}</Heading>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="grid grid-cols-1 gap-4">
         <RadioCards.Root
           value={selectedValue}
           onValueChange={onChange}
@@ -156,7 +105,7 @@ function OptionCards({
           })}
         </RadioCards.Root>
 
-        <div className="rounded-xl border-2 border-lime-400 bg-lime-50/50 p-3">
+        {/* <div className="rounded-xl border-2 border-lime-400 bg-lime-50/50 p-3">
           <Text as="div" size="2" weight="medium" className="mb-2 pb-2">
             Explain your selection
           </Text>
@@ -169,7 +118,7 @@ function OptionCards({
             rows={7}
             className="w-full border-1 border-gray-300"
           />
-        </div>
+        </div> */}
       </div>
     </Flex>
   );
@@ -324,11 +273,7 @@ export default function AuthorQuestionPanel({
                   <Heading size="4">Feedback</Heading>
 
                   <div className="space-y-4">
-                    {questionFeedbackLoading ? (
-                      <Text size="3" color="gray" className="italic">
-                        Loading feedback...
-                      </Text>
-                    ) : (
+                    {
                       selectedFeedback.map((item) => (
                         <div key={item.partId}>
                           <Text as="div" weight="bold" size="2" className="mb-1">
@@ -339,7 +284,7 @@ export default function AuthorQuestionPanel({
                             {item.feedback}
                           </Text>
 
-                          <div className="mt-3 rounded-xl border border-lime-200 bg-lime-50/60 p-3">
+                          {/* <div className="mt-3 rounded-xl border border-lime-200 bg-lime-50/60 p-3">
                             <Text as="div" size="2" weight="bold" className="mb-1">
                               Your explanation:
                             </Text>
@@ -347,10 +292,10 @@ export default function AuthorQuestionPanel({
                             <Text size="3" className="whitespace-pre-wrap leading-7">
                               {questionFeedbackByPart[item.partId] || "No explanation feedback returned."}
                             </Text>
-                          </div>
+                          </div> */}
                         </div>
                       ))
-                    )}
+                    }
                   </div>
 
                   <Flex justify="center">
