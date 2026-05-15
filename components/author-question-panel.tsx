@@ -237,14 +237,10 @@ export default function AuthorQuestionPanel({
                 Complete the statement by selecting the correct option for each blank.
               </Text>
 
-              <Text size="3" className="whitespace-pre-wrap leading-7">
-                {question}
-              </Text>
-
               {parts.map((part) => (
                 <OptionCards
                   key={part.id}
-                  title={`(${part.id})`}
+                  title={`${part.label}`}
                   options={part.options}
                   selectedValue={selectedParts[part.id] || ""}
                   // explanation={explanations[part.id] || ""}
