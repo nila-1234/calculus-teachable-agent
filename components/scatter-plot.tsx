@@ -171,14 +171,13 @@ function buildCombinedData(
 
   const evaluator = equation.trim() ? buildEquationEvaluator(equation) : null;
 
-  const combined: ChartPoint[] = [];
-  for (let x = minX; x <= maxX; x += 1) {
-    combined.push({
+  const combined: ChartPoint[] = xValues
+    .sort((a, b) => a - b)
+    .map((x) => ({
       [xKey]: x,
       scatterY: scatterMap.has(x) ? (scatterMap.get(x) ?? null) : null,
       equationY: evaluator ? evaluator(x) : null,
-    });
-  }
+    }));
 
   return combined;
 }
