@@ -24,10 +24,10 @@ export default function AuthorQuestionPage() {
     PLOT_DATA_SRC,
   } = scenario.schema;
 
-  const [questionFeedbackByPart, setQuestionFeedbackByPart] = useState<
-    Record<string, string>
-  >({});
-  const [questionFeedbackLoading, setQuestionFeedbackLoading] = useState(false);
+    // const [questionFeedbackByPart, setQuestionFeedbackByPart] = useState<
+    //   Record<string, string>
+    // >({});
+    // const [questionFeedbackLoading, setQuestionFeedbackLoading] = useState(false);
 
   const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -40,14 +40,14 @@ export default function AuthorQuestionPage() {
   }, [QUESTION_PARTS, selectedParts]);
 
   const allAnswered = QUESTION_PARTS.every((part) => selectedParts[part.id]);
-  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  // const [explanations, setExplanations] = useState<Record<string, string>>({});
 
-  const handleExplanationChange = (partId: string, value: string) => {
-    setExplanations((prev) => ({
-      ...prev,
-      [partId]: value,
-    }));
-  };
+  // const handleExplanationChange = (partId: string, value: string) => {
+  //   setExplanations((prev) => ({
+  //     ...prev,
+  //     [partId]: value,
+  //   }));
+  // };
 
   const isFullyCorrect =
     allAnswered && selectedChoices.every((choice) => choice?.correct);
@@ -162,17 +162,17 @@ export default function AuthorQuestionPage() {
         //     setQuestionFeedbackLoading(false);
         //   }
         // }}
-        questionFeedbackByPart={questionFeedbackByPart}
-        questionFeedbackLoading={questionFeedbackLoading}
+        // questionFeedbackByPart={questionFeedbackByPart}
+        // questionFeedbackLoading={questionFeedbackLoading}
         onContinue={handleContinue}
         onTryAgain={() => {
           setSubmitted(false);
           setSelectedParts({});
-          setExplanations({});
-          setQuestionFeedbackByPart({});
+          // setExplanations({});
+          // setQuestionFeedbackByPart({});
         }}
-        explanations={explanations}
-        onExplanationChange={handleExplanationChange}
+        // explanations={explanations}
+        // onExplanationChange={handleExplanationChange}
       />
     </main>
   );

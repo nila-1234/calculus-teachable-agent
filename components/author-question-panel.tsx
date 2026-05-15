@@ -33,16 +33,16 @@ type AuthorQuestionPanelProps = {
   scatterPlotSrc: string;
   parts: readonly QuestionPart[];
   selectedParts: Record<string, string>;
-  explanations: Record<string, string>;
+  // explanations: Record<string, string>;
   submitted: boolean;
   isCorrectSelection: boolean;
   onSelectPart: (partId: string, choiceId: string) => void;
-  onExplanationChange: (partId: string, value: string) => void;
+  // onExplanationChange: (partId: string, value: string) => void;
   onSubmit: () => void;
   onContinue: () => void;
   onTryAgain: () => void;
-  questionFeedbackByPart: Record<string, string>;
-  questionFeedbackLoading: boolean;
+  // questionFeedbackByPart: Record<string, string>;
+  // questionFeedbackLoading: boolean;
 };
 
 type OptionCardsProps = {
@@ -50,19 +50,19 @@ type OptionCardsProps = {
   options: readonly Choice[];
   selectedValue: string;
   submitted: boolean;
-  explanation: string;
+  // explanation: string;
   onChange: (id: string) => void;
-  onExplanationChange: (value: string) => void;
+  // onExplanationChange: (value: string) => void;
 };
 
 function OptionCards({
   title,
   options,
   selectedValue,
-  explanation,
+  // explanation,
   submitted,
   onChange,
-  onExplanationChange,
+  // onExplanationChange,
 }: OptionCardsProps) {
   return (
     <Flex direction="column" gap="3">
@@ -136,10 +136,10 @@ export default function AuthorQuestionPanel({
   onSubmit,
   onContinue,
   onTryAgain,
-  questionFeedbackByPart,
-  questionFeedbackLoading,
-  explanations,
-  onExplanationChange,
+  // questionFeedbackByPart,
+  // questionFeedbackLoading,
+  // explanations,
+  // onExplanationChange,
 }: AuthorQuestionPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
@@ -247,10 +247,10 @@ export default function AuthorQuestionPanel({
                   title={`(${part.id})`}
                   options={part.options}
                   selectedValue={selectedParts[part.id] || ""}
-                  explanation={explanations[part.id] || ""}
+                  // explanation={explanations[part.id] || ""}
                   submitted={submitted}
                   onChange={(choiceId) => onSelectPart(part.id, choiceId)}
-                  onExplanationChange={(value) => onExplanationChange(part.id, value)}
+                  // onExplanationChange={(value) => onExplanationChange(part.id, value)}
                 />
               ))}
 
