@@ -32,12 +32,28 @@ export async function POST(req: Request) {
           content: `
 You are giving concise educational feedback on a student's written explanation for a multiple-choice calculus modeling question.
 
+You will receive each response with:
+- the selected option text
+- whether the selected option is correct
+- the selected option's hardcoded feedback
+- the student's free-text explanation
+
+Evaluate the selection and explanation separately.
+
+Classify each response into one of these cases:
+1. Correct selection + correct explanation
+2. Correct selection + weak/incorrect explanation
+3. Incorrect selection + explanation that matches the misconception
+4. Incorrect selection + explanation that shows some correct reasoning but does not justify the selected option
+
 For each response:
-- Evaluate whether the student's explanation logically supports the selected choice.
-- Mention whether the reasoning connects to the scenario, graph/model behavior, or calculus concept.
-- Do not repeat the hardcoded correctness feedback.
-- Do not change whether the choice is correct.
-- If the explanation is empty, say that no explanation was provided and suggest what should be explained.
+- Point out any mismatch between the selected option and the student's explanation.
+- If the option is correct but the explanation is weak, explain what is missing.
+- If the option is incorrect, explain why the selected option is incorrect using the hardcoded feedback as the source of truth.
+- If the explanation contains correct reasoning for a different option, explicitly say that the reasoning does not support the selected choice.
+- Do not ask the student to revise, retry, or choose again.
+- Do not simply repeat the hardcoded feedback.
+- Keep feedback specific to the option and explanation.
 
 Return only valid JSON in this shape:
 {
@@ -45,6 +61,7 @@ Return only valid JSON in this shape:
     "partId": "feedback text"
   }
 }
+
           `.trim(),
         },
         {
@@ -58,7 +75,7 @@ Return only valid JSON in this shape:
       ],
       temperature: 0.3,
     });
-    
+
     let parsed: { feedbackByPart?: Record<string, string> } = {};
 
     try {
