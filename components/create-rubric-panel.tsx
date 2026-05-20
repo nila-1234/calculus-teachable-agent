@@ -230,16 +230,16 @@ export default function CreateRubricPanel({
 
                     <Text size="3" className="leading-7">
 
-                      "Perfect! You included all essential criteria."
+                      Perfect! You included all essential criteria.
                     </Text>
                   </>) : (
                   <>
                     <Heading size="4">Not Quite!</Heading>
 
                     <Text size="3" className="leading-7">
-                      Your rubric is almost there. Review the feedback for each
+                      Not quite. Review the feedback for each
                       criterion and try again.
-                    </Text>
+                    </Text>``
                   </>
                 )}
 
