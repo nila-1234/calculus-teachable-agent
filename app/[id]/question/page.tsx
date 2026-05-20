@@ -24,13 +24,7 @@ export default function AuthorQuestionPage() {
     PLOT_DATA_SRC,
   } = scenario.schema;
 
-    // const [questionFeedbackByPart, setQuestionFeedbackByPart] = useState<
-    //   Record<string, string>
-    // >({});
-    // const [questionFeedbackLoading, setQuestionFeedbackLoading] = useState(false);
-
   const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
-  const [submitted, setSubmitted] = useState(false);
 
   const selectedChoices = useMemo(() => {
     return QUESTION_PARTS.map((part) => {
@@ -40,14 +34,9 @@ export default function AuthorQuestionPage() {
   }, [QUESTION_PARTS, selectedParts]);
 
   const allAnswered = QUESTION_PARTS.every((part) => selectedParts[part.id]);
-  // const [explanations, setExplanations] = useState<Record<string, string>>({});
 
-  // const handleExplanationChange = (partId: string, value: string) => {
-  //   setExplanations((prev) => ({
-  //     ...prev,
-  //     [partId]: value,
-  //   }));
-  // };
+  const [submittedParts, setSubmittedParts] = useState<Record<string, boolean>>({});
+  const [activePartIndex, setActivePartIndex] = useState(0);
 
   const isFullyCorrect =
     allAnswered && selectedChoices.every((choice) => choice?.correct);
@@ -64,6 +53,38 @@ export default function AuthorQuestionPage() {
 
     return result;
   }, [QUESTION_PLACEHOLDER, selectedChoices, allAnswered]);
+
+  const handleSubmitPart = (partId: string) => {
+    if (!selectedParts[partId]) return;
+
+    setSubmittedParts((prev) => ({
+      ...prev,
+      [partId]: true,
+    }));
+  };
+
+  const handleTryAgainPart = (partId: string) => {
+    setSubmittedParts((prev) => ({
+      ...prev,
+      [partId]: false,
+    }));
+
+    setSelectedParts((prev) => {
+      const next = { ...prev };
+      delete next[partId];
+      return next;
+    });
+  };
+
+  const handleNextPart = () => {
+    const currentPart = QUESTION_PARTS[activePartIndex];
+    const selectedId = selectedParts[currentPart.id];
+    const selectedChoice = currentPart.options.find((opt) => opt.id === selectedId);
+
+    if (!selectedChoice?.correct) return;
+
+    setActivePartIndex((prev) => Math.min(prev + 1, QUESTION_PARTS.length - 1));
+  };
 
   const handleContinue = () => {
     if (!isFullyCorrect || !allAnswered) return;
@@ -109,70 +130,19 @@ export default function AuthorQuestionPage() {
         scatterPlotSrc={PLOT_DATA_SRC}
         parts={QUESTION_PARTS}
         selectedParts={selectedParts}
-        submitted={submitted}
-        isCorrectSelection={submitted && isFullyCorrect}
         onSelectPart={(partId, choiceId) => {
-          if (submitted) return;
+          if (submittedParts[partId]) return;
           setSelectedParts((prev) => ({
             ...prev,
             [partId]: choiceId,
           }));
         }}
-        onSubmit={() => {
-          if (!allAnswered) return;
-          setSubmitted(true);
-        }}
-        // onSubmit={async () => {
-        //   if (!allAnswered) return;
-
-        //   setSubmitted(true);
-        //   setQuestionFeedbackLoading(true);
-
-        //   try {
-        //     const responses = QUESTION_PARTS.map((part) => {
-        //       const selectedId = selectedParts[part.id];
-        //       const selectedChoice = part.options.find((opt) => opt.id === selectedId);
-
-        //       return {
-        //         partId: part.id,
-        //         partLabel: part.label,
-        //         selectedChoiceId: selectedChoice?.id || "",
-        //         selectedChoiceText: selectedChoice?.text || "",
-        //         selectedChoiceCorrect: selectedChoice?.correct,
-        //         hardcodedFeedback: selectedChoice?.feedback || "",
-        //         explanation: explanations[part.id] || "",
-        //       };
-        //     });
-
-        //     const res = await fetch("/api/question-feedback", {
-        //       method: "POST",
-        //       headers: { "Content-Type": "application/json" },
-        //       body: JSON.stringify({
-        //         scenario: SCENARIO_PLACEHOLDER,
-        //         question: QUESTION_PLACEHOLDER,
-        //         responses,
-        //       }),
-        //     });
-
-        //     const data = await res.json();
-        //     setQuestionFeedbackByPart(data.feedbackByPart || {});
-        //   } catch {
-        //     setQuestionFeedbackByPart({});
-        //   } finally {
-        //     setQuestionFeedbackLoading(false);
-        //   }
-        // }}
-        // questionFeedbackByPart={questionFeedbackByPart}
-        // questionFeedbackLoading={questionFeedbackLoading}
+        submittedParts={submittedParts}
+        activePartIndex={activePartIndex}
+        onSubmitPart={handleSubmitPart}
+        onTryAgainPart={handleTryAgainPart}
+        onNextPart={handleNextPart}
         onContinue={handleContinue}
-        onTryAgain={() => {
-          setSubmitted(false);
-          setSelectedParts({});
-          // setExplanations({});
-          // setQuestionFeedbackByPart({});
-        }}
-        // explanations={explanations}
-        // onExplanationChange={handleExplanationChange}
       />
     </main>
   );
