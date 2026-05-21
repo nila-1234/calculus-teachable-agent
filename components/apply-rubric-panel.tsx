@@ -13,7 +13,6 @@ export type RubricCriterion = {
 
 export type AnswerReviewState = {
   results: Record<string, "pass" | "fail" | "">;
-  remarks: Record<string, string>;
   submitted: boolean;
   feedback: string;
 };
@@ -28,13 +27,8 @@ type ApplyRubricPanelProps = {
     criterionId: string,
     value: "pass" | "fail"
   ) => void;
-  onChangeRemark: (
-    answerId: string,
-    criterionId: string,
-    value: string
-  ) => void;
   onSubmitAnswer: (answerId: string) => void;
-};
+};  
 
 export default function ApplyRubricPanel({
   rubric,
@@ -42,7 +36,6 @@ export default function ApplyRubricPanel({
   reviewStates,
   loadingAnswerId,
   onToggleResult,
-  onChangeRemark,
   onSubmitAnswer,
 }: ApplyRubricPanelProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -119,7 +112,6 @@ export default function ApplyRubricPanel({
               <Text size="2" color="gray">
                 Review the AI answer above and evaluate it against each selected criterion.
                 Mark “Pass” only if the criterion is fully satisfied, and “Fail” if it is missing, incorrect, or incomplete.
-                Add remarks to justify your evaluation for each criterion.
               </Text>
 
               <div className="overflow-hidden rounded-2xl border border-gray-200">
@@ -133,7 +125,7 @@ export default function ApplyRubricPanel({
                         Evaluation
                       </th>
                       <th className="w-[44%] border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                        Remarks
+                        Feedback
                       </th>
                     </tr>
                   </thead>
@@ -142,9 +134,6 @@ export default function ApplyRubricPanel({
                     {rubric.map((criterion) => {
                       const selectedValue =
                         currentState?.results?.[criterion.id] ?? "";
-                      const remark =
-                        currentState?.remarks?.[criterion.id] ?? "";
-
                       return (
                         <tr key={criterion.id} className="bg-white">
                           <td className="border-b border-gray-200 px-4 py-3 align-middle text-sm font-medium text-slate-900">
@@ -178,22 +167,8 @@ export default function ApplyRubricPanel({
                               </Button>
                             </Flex>
                           </td>
-
-                          <td className="border-b border-gray-200 px-4 py-3 align-middle">
-                            <input
-                              type="text"
-                              value={remark}
-                              disabled={isLoading}
-                              onChange={(e) =>
-                                onChangeRemark(
-                                  currentAnswer.id,
-                                  criterion.id,
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Add remark..."
-                              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-lime-500 focus:ring-2 focus:ring-lime-200 disabled:bg-gray-50"
-                            />
+                          <td className="border-b border-gray-200 px-4 py-3 align-middle text-sm font-medium text-slate-900">
+                            <MathDisplay text={"Placeholder"} />
                           </td>
                         </tr>
                       );

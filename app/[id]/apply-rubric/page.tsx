@@ -50,9 +50,6 @@ export default function ApplyRubricPage() {
           results: Object.fromEntries(
             selectedRubric.map((criterion) => [criterion.id, ""])
           ) as Record<string, "pass" | "fail" | "">,
-          remarks: Object.fromEntries(
-            selectedRubric.map((criterion) => [criterion.id, ""])
-          ) as Record<string, string>,
           submitted: false,
           feedback: "",
         },
@@ -79,23 +76,6 @@ export default function ApplyRubricPage() {
     }));
   };
 
-  const handleChangeRemark = (
-    answerId: string,
-    criterionId: string,
-    value: string
-  ) => {
-    setReviewStates((prev) => ({
-      ...prev,
-      [answerId]: {
-        ...prev[answerId],
-        remarks: {
-          ...prev[answerId].remarks,
-          [criterionId]: value,
-        },
-      },
-    }));
-  };
-
   const handleSubmitAnswer = async (answerId: string) => {
     const review = reviewStates[answerId];
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
@@ -106,7 +86,6 @@ export default function ApplyRubricPage() {
       criterionId: criterion.id,
       criterion: criterion.label,
       evaluation: review.results[criterion.id],
-      remarks: review.remarks[criterion.id] ?? "",
     }));
 
     try {
@@ -177,7 +156,6 @@ export default function ApplyRubricPage() {
           reviewStates={reviewStates}
           loadingAnswerId={loadingAnswerId}
           onToggleResult={handleToggleResult}
-          onChangeRemark={handleChangeRemark}
           onSubmitAnswer={handleSubmitAnswer}
         />
       </div>
