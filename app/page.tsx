@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading } from "@radix-ui/themes";
+
+const scenarios = [
+  { id: 1, name: "Company Profit Analysis" },
+  { id: 2, name: "Water Reservoir Levels" },
+  { id: 3, name: "Machine Risk Scores" },
+  { id: 4, name: "Delivery Cost Analysis" },
+  { id: 5, name: "Company Profit Analysis Pt. 2" },
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -12,27 +20,24 @@ export default function HomePage() {
       style={{ backgroundColor: "var(--lime-5)" }}
     >
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
-        {/* App Title */}
         <Heading size="8">Teachable Calculus Agent</Heading>
 
         <Card size="3" className="w-full max-w-xl">
           <Flex direction="column" gap="5" align="center">
             <Heading size="6">Choose a Scenario</Heading>
 
-            {/* <Text size="3" color="gray" align="center">
-              Select a scenario.
-            </Text> */}
-
             <Flex direction="column" gap="3" className="w-full">
-              {[1, 2, 3, 4, 5].map((id) => (
+              {scenarios.map((scenario) => (
                 <Button
-                  key={id}
+                  key={scenario.id}
                   size="3"
                   color="lime"
                   variant="soft"
-                  onClick={() => router.push(`/${id}/question`)}
+                  onClick={() =>
+                    router.push(`/${scenario.id}/question`)
+                  }
                 >
-                  Scenario {id}
+                  {scenario.id}. {scenario.name}
                 </Button>
               ))}
             </Flex>
