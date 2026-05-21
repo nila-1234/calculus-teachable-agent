@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 
+type Evaluation = "pass" | "fail" | "";
+
 type RubricRow = {
   criterionId: string;
   criterion: string;
-  evaluation: "pass" | "fail" | "";
-  remarks: string;
+  evaluation: Evaluation;
 };
+
+type RubricFitItem = {
+  pass: boolean;
+  feedback: string;
+};
+
+type RubricFit = Record<string, RubricFitItem>;
 
 export async function POST(req: Request) {
   try {
@@ -14,37 +22,55 @@ export async function POST(req: Request) {
     const {
       answerId,
       answerTitle,
-      answerText,
       rubric,
+      rubricFit,
     }: {
       answerId?: string;
       answerTitle?: string;
-      answerText?: string;
       rubric?: RubricRow[];
+      rubricFit?: RubricFit;
     } = body;
 
-    const rows = Array.isArray(rubric) ? rubric : [];
+    const rows = Array.isArray(rubric) ? rubric : {};
+    const fit = rubricFit ?? {};
 
-    type RubricRow = {
-      criterionId: string;
-      criterion: string;
-      evaluation: "pass" | "fail" | "";
-    };
+    const feedback = Array.isArray(rows)
+      ? rows.map((row) => {
+        const expected = fit[row.criterionId];
 
-    const feedback = rows.map((row) => ({
-      criterionId: row.criterionId,
-      criterion: row.criterion,
-      evaluation: row.evaluation,
-      feedback:
-        row.evaluation === "pass"
-          ? "Good: this answer satisfies this criterion."
-          : "Needs work: this answer does not fully satisfy this criterion.",
-    }));
+        if (!expected) {
+          return {
+            criterionId: row.criterionId,
+            criterion: row.criterion,
+            evaluation: row.evaluation,
+            correct: false,
+            expectedEvaluation: null,
+            feedback: "No rubric fit reference was found for this criterion.",
+          };
+        }
 
-    console.log(feedback);
+        const expectedEvaluation: "pass" | "fail" = expected.pass
+          ? "pass"
+          : "fail";
 
-    return NextResponse.json({ feedback });
+        const userWasCorrect = row.evaluation === expectedEvaluation;
 
+        return {
+          criterionId: row.criterionId,
+          criterion: row.criterion,
+          evaluation: row.evaluation,
+          correct: userWasCorrect,
+          expectedEvaluation,
+          feedback: expected.feedback,
+        };
+      })
+      : [];
+
+    return NextResponse.json({
+      answerId,
+      answerTitle,
+      feedback,
+    });
   } catch (error) {
     return NextResponse.json(
       {

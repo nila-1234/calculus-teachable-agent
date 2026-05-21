@@ -110,12 +110,48 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 24.57\\)\n\nCritical point: \\(x\\approx 24.57\\)\n\nThe derivative is computed correctly and the equation is set up correctly, but the response gives only one critical number and does not explain what it means for the company’s profit pattern."
+      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 24.57\\)\n\nCritical point: \\(x\\approx 24.57\\)",
+      "rubricFit": {
+        "derivative-correct": {
+          "pass": true,
+          "feedback": "The derivative is computed correctly."
+        },
+        "solve-fprime-zero": {
+          "pass": true,
+          "feedback": "The equation f'(x)=0 is solved correctly."
+        },
+        "all-critical-points-identified": {
+          "pass": false,
+          "feedback": "Only one critical point is given. The second critical point is missing."
+        },
+        "connects-critical-points-to-context": {
+          "pass": false,
+          "feedback": "No interpretation is provided explaining what the critical point means for company profit."
+        }
+      }
     },
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\((3x-30)(x-20)=0\\)\n\n\\(x=10,20\\)\n\nCritical points: \\(x=10,20\\)\n\nThe derivative is computed correctly, but the factorization is incorrect, so the critical numbers are wrong. The response also gives no interpretation of how those values relate to the company’s profit changes during the month."
+      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\((3x-30)(x-20)=0\\)\n\n\\(x=10,20\\)\n\nCritical points: \\(x=10,20\\)",
+      "rubricFit": {
+        "derivative-correct": {
+          "pass": true,
+          "feedback": "The derivative is computed correctly."
+        },
+        "solve-fprime-zero": {
+          "pass": false,
+          "feedback": "The factorization is incorrect, so f'(x)=0 is not solved correctly."
+        },
+        "all-critical-points-identified": {
+          "pass": false,
+          "feedback": "The critical values x=10 and x=20 are incorrect."
+        },
+        "connects-critical-points-to-context": {
+          "pass": false,
+          "feedback": "No interpretation connects the critical points to changes in company profit."
+        }
+      }
     }
   ]
 }

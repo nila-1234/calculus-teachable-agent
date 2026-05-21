@@ -239,7 +239,7 @@ export default function CreateRubricPanel({
                     <Text size="3" className="leading-7">
                       Not quite. Review the feedback for each
                       criterion and try again.
-                    </Text>``
+                    </Text>
                   </>
                 )}
 

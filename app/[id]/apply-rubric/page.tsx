@@ -43,18 +43,19 @@ export default function ApplyRubricPage() {
 
     setRubric(selectedRubric);
 
-    const initialReviewStates = Object.fromEntries(
-      FINAL_AI_ANSWERS.map((answer) => [
-        answer.id,
-        {
-          results: Object.fromEntries(
-            selectedRubric.map((criterion) => [criterion.id, ""])
-          ) as Record<string, "pass" | "fail" | "">,
-          submitted: false,
-          feedback: "",
-        },
-      ])
-    );
+    const initialReviewStates: Record<string, AnswerReviewState> =
+      Object.fromEntries(
+        FINAL_AI_ANSWERS.map((answer) => [
+          answer.id,
+          {
+            results: Object.fromEntries(
+              selectedRubric.map((criterion) => [criterion.id, ""])
+            ) as Record<string, "" | "pass" | "fail">,
+            submitted: false,
+            feedback: [],
+          },
+        ])
+      );
 
     setReviewStates(initialReviewStates);
   }, [RUBRIC_OPTIONS, FINAL_AI_ANSWERS, scenarioId]);
@@ -101,6 +102,7 @@ export default function ApplyRubricPage() {
           answerText: answer.text,
           rubric: rubricWithReviews,
           results: review.results,
+          rubricFit: answer.rubricFit,
         }),
       });
 
@@ -112,7 +114,7 @@ export default function ApplyRubricPage() {
           [answerId]: {
             ...prev[answerId],
             submitted: true,
-            feedback: data.feedback ?? "No feedback returned.",
+            feedback: Array.isArray(data.feedback) ? data.feedback : [],
           },
         };
 
@@ -129,7 +131,7 @@ export default function ApplyRubricPage() {
           [answerId]: {
             ...prev[answerId],
             submitted: true,
-            feedback: "Something went wrong while generating feedback.",
+            feedback: []
           },
         };
 

@@ -27,6 +27,7 @@ export type FinalAiAnswer = {
   id: string;
   label: string;
   text: string;
+  rubricFit: Record<string, { pass: boolean; feedback: string }>;
 };
 
 export type QuestionSchema = {

@@ -110,12 +110,48 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x \\approx 4.51\\)\n\nSo the critical point is around x = 4.51, which is where profit is highest."
+      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x \\approx 4.51\\)\n\nSo the critical point is around x = 4.51, which is where profit is highest.",
+      "rubricFit": {
+        "derivative-correct": {
+          "pass": true,
+          "feedback": "The derivative is computed correctly."
+        },
+        "solve-fprime-zero": {
+          "pass": true,
+          "feedback": "The equation f'(x)=0 is solved correctly."
+        },
+        "all-critical-points-identified": {
+          "pass": false,
+          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+        },
+        "maximum-profit-identified": {
+          "pass": false,
+          "feedback": "The maximum profit point is not correctly identified."
+        }
+      }
     },
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x \\approx 4.51, 22.16\\)\n\nSince 22.16 is larger, that should be the maximum profit day.\n\nSo the company should focus on day 22."
+      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x \\approx 4.51, 22.16\\)\n\nSince 22.16 is larger, that should be the maximum profit day.\n\nSo the company should focus on day 22.",
+      "rubricFit": {
+        "derivative-correct": {
+          "pass": true,
+          "feedback": "The derivative is computed correctly."
+        },
+        "solve-fprime-zero": {
+          "pass": false,
+          "feedback": "The equation f'(x)=0 is not solved correctly. The second critical point is calculated incorrectly, which leads to an incorrect conclusion about the maximum profit day."
+        },
+        "all-critical-points-identified": {
+          "pass": false,
+          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+        },
+        "maximum-profit-identified": {
+          "pass": false,
+          "feedback": "The maximum profit point is not correctly identified due to the incorrect calculation of the second critical point."
+        }
+      }
     }
   ]
 }

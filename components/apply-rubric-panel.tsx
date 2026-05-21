@@ -10,11 +10,19 @@ export type RubricCriterion = {
   id: string;
   label: string;
 };
+type RubricCriterionFeedback = {
+  criterionId: string;
+  criterion: string;
+  evaluation: "pass" | "fail" | "";
+  correct: boolean;
+  expectedEvaluation: "pass" | "fail" | null;
+  feedback: string;
+};
 
 export type AnswerReviewState = {
   results: Record<string, "pass" | "fail" | "">;
   submitted: boolean;
-  feedback: string;
+  feedback: RubricCriterionFeedback[];
 };
 
 type ApplyRubricPanelProps = {
@@ -173,12 +181,17 @@ export default function ApplyRubricPanel({
                           <td className="border-b border-gray-200 px-4 py-3 align-top">
                             {currentState?.submitted ? (
                               <div
-                                className={`min-h-[64px] rounded-xl border-2 px-3 py-2 ${selectedValue === "pass"
-                                    ? "border-lime-300 bg-lime-50 text-slate-900"
-                                    : "border-red-200 bg-red-50 text-slate-900"
+                                className={`min-h-[64px] rounded-xl border-2 px-3 py-2 ${criterionFeedback?.correct
+                                    ? "border-lime-300 bg-lime-50"
+                                    : "border-red-200 bg-red-50"
                                   }`}
                               >
-                                <div className="text-sm leading-6 text-slate-700">
+                                <div
+                                  className={`text-sm leading-6 ${criterionFeedback?.correct
+                                      ? "text-green-900"
+                                      : "text-red-900"
+                                    }`}
+                                >
                                   {isLoading ? (
                                     "Generating feedback..."
                                   ) : criterionFeedback?.feedback ? (
