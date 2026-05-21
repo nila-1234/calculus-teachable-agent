@@ -171,13 +171,37 @@ function buildCombinedData(
 
   const evaluator = equation.trim() ? buildEquationEvaluator(equation) : null;
 
-  const combined: ChartPoint[] = xValues
-    .sort((a, b) => a - b)
-    .map((x) => ({
+  // const combined: ChartPoint[] = xValues
+  //   .sort((a, b) => a - b)
+  //   .map((x) => ({
+  //     [xKey]: x,
+  //     scatterY: scatterMap.has(x) ? (scatterMap.get(x) ?? null) : null,
+  //     equationY: evaluator ? evaluator(x) : null,
+  //   }));
+
+  const MAX_Y = 150;
+
+  const step = (maxX - minX) / 200;
+
+  const sampledX = Array.from(
+    { length: 201 },
+    (_, i) => minX + i * step
+  );
+
+  const allXValues = Array.from(new Set([...sampledX, ...xValues])).sort(
+    (a, b) => a - b
+  );
+
+  const combined: ChartPoint[] = allXValues.map((x) => {
+    const y = evaluator ? evaluator(x) : null;
+
+    return {
       [xKey]: x,
-      scatterY: scatterMap.has(x) ? (scatterMap.get(x) ?? null) : null,
-      equationY: evaluator ? evaluator(x) : null,
-    }));
+      scatterY: scatterMap.has(x) ? scatterMap.get(x) ?? null : null,
+      equationY:
+        y === null || !Number.isFinite(y) || Math.abs(y) > MAX_Y ? null : y,
+    };
+  });
 
   return combined;
 }
@@ -306,7 +330,7 @@ export default function ScatterPlot({
             <XAxis
               type="number"
               dataKey={plot.xKey}
-              domain={["dataMin", "dataMax"]}
+              domain={["dataMin" + 5, "dataMax" + 5]}
               name={plot.xAxisLabel}
               label={{
                 value: plot.xAxisLabel,
@@ -317,8 +341,9 @@ export default function ScatterPlot({
 
             <YAxis
               type="number"
-              domain={["auto", "auto"]}
+              domain={["auto", (dataMax: number) => Math.min(dataMax, 150),]}
               name={plot.yAxisLabel}
+              allowDataOverflow
               label={{
                 value: plot.yAxisLabel,
                 angle: -90,
