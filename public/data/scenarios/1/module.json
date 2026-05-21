@@ -1,6 +1,6 @@
 {
-  "scenario": "A company is reviewing its daily profit over the past month to better understand its performance and decide which day’s strategy is worth repeating. The scatter plot below shows the company’s daily profit throughout the month. Which of the following questions would best help the company determine which day produced the highest profit pattern worth mimicking?",
-  "question": "Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.",
+  "scenario": "A company is reviewing its daily profit over the past month to better understand an unusual change in performance. Over the past year, the company’s profit has generally been declining, but during this month it started going up, but later began to decrease again. The company recently made a change in its marketing strategy, which may have contributed to this fluctuation. The company wants to choose a function that best models this month’s data. The goal is to identify the most important features of this month’s profit pattern so the company can decide which parts of the month deserve closer investigation.",
+  "question": "Use the function __(1)__ to model the company’s profit. Analyse the company’s situation by finding its __(2)__.",
   "plotDataSrc": "/data/scenarios/1/plot-data.json",
   "questionParts": [
     {
@@ -9,21 +9,27 @@
       "options": [
         {
           "id": "f1",
-          "text": "\\(f(x)=0.05x^3-2x^2+15x+80\\)",
+          "text": "\\(f(x)=-0.01x^{3}+0.45x^{2}-4x+80\\)",
           "correct": true,
-          "feedback": "This is the strongest choice because it matches the overall shape of the scatter plot: profit rises early in the month, reaches a high point, then drops before increasing again. This model can produce multiple critical points, which helps identify the company’s best-profit day."
+          "feedback": "Correct! This function matches the overall shape of the scatter plot and the story in the scenario. The graph starts by decreasing, then rises to a high point, and later begins decreasing again, which fits the monthly profit pattern shown in the data. The coefficients also create a smooth and realistic curve: the cubic term \\(-0.01x^3\\) is small enough to avoid overly steep changes, while the quadratic and linear terms place the turning points in a reasonable part of the month. This makes the function a strong model for identifying the key features of the company’s profit pattern."
         },
         {
           "id": "f2",
-          "text": "\\(f(x)=0.05x^3+2x^2+15x+75\\)",
+          "text": "\\(f(x)=-0.01x^{3}+0.4x^{2}-3x+90\\)",
           "correct": false,
-          "feedback": "This choice is less appropriate because the positive quadratic term changes the shape of the graph too much. It does not match the pattern in the scatter plot as well as the correct model."
+          "feedback": "Incorrect! This function is close to the correct model, but its coefficients make the graph fit the data less accurately. The constant term \\(+90\\) shifts the graph upward, so the model starts too high compared with the early profit values in the scatter plot. Also, changing the quadratic coefficient from \\(0.45\\) to \\(0.4\\) and the linear coefficient from \\(-4\\) to \\(-3\\) changes the shape and location of the turning points. Because of these differences, the curve does not match the low point and later rise in the data as well as the correct function."
         },
         {
           "id": "f3",
-          "text": "\\(f(x)=0.5x^3-2x^2+15x+80\\)",
+          "text": "\\(f(x)=18\\sin(0.16x-2.4)+88\\)",
           "correct": false,
-          "feedback": "This choice is not the best fit because the larger cubic coefficient makes the function change too rapidly. The graph suggests a smoother trend, so this model exaggerates the behavior."
+          "feedback": "Incorrect! This graph may look similar to the data over the month because it rises and falls in a comparable way, but a sine function represents a repeating periodic pattern. That means it suggests the company’s profit would continue to move up and down in regular cycles. In this scenario, the fluctuation is connected to a recent strategy change, so a repeating sinusoidal model is less appropriate than a cubic model. The shape may look convincing locally, but the function type does not fit the situation as well."
+        },
+        {
+          "id": "f4",
+          "text": "\\(f(x)=-e^{0.17x}+100\\)",
+          "correct": false,
+          "feedback": "Incorrect! This function does not match the scatter plot because its shape is fundamentally different from the data. An exponential function like this changes in only one general direction and does not create the two turning points shown in the monthly profit pattern. The data decreases, then rises, and then decreases again, but this exponential model cannot capture that type of fluctuation. So the problem is not just a small mismatch in coefficients — the entire function family is not suitable for modeling this situation."
         }
       ]
     },
@@ -35,19 +41,19 @@
           "id": "a1",
           "text": "critical points",
           "correct": true,
-          "feedback": "This is the best choice because critical points identify where profit reaches maximum or minimum values, directly answering the company’s question."
+          "feedback": "Correct! Critical points help identify where profit changes direction and reaches local maximum or minimum values. That makes them the most useful features for analyzing this month’s fluctuation."
         },
         {
           "id": "a2",
           "text": "average rate of change over the month",
           "correct": false,
-          "feedback": "This only describes overall change and does not identify the specific day when profit was highest."
+          "feedback": "Incorrect! The average rate of change only summarizes the overall change from the beginning to the end of the month. It does not show the important ups and downs within the month."
         },
         {
           "id": "a3",
           "text": "intercepts",
           "correct": false,
-          "feedback": "Intercepts do not help determine the day of maximum profit."
+          "feedback": "Incorrect! Intercepts only show where the graph crosses the axes. They do not help identify the most important changes in the company’s profit pattern."
         }
       ]
     }
@@ -61,27 +67,21 @@
     },
     {
       "id": "solve-fprime-zero",
-      "label": "Equation \\(f'(x)=0\\) is solved correctly",
+      "label": "Equation \\(f'(x)=0\\) is solved correctly to find all critical numbers",
       "correct": true,
       "feedback": "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers."
     },
     {
       "id": "all-critical-points-identified",
-      "label": "All critical points are identified",
+      "label": "All critical points are correctly identified",
       "correct": true,
       "feedback": "This is an essential criterion because missing any critical point would lead to an incomplete or incorrect analysis."
     },
     {
-      "id": "maximum-profit-identified",
-      "label": "The critical point corresponding to maximum profit is identified correctly",
+      "id": "connects-critical-points-to-context",
+      "label": "Correctly connects the critical points to important changes in the company’s profit during the month",
       "correct": true,
       "feedback": "This is an essential criterion because the goal is to identify and explain the day of highest profit."
-    },
-    {
-      "id": "whole-number-simplification",
-      "label": "The equation is simplified into whole-number coefficients before solving",
-      "correct": false,
-      "feedback": "This is not required, since simplifying the equation can help but is not necessary for obtaining the correct answer."
     },
     {
       "id": "graph-verification",
@@ -98,19 +98,19 @@
   ],
   "sampleAnswers": {
     "correct": {
-      "title": "Sample AI Answer 1 (Fully Correct)",
-      "text": "\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)\n\n\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)\n\n\\(x \\approx 4.5, 22.2\\)\n\nBoth are critical points. From the graph, the earlier one corresponds to the highest profit.\n\nSo the company should focus on around day 4-5."
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(f(x)=-0.01x^3+0.45x^2-4x+80\\)\n\n\\(f'(x)=-0.03x^2+0.9x-4\\)\n\nSet \\(f'(x)=0\\):\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 5.43,\\ 24.57\\)\n\nNow find the points:\n\n\\(f(5.43)\\approx 69.95\\)\n\n\\(f(24.57)\\approx 105.05\\)\n\nCritical points:\n\\((5.43,69.95),\\ (24.57,105.05)\\)\n\nInterpretation:\nAt \\(x\\approx 5.43\\), profit reaches a local minimum, so this is where the company’s profit stops decreasing and begins to rise.\nAt \\(x\\approx 24.57\\), profit reaches a local maximum, so this is where the profit stops increasing and begins to decrease again.\nThese points show the most important changes in the company’s profit pattern during the month."
     },
     "incorrect": {
-      "title": "Sample AI Answer 2 (Fully Incorrect)",
-      "text": "\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)\n\n\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)\n\n\\(x \\approx 3.81, 262.86\\)\n\nSo the highest profit happens around day 263."
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(f(x)=0.03x^2+0.9x-4\\)\n\n\\(f'(x)=0.06x+0.9\\)\n\nSet \\(f'(x)=0\\):\n\\(0.06x+0.9=0\\)\n\n\\(x=-15\\)\n\nCritical point:\n\\((-15,f(-15))\\)\n\nSo the company’s most important profit change happens before the month even begins, which means the model shows profit just keeps decreasing during the month."
     }
   },
   "finalAiAnswers": [
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x \\approx 4.51\\)\n\nSo the critical point is around x = 4.51, which is where profit is highest.",
+      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 24.57\\)\n\nCritical point: \\(x\\approx 24.57\\)",
       "rubricFit": {
         "derivative-correct": {
           "pass": true,
@@ -122,18 +122,18 @@
         },
         "all-critical-points-identified": {
           "pass": false,
-          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+          "feedback": "Only one critical point is given. The second critical point is missing."
         },
-        "maximum-profit-identified": {
+        "connects-critical-points-to-context": {
           "pass": false,
-          "feedback": "The maximum profit point is not correctly identified."
+          "feedback": "No interpretation is provided explaining what the critical point means for company profit."
         }
       }
     },
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x \\approx 4.51, 22.16\\)\n\nSince 22.16 is larger, that should be the maximum profit day.\n\nSo the company should focus on day 22.",
+      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\((3x-30)(x-20)=0\\)\n\n\\(x=10,20\\)\n\nCritical points: \\(x=10,20\\)",
       "rubricFit": {
         "derivative-correct": {
           "pass": true,
@@ -141,15 +141,15 @@
         },
         "solve-fprime-zero": {
           "pass": false,
-          "feedback": "The equation f'(x)=0 is not solved correctly. The second critical point is calculated incorrectly, which leads to an incorrect conclusion about the maximum profit day."
+          "feedback": "The factorization is incorrect, so f'(x)=0 is not solved correctly."
         },
         "all-critical-points-identified": {
           "pass": false,
-          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+          "feedback": "The critical values x=10 and x=20 are incorrect."
         },
-        "maximum-profit-identified": {
+        "connects-critical-points-to-context": {
           "pass": false,
-          "feedback": "The maximum profit point is not correctly identified due to the incorrect calculation of the second critical point."
+          "feedback": "No interpretation connects the critical points to changes in company profit."
         }
       }
     }

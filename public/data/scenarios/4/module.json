@@ -1,161 +1,161 @@
 {
-  "scenario": "A manufacturing company uses an automated monitoring system to review machine risk during an 8-hour shift. The system flagged the middle of the shift as a possible important point and suggested that the manager should inspect the machine around that time. Before changing the inspection schedule, the company wants to check whether the system’s claim is mathematically valid. The company collected risk-score data from the shift.",
-  "question": "Use the function __(1)__ to model the machine’s estimated risk score. The system marked t=4 as a critical point of the model. To check this claim, determine whether __(2)__.",
+  "scenario": "A delivery company is reviewing transportation data from one city. The company has collected records of extra delivery cost at different distances from the city center, but the pattern is not immediately clear. Managers want to identify a function that best models the data so they can better decide where to place a temporary distribution station.",
+  "question": "Use the function __(1)__ to model the company’s extra delivery cost. Analyse the company’s situation by finding its __(2)__.",
   "plotDataSrc": "/data/scenarios/4/plot-data.json",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the machine’s estimated risk score.",
+      "label": "Use the function __(1)__ to model the company’s extra delivery cost.",
       "options": [
         {
           "id": "f1",
-          "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)",
+          "text": "\\(C(x)=1.5|x-6|+18\\)",
           "correct": true,
-          "feedback": "Correct! This function best matches the overall pattern of the scatter plot, where the risk score becomes much higher near the middle of the shift and lower farther away from that time. The denominator approaches zero near \\(t=4\\), which creates the sharp increase shown in the data."
+          "feedback": "Correct! This function best matches the overall pattern of the scatter plot. The data decreases as distance increases at first, reaches its lowest values around x=6, and then increases again. An absolute value function captures this V-shaped trend well. The graph is not perfectly smooth, but this model reflects the overall structure of the company’s cost pattern better than the other options."
         },
         {
           "id": "f2",
-          "text": "\\(R(t)=90-(t-4)^2\\)",
+          "text": "\\(C(x)=0.5x+20\\)",
           "correct": false,
-          "feedback": "Incorrect! This function creates a smooth rounded peak near the middle of the shift, but the scatter plot suggests the values rise much more sharply near \\(t=4\\). The overall shape does not match the steep increase shown in the data."
+          "feedback": "Incorrect! A linear function only increases or decreases in one direction. The scatter plot does not show a single straight-line trend. Instead, the data first decreases and then increases, so a linear model does not capture the overall pattern well."
         },
         {
           "id": "f3",
-          "text": "\\(R(t)=2t+70\\)",
+          "text": "\\(C(x)=0.2(x-6)^2+18\\)",
           "correct": false,
-          "feedback": "Incorrect! This function only increases over time, but the scatter plot does not show one consistent increasing trend across the whole shift. The risk score rises sharply near the middle and then decreases afterward."
+          "feedback": "Incorrect! This quadratic function has a minimum near x=6, so it may seem reasonable at first. However, a quadratic graph is smooth at its lowest point, while the data suggests a sharper V-shaped pattern. The quadratic model is close, but it does not match the shape of the data as well as the absolute value function."
         },
         {
           "id": "f4",
-          "text": "\\(R(t)=70+2e^{0.3t}\\)",
+          "text": "\\(C(x)=18e^{-0.1x}+10\\)",
           "correct": false,
-          "feedback": "Incorrect! This function increases exponentially in one direction, but it does not match the pattern of high values near the middle of the shift and lower values farther away. The graph does not capture the sharp behavior around \\(t=4\\)."
+          "feedback": "Incorrect! This exponential function mostly decreases and then levels off. It does not capture the pattern in the scatter plot, where the data decreases and later increases again. So the overall function family is not a good fit for this situation."
         }
       ]
     },
     {
       "id": "2",
-      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether __(2)__.",
+      "label": "Analyse the company’s situation by finding its __(2)__.",
       "options": [
         {
-          "id": "c1",
-          "text": "\\(R(4)\\) exists and \\(R'(4)=0\\) or \\(R'(4)\\) does not exist",
+          "id": "a1",
+          "text": "critical point(s)",
           "correct": true,
-          "feedback": "Correct! To determine whether \\(t=4\\) is a critical point, the function value must exist and the derivative must either equal zero or be undefined."
+          "feedback": "Correct! Critical points help identify important locations where a function may reach a local maximum or minimum, or where its behavior changes in an important way. In this situation, they are the most useful feature for helping the company decide where extra delivery cost is lowest."
         },
         {
-          "id": "c2",
-          "text": "\\(R'(4)\\) does not exist",
+          "id": "a2",
+          "text": "average rate of change over the interval",
           "correct": false,
-          "feedback": "Incorrect! This is not enough by itself. A critical point also requires the original function value to exist at that input."
+          "feedback": "Incorrect! The average rate of change only summarizes the overall change from the beginning to the end of the interval. It does not identify the most important location in the middle of the graph where the company may want to place the distribution station."
         },
         {
-          "id": "c3",
-          "text": "\\(R(t)\\) becomes very large near \\(t=4\\)",
+          "id": "a3",
+          "text": "y-intercept",
           "correct": false,
-          "feedback": "Incorrect! Large nearby values do not prove that \\(t=4\\) is a critical point. The function itself must exist at that point."
+          "feedback": "Incorrect! The y-intercept only tells the extra delivery cost when x=0, which represents the city center. This does not answer the company’s main question about where delivery cost is lowest overall."
         },
         {
-          "id": "c4",
-          "text": "\\(R(0)=R(8)\\)",
+          "id": "a4",
+          "text": "horizontal asymptote",
           "correct": false,
-          "feedback": "Incorrect! Equal endpoint values do not determine whether \\(t=4\\) is a critical point."
+          "feedback": "Incorrect! A horizontal asymptote describes long-term end behavior. In this scenario, the company is interested in the pattern within the observed range of distances, especially the most useful location for placing the station."
         }
       ]
     }
   ],
   "rubricOptions": [
     {
-      "id": "checks-r4-exists",
-      "label": "Checks whether \\(R(4)\\) exists",
+      "id": "function-value-at-6",
+      "label": "Correctly evaluates the function value at \\(x=6\\)",
       "correct": true,
-      "feedback": "This is an essential criterion because a critical point must belong to the original function. The answer must check whether the model gives a valid value at \\(t=4\\)."
+      "feedback": "This is an essential criterion because the function value must exist before x=6 can be considered a critical number. In this problem, \\(C(6)=18\\), so the point exists on the function."
     },
     {
-      "id": "identifies-r4-undefined",
-      "label": "Correctly identifies that \\(R(4)\\) is undefined",
+      "id": "derivative-undefined-at-6",
+      "label": "Correctly identifies that \\(C'(6)\\) is undefined",
       "correct": true,
-      "feedback": "This is an essential criterion because the denominator becomes zero at \\(t=4\\), making the function undefined."
+      "feedback": "This is an essential criterion because the absolute value function has a sharp corner at \\(x=6\\). The derivative does not exist there, which is the special case being tested."
     },
     {
-      "id": "applies-critical-point-definition",
-      "label": "Correctly applies the full definition of a critical point",
+      "id": "critical-point-definition",
+      "label": "Correctly applies the definition of critical point",
       "correct": true,
-      "feedback": "This is an essential criterion because an undefined derivative alone is not sufficient. The function value must also exist."
+      "feedback": "This is an essential criterion because a critical point can happen when the derivative is undefined, as long as the function value exists. Here, \\(C(6)\\) exists and \\(C'(6)\\) is undefined, so \\((6,18)\\) is a critical point."
     },
     {
-      "id": "concludes-not-critical",
-      "label": "Correctly concludes that \\(t=4\\) is not a critical point",
+      "id": "context-interpretation",
+      "label": "Correctly interprets the result in the company context",
       "correct": true,
-      "feedback": "This is an essential criterion because the system’s claim is incorrect. Since \\(R(4)\\) does not exist, \\(t=4\\) cannot be a critical point."
+      "feedback": "This is an essential criterion because the final answer should explain what the critical point means for the company. The model suggests that 6 miles from the city center gives the lowest extra delivery cost."
     },
     {
-      "id": "solves-derivative-zero",
-      "label": "Solves \\(R'(t)=0\\) to search for possible critical numbers",
+      "id": "graph-verification",
+      "label": "Uses a graph to verify the result",
       "correct": false,
-      "feedback": "This is not sufficient for this problem. While solving \\(R'(t)=0\\) is part of finding critical numbers in general, the key issue here is whether the function exists at \\(t=4\\)."
+      "feedback": "This is not required. A graph can help show the sharp corner, but the answer can be evaluated correctly using the function value and the derivative behavior."
     },
     {
-      "id": "compares-nearby-values",
-      "label": "Compares nearby risk scores before and after \\(t=4\\)",
+      "id": "average-rate-of-change",
+      "label": "Calculates the average rate of change",
       "correct": false,
-      "feedback": "This is not required. Nearby behavior may help visualize the model, but it does not determine whether \\(t=4\\) is a valid critical point."
+      "feedback": "This is not required. Average rate of change describes the overall change across an interval, but it does not determine whether \\(x=6\\) is a critical number."
     }
   ],
   "sampleAnswers": {
     "correct": {
       "title": "Sample AI Answer 1 (100%)",
-      "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)\n\nTo determine whether \\(t=4\\) is a critical point, first check whether \\(R(4)\\) exists.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\n\\(R(4)=70+\\frac{8}{0}\\)\n\nDivision by zero is undefined, so \\(R(4)\\) does not exist.\n\nA critical point must satisfy two conditions:\n- the function value exists\n- and the derivative is zero or undefined\n\nSince \\(R(4)\\) does not exist, \\(t=4\\) is not a critical point.\n\nTherefore, the monitoring system’s claim is not mathematically valid."
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\nFirst evaluate the function at \\(x=6\\):\n\\(C(6)=1.5|6-6|+18=18\\)\n\nSo the function exists at \\(x=6\\).\n\nFor \\(x<6\\), \\(C(x)=1.5(6-x)+18\\), so \\(C'(x)=-1.5\\).\n\nFor \\(x>6\\), \\(C(x)=1.5(x-6)+18\\), so \\(C'(x)=1.5\\).\n\nBecause the left-hand derivative and right-hand derivative are different, \\(C'(6)\\) is undefined.\n\nSince \\(C(6)\\) exists and \\(C'(6)\\) is undefined, \\(x=6\\) is a critical number.\n\nCritical point: \\((6,18)\\)\n\nInterpretation:\nThe model suggests that the extra delivery cost is lowest when the temporary distribution station is placed about 6 miles from the city center."
     },
     "incorrect": {
       "title": "Sample AI Answer 2 (0%)",
-      "text": "\\(R(t)=70+\\frac{8}{(t-4)^2}\\)\n\nAs \\(t\\) approaches 4, the denominator becomes very small, so the graph rises sharply.\n\nBecause the graph becomes very large near \\(t=4\\), this means \\(t=4\\) is a critical point.\n\nTherefore, the system is correct."
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\nThe critical point happens when \\(C'(x)=0\\).\n\nSince the graph is made from straight line pieces, the slope is never 0.\n\nTherefore, there are no critical points.\n\nThis means the company cannot use this model to decide where the distribution station should go."
     }
   },
   "finalAiAnswers": [
     {
-      "id": "answer-50",
+      "id": "answer-25",
       "label": "AI Student 1",
-      "text": "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\nThe denominator becomes zero, so \\(R(4)\\) is undefined.\n\nAlso, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point.\n\nThe response correctly checks whether \\(R(4)\\) exists, but it incorrectly concludes that \\(t=4\\) is a critical point even though the function value does not exist there.",
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=1.5|6-6|+18=18\\)\n\nThe lowest point is \\((6,18)\\), so the critical point is \\((6,18)\\).\n\nThis means the extra delivery cost is lowest 6 miles from the city center.\n\nThis answer evaluates the function value correctly and identifies the correct point, but it does not explain that \\(C'(6)\\) is undefined. It also does not clearly justify the result using the definition of a critical point.",
       "rubricFit": {
-        "checks-r4-exists": {
+        "function-value-at-6": {
           "pass": true,
-          "feedback": "The answer correctly checks whether \\(R(4)\\) exists."
+          "feedback": "The answer correctly evaluates the function value at \\(x=6\\)."
         },
-        "identifies-r4-undefined": {
-          "pass": true,
-          "feedback": "The answer correctly identifies that \\(R(4)\\) is undefined."
-        },
-        "applies-critical-point-definition": {
+        "derivative-undefined-at-6": {
           "pass": false,
-          "feedback": "The answer does not correctly apply the full definition of a critical point. Since \\(R(4)\\) does not exist, \\(t=4\\) cannot be a critical point."
+          "feedback": "The answer does not identify that \\(C'(6)\\) is undefined, which is a key reason why \\((6,18)\\) is a critical point."
         },
-        "concludes-not-critical": {
+        "critical-point-definition": {
           "pass": false,
-          "feedback": "The answer incorrectly concludes that \\(t=4\\) is a critical point."
+          "feedback": "The answer does not clearly apply the definition of a critical point. It should explain that a critical point can occur when the derivative is undefined, as long as the function value exists."
+        },
+        "context-interpretation": {
+          "pass": false,
+          "feedback": "The answer only partially meets this rubric as it identifies the lowest point, but does not clearly connect it to the delivery company’s station decision"
         }
       }
     },
     {
-      "id": "answer-25",
+      "id": "answer-50",
       "label": "AI Student 2",
-      "text": "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.\n\nSince the graph changes direction around \\(t=4\\), that must be a critical point.\n\nTherefore, the system’s claim is correct.\n\nThe response discusses nearby behavior but does not check whether \\(R(4)\\) exists or apply the definition of a critical point correctly.",
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=18\\)\n\nAt \\(x=6\\), the graph has a sharp corner, so \\(C'(6)\\) is undefined.\n\nBecause the derivative is undefined, this cannot be a critical point.\n\nSo the company should not place the station at 6 miles from the city center.\n\nThis answer evaluates the function value correctly and recognizes that the derivative is undefined, but it incorrectly applies the definition of critical point. A point can still be critical when the derivative is undefined, as long as the function exists there.",
       "rubricFit": {
-        "checks-r4-exists": {
+        "function-value-at-6": {
           "pass": true,
-          "feedback": "The answer correctly check whether \\(R(4)\\) exists, which is necessary for determining whether \\(t=4\\) is a critical point."
+          "feedback": "The answer correctly evaluates the function value at \\(x=6\\)."
         },
-        "identifies-r4-undefined": {
-          "pass": false,
-          "feedback": "The answer does not identify that \\(R(4)\\) is undefined, which is a key reason why \\(t=4\\) cannot be a critical point."
+        "derivative-undefined-at-6": {
+          "pass": true,
+          "feedback": "The answer correctly identifies that \\(C'(6)\\) is undefined."
         },
-        "applies-critical-point-definition": {
+        "critical-point-definition": {
           "pass": false,
-          "feedback": "The answer does not correctly apply the full definition of a critical point. The function value must exist at \\(t=4\\) for it to be a critical point."
+          "feedback": "The answer does not correctly apply the definition of a critical point. It incorrectly says an undefined derivative means there is no critical point."
         },
-        "concludes-not-critical": {
+        "context-interpretation": {
           "pass": false,
-          "feedback": "It incorrectly concludes that \\(t=4\\) is a critical point."
+          "feedback": "The answer incorrectly concludes that \\((6,18)\\) cannot be a critical point and that the company should not place the station there."
         }
       }
     }

@@ -1,107 +1,38 @@
 {
-  "title": "Scatter Plot of Extra Delivery Cost by Distance",
-  "xAxisLabel": "Distance from City Center",
-  "yAxisLabel": "Extra Delivery Cost",
+  "title": "Daily Profit Over a Month",
+  "xAxisLabel": "Day of the Month",
+  "yAxisLabel": "Daily Profit",
   "data": [
-    {
-      "distance": 0,
-      "cost": 27.2
-    },
-    {
-      "distance": 0.5,
-      "cost": 25.9
-    },
-    {
-      "distance": 1,
-      "cost": 26.1
-    },
-    {
-      "distance": 1.5,
-      "cost": 24.7
-    },
-    {
-      "distance": 2,
-      "cost": 23.8
-    },
-    {
-      "distance": 2.5,
-      "cost": 24.1
-    },
-    {
-      "distance": 3,
-      "cost": 22.4
-    },
-    {
-      "distance": 3.5,
-      "cost": 21.9
-    },
-    {
-      "distance": 4,
-      "cost": 21.1
-    },
-    {
-      "distance": 4.5,
-      "cost": 20.7
-    },
-    {
-      "distance": 5,
-      "cost": 20.2
-    },
-    {
-      "distance": 5.5,
-      "cost": 19.4
-    },
-    {
-      "distance": 6,
-      "cost": 18.8
-    },
-    {
-      "distance": 6.5,
-      "cost": 19.6
-    },
-    {
-      "distance": 7,
-      "cost": 20.1
-    },
-    {
-      "distance": 7.5,
-      "cost": 19.8
-    },
-    {
-      "distance": 8,
-      "cost": 21
-    },
-    {
-      "distance": 8.5,
-      "cost": 22
-    },
-    {
-      "distance": 9,
-      "cost": 22.4
-    },
-    {
-      "distance": 9.5,
-      "cost": 23.7
-    },
-    {
-      "distance": 10,
-      "cost": 23.4
-    },
-    {
-      "distance": 10.5,
-      "cost": 24.9
-    },
-    {
-      "distance": 11,
-      "cost": 25.8
-    },
-    {
-      "distance": 11.5,
-      "cost": 25.4
-    },
-    {
-      "distance": 12,
-      "cost": 27
-    }
+    { "day": 1, "profit": 84.93 },
+    { "day": 2, "profit": 101.89 },
+    { "day": 3, "profit": 99.3 },
+    { "day": 4, "profit": 112.51 },
+    { "day": 5, "profit": 112.55 },
+    { "day": 6, "profit": 131.89 },
+    { "day": 7, "profit": 104.14 },
+    { "day": 8, "profit": 99.31 },
+    { "day": 9, "profit": 93.94 },
+    { "day": 10, "profit": 78.19 },
+    { "day": 11, "profit": 77.83 },
+    { "day": 12, "profit": 52.45 },
+    { "day": 13, "profit": 55.18 },
+    { "day": 14, "profit": 25.18 },
+    { "day": 15, "profit": 21.36 },
+    { "day": 16, "profit": 19.64 },
+    { "day": 17, "profit": 3.94 },
+    { "day": 18, "profit": -2.89 },
+    { "day": 19, "profit": -39.61 },
+    { "day": 20, "profit": -16.39 },
+    { "day": 21, "profit": -30.86 },
+    { "day": 22, "profit": -30.57 },
+    { "day": 23, "profit": -25.5 },
+    { "day": 24, "profit": -19.36 },
+    { "day": 25, "profit": -12.26 },
+    { "day": 26, "profit": 15.86 },
+    { "day": 27, "profit": 9.31 },
+    { "day": 28, "profit": 36.85 },
+    { "day": 29, "profit": 53.55 },
+    { "day": 30, "profit": 82.23 },
+    { "day": 31, "profit": 111.5 }
   ]
 }

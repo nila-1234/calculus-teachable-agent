@@ -1,155 +1,147 @@
 {
-  "scenario": "A company is reviewing its daily profit over the past month to better understand an unusual change in performance. Over the past year, the company’s profit has generally been declining, but during this month it started going up, but later began to decrease again. The company recently made a change in its marketing strategy, which may have contributed to this fluctuation. The company wants to choose a function that best models this month’s data. The goal is to identify the most important features of this month’s profit pattern so the company can decide which parts of the month deserve closer investigation.",
-  "question": "Use the function __(1)__ to model the company’s profit. Analyse the company’s situation by finding its __(2)__.",
+  "scenario": "During a heavy rainstorm, water flows into a city reservoir. The rate of water flow into the reservoir is modeled in thousands of gallons per hour, where t is the number of hours since the storm began. The reservoir has a maximum capacity of 500 thousand gallons, and at the start of the storm, it already contains 450 thousand gallons. The city engineers need to determine whether the reservoir will overflow during the first 4 hours of the storm.",
+  "question": "Use the function __(1)__ to model the reservoir inflow rate. To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__, and determine if the reservoir will overflow or not.",
   "plotDataSrc": "/data/scenarios/2/plot-data.json",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the company’s profit.",
+      "label": "Use the function __(1)__ to model the reservoir inflow rate.",
       "options": [
         {
           "id": "f1",
-          "text": "\\(f(x)=-0.01x^{3}+0.45x^{2}-4x+80\\)",
+          "text": "\\(R(t)=20+5t-1/2t^2\\)",
           "correct": true,
-          "feedback": "Correct! This function matches the overall shape of the scatter plot and the story in the scenario. The graph starts by decreasing, then rises to a high point, and later begins decreasing again, which fits the monthly profit pattern shown in the data. The coefficients also create a smooth and realistic curve: the cubic term \\(-0.01x^3\\) is small enough to avoid overly steep changes, while the quadratic and linear terms place the turning points in a reasonable part of the month. This makes the function a strong model for identifying the key features of the company’s profit pattern."
+          "feedback": "Correct! This function matches the reservoir inflow model in the scenario. It starts at 20 thousand gallons per hour, increases during the early storm, and then bends downward because of the negative quadratic term."
         },
         {
           "id": "f2",
-          "text": "\\(f(x)=-0.01x^{3}+0.4x^{2}-3x+90\\)",
+          "text": "\\(R(t)=20+4t-1/2t^2\\)",
           "correct": false,
-          "feedback": "Incorrect! This function is close to the correct model, but its coefficients make the graph fit the data less accurately. The constant term \\(+90\\) shifts the graph upward, so the model starts too high compared with the early profit values in the scatter plot. Also, changing the quadratic coefficient from \\(0.45\\) to \\(0.4\\) and the linear coefficient from \\(-4\\) to \\(-3\\) changes the shape and location of the turning points. Because of these differences, the curve does not match the low point and later rise in the data as well as the correct function."
+          "feedback": "Incorrect! This function changes the linear coefficient from 5 to 4, so the inflow rate increases too slowly compared with the model in the scenario."
         },
         {
           "id": "f3",
-          "text": "\\(f(x)=18\\sin(0.16x-2.4)+88\\)",
+          "text": "\\(R(t)=18+5t-1/2t^2\\)",
           "correct": false,
-          "feedback": "Incorrect! This graph may look similar to the data over the month because it rises and falls in a comparable way, but a sine function represents a repeating periodic pattern. That means it suggests the company’s profit would continue to move up and down in regular cycles. In this scenario, the fluctuation is connected to a recent strategy change, so a repeating sinusoidal model is less appropriate than a cubic model. The shape may look convincing locally, but the function type does not fit the situation as well."
+          "feedback": "Incorrect! This function changes the initial inflow rate from 20 to 18 thousand gallons per hour, so it does not match the scenario."
         },
         {
           "id": "f4",
-          "text": "\\(f(x)=-e^{0.17x}+100\\)",
+          "text": "\\(R(t)=20+5t-t^2\\)",
           "correct": false,
-          "feedback": "Incorrect! This function does not match the scatter plot because its shape is fundamentally different from the data. An exponential function like this changes in only one general direction and does not create the two turning points shown in the monthly profit pattern. The data decreases, then rises, and then decreases again, but this exponential model cannot capture that type of fluctuation. So the problem is not just a small mismatch in coefficients — the entire function family is not suitable for modeling this situation."
+          "feedback": "Incorrect! This function changes the quadratic coefficient from -0.5 to -1, making the rate bend downward too sharply."
         }
       ]
     },
     {
       "id": "2",
-      "label": "Analyse the company’s situation by finding its __(2)__.",
+      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__, and determine if the reservoir will overflow or not.",
       "options": [
         {
-          "id": "a1",
-          "text": "critical points",
+          "id": "op1",
+          "text": "integration",
           "correct": true,
-          "feedback": "Correct! Critical points help identify where profit changes direction and reaches local maximum or minimum values. That makes them the most useful features for analyzing this month’s fluctuation."
+          "feedback": "Correct! Since \\(R(t)\\) is a rate of water flow, integration over \\([0,4]\\) gives the accumulated amount of water that entered the reservoir."
         },
         {
-          "id": "a2",
-          "text": "average rate of change over the month",
+          "id": "op2",
+          "text": "differentiation",
           "correct": false,
-          "feedback": "Incorrect! The average rate of change only summarizes the overall change from the beginning to the end of the month. It does not show the important ups and downs within the month."
+          "feedback": "Incorrect! Differentiation would describe how the inflow rate itself is changing, which is useful for finding the peak flow rate, but not for finding total accumulated water."
         },
         {
-          "id": "a3",
-          "text": "intercepts",
+          "id": "op3",
+          "text": "finding an intercept",
           "correct": false,
-          "feedback": "Incorrect! Intercepts only show where the graph crosses the axes. They do not help identify the most important changes in the company’s profit pattern."
+          "feedback": "Incorrect! Intercepts show when a function equals zero. The goal here is to find total water added over time, so an accumulation method is needed."
+        },
+        {
+          "id": "op4",
+          "text": "finding an average rate of change",
+          "correct": false,
+          "feedback": "Incorrect! Average rate of change compares the inflow rate at two times. It does not calculate the total amount of water entering the reservoir."
         }
       ]
     }
   ],
   "rubricOptions": [
     {
-      "id": "derivative-correct",
-      "label": "Derivative of the function is computed correctly",
+      "id": "identifies-integration",
+      "label": "Correctly identifies integration as the needed operation for accumulated water",
       "correct": true,
-      "feedback": "This is an essential criterion because a correct derivative is required to find critical points accurately."
+      "feedback": "This is an essential criterion because the task asks for total water added from a rate over a time interval."
     },
     {
-      "id": "solve-fprime-zero",
-      "label": "Equation \\(f'(x)=0\\) is solved correctly to find all critical numbers",
+      "id": "sets-integral-bounds",
+      "label": "Sets up the definite integral \\(\\int_{0}^{4} R(t)\\,dt\\) with correct bounds",
       "correct": true,
-      "feedback": "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers."
+      "feedback": "This is an essential criterion because the accumulated water must be calculated over the first 4 hours of the storm."
     },
     {
-      "id": "all-critical-points-identified",
-      "label": "All critical points are correctly identified",
+      "id": "computes-antiderivative",
+      "label": "Computes the antiderivative of \\(20+5t-\\frac{1}{2}t^2\\) correctly",
       "correct": true,
-      "feedback": "This is an essential criterion because missing any critical point would lead to an incomplete or incorrect analysis."
+      "feedback": "This is an essential criterion because an incorrect antiderivative leads to an incorrect accumulated amount."
     },
     {
-      "id": "connects-critical-points-to-context",
-      "label": "Correctly connects the critical points to important changes in the company’s profit during the month",
-      "correct": true,
-      "feedback": "This is an essential criterion because the goal is to identify and explain the day of highest profit."
-    },
-    {
-      "id": "graph-verification",
-      "label": "The behavior of the function is verified using a graph or visual inspection",
+      "id": "finds-peak-rate",
+      "label": "Finds the time when the inflow rate is maximized",
       "correct": false,
-      "feedback": "This is not required, because visual checking may support the answer but does not determine its correctness."
+      "feedback": "This is not required for Goal A. It is relevant to Goal B, but Goal A asks for accumulated water during the first 4 hours."
     },
     {
-      "id": "nearby-point-check",
-      "label": "Values of the derivative are checked at nearby points to confirm the result",
+      "id": "uses-graph-only",
+      "label": "Uses the graph or scatter plot alone to estimate the answer",
       "correct": false,
-      "feedback": "This is not required, since checking nearby values is optional and not needed to correctly solve the problem."
+      "feedback": "This is not sufficient because the task asks for a calculus-based calculation of accumulated water, not only a visual estimate."
     }
   ],
   "sampleAnswers": {
     "correct": {
       "title": "Sample AI Answer 1 (100%)",
-      "text": "\\(f(x)=-0.01x^3+0.45x^2-4x+80\\)\n\n\\(f'(x)=-0.03x^2+0.9x-4\\)\n\nSet \\(f'(x)=0\\):\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 5.43,\\ 24.57\\)\n\nNow find the points:\n\n\\(f(5.43)\\approx 69.95\\)\n\n\\(f(24.57)\\approx 105.05\\)\n\nCritical points:\n\\((5.43,69.95),\\ (24.57,105.05)\\)\n\nInterpretation:\nAt \\(x\\approx 5.43\\), profit reaches a local minimum, so this is where the company’s profit stops decreasing and begins to rise.\nAt \\(x\\approx 24.57\\), profit reaches a local maximum, so this is where the profit stops increasing and begins to decrease again.\nThese points show the most important changes in the company’s profit pattern during the month."
+      "text": "Because \\(R(t)\\) is measured in thousands of gallons per hour, I need integration to find the total amount of water that enters during the first 4 hours.\n\n\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)\n\n\\(=\\left[20t+\\frac{5}{2}t^2-\\frac{1}{6}t^3\\right]_{0}^{4}\\)\n\n\\(=80+40-\\frac{64}{6}\\)\n\n\\(\\approx109.33\\)\n\nSo about 109.33 thousand gallons enter the reservoir during the first 4 hours.\n\nThe reservoir started with 450 thousand gallons, so the total is:\n\n\\(450+109.33=559.33\\)\n\nSince \\(559.33>500\\), the reservoir will overflow."
     },
     "incorrect": {
       "title": "Sample AI Answer 2 (0%)",
-      "text": "\\(f(x)=0.03x^2+0.9x-4\\)\n\n\\(f'(x)=0.06x+0.9\\)\n\nSet \\(f'(x)=0\\):\n\\(0.06x+0.9=0\\)\n\n\\(x=-15\\)\n\nCritical point:\n\\((-15,f(-15))\\)\n\nSo the company’s most important profit change happens before the month even begins, which means the model shows profit just keeps decreasing during the month."
+      "text": "I need to differentiate because the problem gives a function involving time.\n\n\\(R'(t)=5-t\\)\n\nAt \\(t=4\\):\n\n\\(R'(4)=1\\)\n\nSo 1 thousand gallons entered the reservoir during the first 4 hours.\n\nThe reservoir has \\(450+1=451\\) thousand gallons, so it will not overflow."
     }
   },
   "finalAiAnswers": [
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 24.57\\)\n\nCritical point: \\(x\\approx 24.57\\)",
+      "text": "Since \\(R(t)\\) is a rate, I should integrate it from 0 to 4.\n\n\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)\n\n\\(=\\left[20t+5t^2-\\frac{1}{2}t^3\\right]_{0}^{4}\\)\n\n\\(=80+80-32\\)\n\n\\(=128\\)\n\nSo 128 thousand gallons enter the reservoir. Since \\(450+128=578\\), the reservoir will overflow.",
       "rubricFit": {
-        "derivative-correct": {
+        "identifies-integration": {
           "pass": true,
-          "feedback": "The derivative is computed correctly."
+          "feedback": "The answer correctly identifies integration as the needed operation for accumulated water."
         },
-        "solve-fprime-zero": {
+        "sets-integral-bounds": {
           "pass": true,
-          "feedback": "The equation f'(x)=0 is solved correctly."
+          "feedback": "The answer sets up the definite integral with correct bounds from 0 to 4."
         },
-        "all-critical-points-identified": {
+        "computes-antiderivative": {
           "pass": false,
-          "feedback": "Only one critical point is given. The second critical point is missing."
-        },
-        "connects-critical-points-to-context": {
-          "pass": false,
-          "feedback": "No interpretation is provided explaining what the critical point means for company profit."
+          "feedback": "The antiderivative is computed incorrectly, leading to an incorrect accumulated water value."
         }
       }
     },
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(f'(x)=-0.03x^2+0.9x-4\\)\n\n\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\((3x-30)(x-20)=0\\)\n\n\\(x=10,20\\)\n\nCritical points: \\(x=10,20\\)",
+      "text": "To find the amount of water added, I will use the rate at 4 hours.\n\n\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)\n\nSo 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow.\n\nThis answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water.",
       "rubricFit": {
-        "derivative-correct": {
-          "pass": true,
-          "feedback": "The derivative is computed correctly."
-        },
-        "solve-fprime-zero": {
+        "identifies-integration": {
           "pass": false,
-          "feedback": "The factorization is incorrect, so f'(x)=0 is not solved correctly."
+          "feedback": "This answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water."
         },
-        "all-critical-points-identified": {
+        "sets-integral-bounds": {
           "pass": false,
-          "feedback": "The critical values x=10 and x=20 are incorrect."
+          "feedback": "The answer does not set up a definite integral, which is needed to calculate total water added over the time interval."
         },
-        "connects-critical-points-to-context": {
+        "computes-antiderivative": {
           "pass": false,
-          "feedback": "No interpretation connects the critical points to changes in company profit."
+          "feedback": "The answer does not compute an antiderivative because it does not use integration."
         }
       }
     }

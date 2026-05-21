@@ -1,24 +1,107 @@
 {
-  "title": "Scatter Plot of Machine Risk Score Data",
-  "xAxisLabel": "Hours After Shift Begins",
-  "yAxisLabel": "Risk Score",
+  "title": "Scatter Plot of Extra Delivery Cost by Distance",
+  "xAxisLabel": "Distance from City Center",
+  "yAxisLabel": "Extra Delivery Cost",
   "data": [
-    { "time": 0, "risk": 70.6 },
-    { "time": 0.5, "risk": 70.9 },
-    { "time": 1, "risk": 71.1 },
-    { "time": 1.5, "risk": 71.8 },
-    { "time": 2, "risk": 72.3 },
-    { "time": 2.5, "risk": 74.9 },
-    { "time": 3, "risk": 77.6 },
-    { "time": 3.5, "risk": 101.4 },
-    { "time": 4, "risk": null },
-    { "time": 4.5, "risk": 98.7 },
-    { "time": 5, "risk": 78.9 },
-    { "time": 5.5, "risk": 74.3 },
-    { "time": 6, "risk": 72.6 },
-    { "time": 6.5, "risk": 71.7 },
-    { "time": 7, "risk": 71.2 },
-    { "time": 7.5, "risk": 70.8 },
-    { "time": 8, "risk": 70.4 }
+    {
+      "distance": 0,
+      "cost": 27.2
+    },
+    {
+      "distance": 0.5,
+      "cost": 25.9
+    },
+    {
+      "distance": 1,
+      "cost": 26.1
+    },
+    {
+      "distance": 1.5,
+      "cost": 24.7
+    },
+    {
+      "distance": 2,
+      "cost": 23.8
+    },
+    {
+      "distance": 2.5,
+      "cost": 24.1
+    },
+    {
+      "distance": 3,
+      "cost": 22.4
+    },
+    {
+      "distance": 3.5,
+      "cost": 21.9
+    },
+    {
+      "distance": 4,
+      "cost": 21.1
+    },
+    {
+      "distance": 4.5,
+      "cost": 20.7
+    },
+    {
+      "distance": 5,
+      "cost": 20.2
+    },
+    {
+      "distance": 5.5,
+      "cost": 19.4
+    },
+    {
+      "distance": 6,
+      "cost": 18.8
+    },
+    {
+      "distance": 6.5,
+      "cost": 19.6
+    },
+    {
+      "distance": 7,
+      "cost": 20.1
+    },
+    {
+      "distance": 7.5,
+      "cost": 19.8
+    },
+    {
+      "distance": 8,
+      "cost": 21
+    },
+    {
+      "distance": 8.5,
+      "cost": 22
+    },
+    {
+      "distance": 9,
+      "cost": 22.4
+    },
+    {
+      "distance": 9.5,
+      "cost": 23.7
+    },
+    {
+      "distance": 10,
+      "cost": 23.4
+    },
+    {
+      "distance": 10.5,
+      "cost": 24.9
+    },
+    {
+      "distance": 11,
+      "cost": 25.8
+    },
+    {
+      "distance": 11.5,
+      "cost": 25.4
+    },
+    {
+      "distance": 12,
+      "cost": 27
+    }
   ]
 }
