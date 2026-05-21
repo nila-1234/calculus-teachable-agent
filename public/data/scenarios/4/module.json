@@ -116,7 +116,7 @@
     {
       "id": "answer-25",
       "label": "AI Student 1",
-      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=1.5|6-6|+18=18\\)\n\nThe lowest point is \\((6,18)\\), so the critical point is \\((6,18)\\).\n\nThis means the extra delivery cost is lowest 6 miles from the city center.\n\nThis answer evaluates the function value correctly and identifies the correct point, but it does not explain that \\(C'(6)\\) is undefined. It also does not clearly justify the result using the definition of a critical point.",
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=1.5|6-6|+18=18\\)\n\nThe lowest point is \\((6,18)\\), so the critical point is \\((6,18)\\).\n\nThis means the extra delivery cost is lowest 6 miles from the city center.",
       "rubricFit": {
         "function-value-at-6": {
           "pass": true,
@@ -139,7 +139,7 @@
     {
       "id": "answer-50",
       "label": "AI Student 2",
-      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=18\\)\n\nAt \\(x=6\\), the graph has a sharp corner, so \\(C'(6)\\) is undefined.\n\nBecause the derivative is undefined, this cannot be a critical point.\n\nSo the company should not place the station at 6 miles from the city center.\n\nThis answer evaluates the function value correctly and recognizes that the derivative is undefined, but it incorrectly applies the definition of critical point. A point can still be critical when the derivative is undefined, as long as the function exists there.",
+      "text": "\\(C(x)=1.5|x-6|+18\\)\n\n\\(C(6)=18\\)\n\nAt \\(x=6\\), the graph has a sharp corner, so \\(C'(6)\\) is undefined.\n\nBecause the derivative is undefined, this cannot be a critical point.\n\nSo the company should not place the station at 6 miles from the city center.",
       "rubricFit": {
         "function-value-at-6": {
           "pass": true,

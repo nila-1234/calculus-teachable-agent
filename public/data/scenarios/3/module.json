@@ -116,7 +116,7 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\nThe denominator becomes zero, so \\(R(4)\\) is undefined.\n\nAlso, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point.\n\nThe response correctly checks whether \\(R(4)\\) exists, but it incorrectly concludes that \\(t=4\\) is a critical point even though the function value does not exist there.",
+      "text": "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\nThe denominator becomes zero, so \\(R(4)\\) is undefined.\n\nAlso, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point.",
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,
@@ -139,7 +139,7 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.\n\nSince the graph changes direction around \\(t=4\\), that must be a critical point.\n\nTherefore, the system’s claim is correct.\n\nThe response discusses nearby behavior but does not check whether \\(R(4)\\) exists or apply the definition of a critical point correctly.",
+      "text": "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.\n\nSince the graph changes direction around \\(t=4\\), that must be a critical point.\n\nTherefore, the system’s claim is correct.",
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,

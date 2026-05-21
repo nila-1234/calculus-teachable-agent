@@ -129,7 +129,7 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "To find the amount of water added, I will use the rate at 4 hours.\n\n\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)\n\nSo 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow.\n\nThis answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water.",
+      "text": "To find the amount of water added, I will use the rate at 4 hours.\n\n\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)\n\nSo 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow.",
       "rubricFit": {
         "identifies-integration": {
           "pass": false,
