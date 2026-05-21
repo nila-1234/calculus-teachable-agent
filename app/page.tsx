@@ -8,7 +8,7 @@ const scenarios = [
   { id: 2, name: "Water Reservoir Levels" },
   { id: 3, name: "Machine Risk Scores" },
   { id: 4, name: "Delivery Cost Analysis" },
-  { id: 5, name: "Company Profit Analysis Pt. 2" },
+  // { id: 5, name: "Company Profit Analysis Pt. 2" },
 ];
 
 export default function HomePage() {
