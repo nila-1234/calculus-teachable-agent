@@ -69,19 +69,19 @@
       "id": "function-value-at-6",
       "label": "Correctly evaluates the function value at \\(x=6\\)",
       "correct": true,
-      "feedback": "This is an essential criterion because the function value must exist before x=6 can be considered a critical number. In this problem, C(6)=18, so the point exists on the function."
+      "feedback": "This is an essential criterion because the function value must exist before x=6 can be considered a critical number. In this problem, \\(C(6)=18\\), so the point exists on the function."
     },
     {
       "id": "derivative-undefined-at-6",
       "label": "Correctly identifies that \\(C'(6)\\) is undefined",
       "correct": true,
-      "feedback": "This is an essential criterion because the absolute value function has a sharp corner at x=6. The derivative does not exist there, which is the special case being tested."
+      "feedback": "This is an essential criterion because the absolute value function has a sharp corner at \\(x=6\\). The derivative does not exist there, which is the special case being tested."
     },
     {
       "id": "critical-point-definition",
       "label": "Correctly applies the definition of critical point",
       "correct": true,
-      "feedback": "This is an essential criterion because a critical point can happen when the derivative is undefined, as long as the function value exists. Here, C(6) exists and C'(6) is undefined, so (6,18) is a critical point."
+      "feedback": "This is an essential criterion because a critical point can happen when the derivative is undefined, as long as the function value exists. Here, \\(C(6)\\) exists and \\(C'(6)\\) is undefined, so \\((6,18)\\) is a critical point."
     },
     {
       "id": "context-interpretation",
@@ -99,7 +99,7 @@
       "id": "average-rate-of-change",
       "label": "Calculates the average rate of change",
       "correct": false,
-      "feedback": "This is not required. Average rate of change describes the overall change across an interval, but it does not determine whether x=6 is a critical number."
+      "feedback": "This is not required. Average rate of change describes the overall change across an interval, but it does not determine whether \\(x=6\\) is a critical number."
     }
   ],
   "sampleAnswers": {

@@ -63,7 +63,7 @@
       "id": "solve-fprime-zero",
       "label": "Equation \\(f'(x)=0\\) is solved correctly",
       "correct": true,
-      "feedback": "This is an essential criterion because solving f′(x)=0 correctly is necessary to identify all critical numbers."
+      "feedback": "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers."
     },
     {
       "id": "all-critical-points-identified",

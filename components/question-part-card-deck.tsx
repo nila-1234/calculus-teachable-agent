@@ -127,9 +127,12 @@ export default function QuestionPartCardDeck({
               <Flex direction="column" gap="3">
                 <Heading size="4">Feedback</Heading>
 
-                <Text size="3" className="whitespace-pre-wrap leading-7">
+                {/* <Text size="3" className="whitespace-pre-wrap leading-7">
                   {selectedChoice?.feedback || "No feedback available."}
-                </Text>
+                </Text> */}
+
+                <MathDisplay className="whitespace-pre-wrap leading-7"
+                  text={selectedChoice?.feedback || "No feedback available."} />
 
                 <Flex justify="center">
                   {isCorrect ? (
