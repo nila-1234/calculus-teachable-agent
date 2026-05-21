@@ -25,27 +25,30 @@ export async function POST(req: Request) {
 
     const rows = Array.isArray(rubric) ? rubric : [];
 
-    const formattedRubric = rows
-      .map(
-        (row, index) =>
-          `${index + 1}. ${row.criterion}\n   Evaluation: ${row.evaluation || "not selected"}\n   Remarks: ${row.remarks?.trim() || "None"}`
-      )
-      .join("\n\n");
+    type RubricRow = {
+      criterionId: string;
+      criterion: string;
+      evaluation: "pass" | "fail" | "";
+    };
 
-    const feedback = [
-      `Received rubric evaluation for ${answerTitle || answerId || "answer"}.`,
-      "",
-      "Rubric results:",
-      formattedRubric || "No rubric rows received.",
-    ].join("\n");
+    const feedback = rows.map((row) => ({
+      criterionId: row.criterionId,
+      criterion: row.criterion,
+      evaluation: row.evaluation,
+      feedback:
+        row.evaluation === "pass"
+          ? "Good: this answer satisfies this criterion."
+          : "Needs work: this answer does not fully satisfy this criterion.",
+    }));
 
     console.log(feedback);
 
     return NextResponse.json({ feedback });
+
   } catch (error) {
     return NextResponse.json(
       {
-        feedback: "Failed to generate feedback.",
+        feedback: [],
       },
       { status: 500 }
     );

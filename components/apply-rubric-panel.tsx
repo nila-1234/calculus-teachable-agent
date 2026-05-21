@@ -116,16 +116,16 @@ export default function ApplyRubricPanel({
 
               <div className="overflow-hidden rounded-2xl border border-gray-200">
                 <table className="w-full border-collapse table-fixed">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-lime-50">
                     <tr>
-                      <th className="w-[40%] border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                      <th className="w-[45%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
                         Criterion
                       </th>
-                      <th className="w-[10%] border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
+                      <th className="w-[18%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
                         Evaluation
                       </th>
-                      <th className="w-[44%] border-b border-gray-200 px-4 py-3 text-left text-sm font-medium text-gray-700">
-                        Feedback
+                      <th className="w-[37%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                        {currentState?.submitted ? "Feedback" : ""}
                       </th>
                     </tr>
                   </thead>
@@ -134,6 +134,9 @@ export default function ApplyRubricPanel({
                     {rubric.map((criterion) => {
                       const selectedValue =
                         currentState?.results?.[criterion.id] ?? "";
+                      const criterionFeedback = Array.isArray(currentState?.feedback)
+                        ? currentState.feedback.find((item) => item.criterionId === criterion.id)
+                        : undefined;
                       return (
                         <tr key={criterion.id} className="bg-white">
                           <td className="border-b border-gray-200 px-4 py-3 align-middle text-sm font-medium text-slate-900">
@@ -167,8 +170,27 @@ export default function ApplyRubricPanel({
                               </Button>
                             </Flex>
                           </td>
-                          <td className="border-b border-gray-200 px-4 py-3 align-middle text-sm font-medium text-slate-900">
-                            <MathDisplay text={"Placeholder"} />
+                          <td className="border-b border-gray-200 px-4 py-3 align-top">
+                            {currentState?.submitted ? (
+                              <div
+                                className={`min-h-[64px] rounded-xl border-2 px-3 py-2 ${selectedValue === "pass"
+                                    ? "border-lime-300 bg-lime-50 text-slate-900"
+                                    : "border-red-200 bg-red-50 text-slate-900"
+                                  }`}
+                              >
+                                <div className="text-sm leading-6 text-slate-700">
+                                  {isLoading ? (
+                                    "Generating feedback..."
+                                  ) : criterionFeedback?.feedback ? (
+                                    <MathDisplay text={criterionFeedback.feedback} />
+                                  ) : (
+                                    "No feedback returned for this criterion."
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="min-h-[64px]" />
+                            )}
                           </td>
                         </tr>
                       );
@@ -194,7 +216,7 @@ export default function ApplyRubricPanel({
             </Flex>
           </Card>
 
-          {currentState?.submitted ? (
+          {/* {currentState?.submitted ? (
             <div ref={feedbackRef}>
               <Card size="2">
                 <Flex direction="column" gap="3">
@@ -216,7 +238,7 @@ export default function ApplyRubricPanel({
                 </Flex>
               </Card>
             </div>
-          ) : null}
+          ) : null} */}
         </div>
 
         <Flex align="center" justify="between">
