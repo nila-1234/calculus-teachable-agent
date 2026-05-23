@@ -56,7 +56,7 @@ export default function QuestionPartCardDeck({
 
   useEffect(() => {
     if (isSubmitted && feedbackRef.current) {
-      feedbackRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      feedbackRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [isSubmitted]);
 
@@ -122,43 +122,35 @@ export default function QuestionPartCardDeck({
         </Flex>
 
         {isSubmitted ? (
-          <div ref={feedbackRef}>
-            <Card size="2">
-              <Flex direction="column" gap="3">
-                <Heading size="4">Feedback</Heading>
+          <div ref={feedbackRef} className="pb-4">
+            <Flex direction="column" gap="4">
+              <Card size="2">
+                <Flex direction="column" gap="3">
+                  <Heading size="4">Feedback</Heading>
 
-                {/* <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {selectedChoice?.feedback || "No feedback available."}
-                </Text> */}
-
-                <MathDisplay className="whitespace-pre-wrap leading-7"
-                  text={selectedChoice?.feedback || "No feedback available."} />
-
-                <Flex justify="center">
-                  {isCorrect ? (
-                    isLastPart ? (
-                      <Flex align="center" gap="4">
-                        {/* <Text weight="bold">
-                          All parts solved correctly.
-                        </Text> */}
-
-                        <Button onClick={onContinue} color="lime">
-                          Continue →
-                        </Button>
-                      </Flex>
-                    ) : (
-                      <Button onClick={onNextPart} color="lime">
-                        Next Question
-                      </Button>
-                    )
-                  ) : (
-                    <Button onClick={() => onTryAgainPart(part.id)} color="lime">
-                      Try Again
-                    </Button>
-                  )}
+                  <MathDisplay className="text-md whitespace-pre-wrap leading-7"
+                    text={selectedChoice?.feedback || "No feedback available."} />
                 </Flex>
+              </Card>
+
+              <Flex justify="center">
+                {isCorrect ? (
+                  isLastPart ? (
+                    <Button onClick={onContinue} color="lime">
+                      Continue →
+                    </Button>
+                  ) : (
+                    <Button onClick={onNextPart} color="lime">
+                      Next Question
+                    </Button>
+                  )
+                ) : (
+                  <Button onClick={() => onTryAgainPart(part.id)} color="lime">
+                    Try Again
+                  </Button>
+                )}
               </Flex>
-            </Card>
+            </Flex>
           </div>
         ) : null}
       </Flex>
