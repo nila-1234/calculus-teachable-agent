@@ -1,9 +1,9 @@
 "use client";
 
-import { Button, Card, Flex, Heading, RadioGroup, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
 import { useEffect, useRef } from "react";
-import { ArrowRightIcon } from "@radix-ui/react-icons";
+import { ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
 
 export type RubricDecision = "include" | "exclude";
@@ -113,19 +113,14 @@ export default function CreateRubricPanel({
                   <thead className="bg-lime-50">
                     <tr>
                       <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
-                        Criteria
+                        Criterion
                       </th>
-                      <th className="w-20 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
-                        Include
+                      <th className="w-44 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
+                        Select
                       </th>
-                      <th className="w-20 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
-                        Exclude
-                      </th>
-                      {/* {submitted ? ( */}
-                      <th className="w-[52%] border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
+                      <th className="w-[45%] border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
                         {submitted ? "Feedback" : ""}
                       </th>
-                      {/* ) : null} */}
                     </tr>
                   </thead>
 
@@ -140,59 +135,52 @@ export default function CreateRubricPanel({
                         (!option.correct && excluded);
 
                       return (
-                        <tr key={option.id} className="align-top">
+                        <tr key={option.id} className="align-middle">
                           <td className="border-b border-gray-200 px-4 py-4 font-medium text-slate-900">
                             <MathDisplay text={option.label} />
                           </td>
 
                           <td className="border-b border-gray-200 px-4 py-4 text-center">
-                            <RadioGroup.Root
-                              value={decision ?? ""}
-                              onValueChange={(value) =>
-                                onSetRubricDecision(
-                                  option.id,
-                                  value as RubricDecision
-                                )
-                              }
-                              disabled={submitted}
-                            >
-                              <Flex justify="center">
-                                <RadioGroup.Item value="include" />
-                              </Flex>
-                            </RadioGroup.Root>
-                          </td>
-
-                          <td className="border-b border-gray-200 px-4 py-4 text-center">
-                            <RadioGroup.Root
-                              value={decision ?? ""}
-                              onValueChange={(value) =>
-                                onSetRubricDecision(
-                                  option.id,
-                                  value as RubricDecision
-                                )
-                              }
-                              disabled={submitted}
-                            >
-                              <Flex justify="center">
-                                <RadioGroup.Item value="exclude" />
-                              </Flex>
-                            </RadioGroup.Root>
-                          </td>
-
-                          <td className="w-[52%] border-b border-gray-200 px-4 py-3">
-                            {submitted ? (
-                              <div
-                                className={`rounded-xl border-2 px-3 py-2 ${isCorrectDecision
-                                  ? "border-lime-300 bg-lime-50 text-slate-900"
-                                  : "border-red-200 bg-red-50 text-slate-900"
-                                  }`}
+                            <Flex gap="2" justify="center">
+                              <Button
+                                variant="soft"
+                                color={included ? "green" : "gray"}
+                                onClick={() => onSetRubricDecision(option.id, "include")}
+                                disabled={submitted}
+                                size="2"
+                                className={`${!included ? "!bg-white" : ""}`}
                               >
-                                <div className="text-sm leading-6 text-slate-700">
-                                  <MathDisplay text={option.feedback} />
+                                Include
+                              </Button>
+                              <Button
+                                variant="soft"
+                                color={excluded ? "red" : "gray"}
+                                onClick={() => onSetRubricDecision(option.id, "exclude")}
+                                disabled={submitted}
+                                size="2"
+                                className={`${!excluded ? "!bg-white" : ""}`}
+                              >
+                                Exclude
+                              </Button>
+                            </Flex>
+                          </td>
+
+                          <td className="w-[45%] border-b border-gray-200 px-4 py-4">
+                            {submitted ? (
+                              <div className="flex flex-col gap-1">
+                                <div className={`flex items-center gap-2 font-semibold ${isCorrectDecision ? "text-green-600" : "text-red-600"}`}>
+                                  {isCorrectDecision
+                                    ? <><CheckCircledIcon width={30} height={30} /> <div className="text-sm leading-6">
+                                      <MathDisplay className="text-green-600" text={"Correct: " + option.feedback} />
+                                    </div></>
+                                    : <><CrossCircledIcon width={30} height={30} /> <div className="text-sm leading-6">
+                                      <MathDisplay className="text-red-600" text={"Incorrect: " + option.feedback} />
+                                    </div></>
+                                  }
                                 </div>
                               </div>
                             ) : (
-                              <div className="min-h-[64px]" />
+                              <div className="min-h-[40px]" />
                             )}
                           </td>
                         </tr>
@@ -242,7 +230,6 @@ export default function CreateRubricPanel({
                     </Text>
                   </>
                 )}
-
 
 
                 <Flex justify="center" gap="3">
