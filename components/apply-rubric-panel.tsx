@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
-import { ArrowLeftIcon, ArrowRightIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 
@@ -181,19 +181,18 @@ export default function ApplyRubricPanel({
                           <td className="border-b border-gray-200 px-4 py-3 align-top">
                             {currentState?.submitted ? (
                               <div
-                                className={`min-h-[64px] rounded-xl border-2 px-3 py-2 ${criterionFeedback?.correct
-                                    ? "border-lime-300 bg-lime-50"
-                                    : "border-red-200 bg-red-50"
+                                className={`min-h-[40px] flex items-center gap-2 ${criterionFeedback?.correct
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                   }`}
                               >
-                                <div
-                                  className={`text-sm leading-6 ${criterionFeedback?.correct
-                                      ? "text-green-900"
-                                      : "text-red-900"
-                                    }`}
-                                >
+                                {!isLoading && (criterionFeedback?.correct
+                                  ? <CheckCircledIcon className="shrink-0 mt-0.5" width={25} height={25} />
+                                  : <CrossCircledIcon className="shrink-0 mt-0.5" width={25} height={25} />
+                                )}
+                                <div>
                                   {isLoading ? (
-                                    "Generating feedback..."
+                                    "Loading feedback..."
                                   ) : criterionFeedback?.feedback ? (
                                     <MathDisplay text={criterionFeedback.feedback} />
                                   ) : (
@@ -202,7 +201,7 @@ export default function ApplyRubricPanel({
                                 </div>
                               </div>
                             ) : (
-                              <div className="min-h-[64px]" />
+                              <div className="min-h-[40px]" />
                             )}
                           </td>
                         </tr>

@@ -168,13 +168,13 @@ export default function CreateRubricPanel({
                           <td className="w-[45%] border-b border-gray-200 px-4 py-4">
                             {submitted ? (
                               <div className="flex flex-col gap-1">
-                                <div className={`flex items-center gap-2 font-semibold ${isCorrectDecision ? "text-green-600" : "text-red-600"}`}>
+                                <div className={`min-h-[40px] flex items-center gap-2 ${isCorrectDecision ? "text-green-600" : "text-red-700"}`}>
                                   {isCorrectDecision
-                                    ? <><CheckCircledIcon width={30} height={30} /> <div className="text-sm leading-6">
-                                      <MathDisplay className="text-green-600" text={"Correct: " + option.feedback} />
+                                    ? <><CheckCircledIcon className="shrink-0 mt-0.5" width={25} height={25} /> <div>
+                                      <MathDisplay text={"Correct: " + option.feedback} />
                                     </div></>
-                                    : <><CrossCircledIcon width={30} height={30} /> <div className="text-sm leading-6">
-                                      <MathDisplay className="text-red-600" text={"Incorrect: " + option.feedback} />
+                                    : <><CrossCircledIcon className="shrink-0 mt-0.5" width={25} height={25} /> <div>
+                                      <MathDisplay text={"Incorrect: " + option.feedback} />
                                     </div></>
                                   }
                                 </div>
