@@ -25,32 +25,26 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Chrome / Edge / Safari */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--gray-3);
-  border-radius: 9999px;
+  background: #1a1a1a;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--accent-8);
-  border-radius: 9999px;
-  border: 2px solid var(--gray-3);
-  transition: background 0.2s ease;
+  background: #4a4a4a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-9);
-}
-
-::-webkit-scrollbar-thumb:active {
-  background: var(--accent-10);
+  background: #666666;
 }
 
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent-8) var(--gray-3);
+  /* scrollbar-width: thin; */
+  scrollbar-color: #4a4a4a #1a1a1a;
 }
+
