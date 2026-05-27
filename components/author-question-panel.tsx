@@ -31,6 +31,11 @@ type AuthorQuestionPanelProps = {
   onTryAgainPart: (partId: string) => void;
   onNextPart: () => void;
   onContinue?: () => void;
+  mode?: number;
+  explanations?: Record<string, string>;
+  onExplanationChange?: (partId: string, value: string) => void;
+  llmFeedback?: Record<string, string>;
+  loadingFeedback?: Record<string, boolean>;
 };
 
 export default function AuthorQuestionPanel({
@@ -46,6 +51,11 @@ export default function AuthorQuestionPanel({
   onTryAgainPart,
   onNextPart,
   onContinue,
+  mode,
+  explanations,
+  onExplanationChange,
+  llmFeedback,
+  loadingFeedback,
 }: AuthorQuestionPanelProps) {
   const selectedEquation = useMemo(() => {
     const firstPart = parts[0];
@@ -107,6 +117,11 @@ export default function AuthorQuestionPanel({
             onTryAgainPart={onTryAgainPart}
             onNextPart={onNextPart}
             onContinue={onContinue}
+            mode={mode}
+            explanations={explanations}
+            onExplanationChange={onExplanationChange}
+            llmFeedback={llmFeedback}
+            loadingFeedback={loadingFeedback}
           />
         </div>
       </Flex>

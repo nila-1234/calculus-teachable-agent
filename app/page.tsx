@@ -1,6 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, Flex, Heading } from "@radix-ui/themes";
 
 const scenarios = [
@@ -11,8 +12,10 @@ const scenarios = [
   // { id: 5, name: "Company Profit Analysis Pt. 2" },
 ];
 
-export default function HomePage() {
+function HomePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const mode = searchParams.get("mode") || "1";
 
   return (
     <main
@@ -34,7 +37,7 @@ export default function HomePage() {
                   color="lime"
                   variant="soft"
                   onClick={() =>
-                    router.push(`/${scenario.id}/question`)
+                    router.push(`/${scenario.id}/question?mode=${mode}`)
                   }
                 >
                   {scenario.id}. {scenario.name}
@@ -45,5 +48,13 @@ export default function HomePage() {
         </Card>
       </div>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomePageContent />
+    </Suspense>
   );
 }

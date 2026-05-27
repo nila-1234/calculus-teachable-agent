@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 
-export default function AuthorQuestionPage() {
+function AuthorQuestionPageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const mode = parseInt(searchParams.get("mode") || "1", 10);
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
+
+  const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
+  const [submittedParts, setSubmittedParts] = useState<Record<string, boolean>>({});
+  const [activePartIndex, setActivePartIndex] = useState(0);
+  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [llmFeedback, setLlmFeedback] = useState<Record<string, string>>({});
+  const [loadingFeedback, setLoadingFeedback] = useState<Record<string, boolean>>({});
 
   if (!scenarioId || !scenario) {
     return <main className="p-6">Scenario not found.</main>;
@@ -24,19 +33,12 @@ export default function AuthorQuestionPage() {
     PLOT_DATA_SRC,
   } = scenario.schema;
 
-  const [selectedParts, setSelectedParts] = useState<Record<string, string>>({});
-
-  const selectedChoices = useMemo(() => {
-    return QUESTION_PARTS.map((part) => {
-      const selectedId = selectedParts[part.id];
-      return part.options.find((opt) => opt.id === selectedId);
-    });
-  }, [QUESTION_PARTS, selectedParts]);
+  const selectedChoices = QUESTION_PARTS.map((part) => {
+    const selectedId = selectedParts[part.id];
+    return part.options.find((opt) => opt.id === selectedId);
+  });
 
   const allAnswered = QUESTION_PARTS.every((part) => selectedParts[part.id]);
-
-  const [submittedParts, setSubmittedParts] = useState<Record<string, boolean>>({});
-  const [activePartIndex, setActivePartIndex] = useState(0);
 
   const isFullyCorrect =
     allAnswered && selectedChoices.every((choice) => choice?.correct);
@@ -54,22 +56,70 @@ export default function AuthorQuestionPage() {
     return result;
   }, [QUESTION_PLACEHOLDER, selectedChoices, allAnswered]);
 
-  const handleSubmitPart = (partId: string) => {
+  const handleSubmitPart = async (partId: string) => {
     if (!selectedParts[partId]) return;
 
-    setSubmittedParts((prev) => ({
-      ...prev,
-      [partId]: true,
-    }));
+    setSubmittedParts((prev) => ({ ...prev, [partId]: true }));
+
+    if (mode === 2) {
+      const part = QUESTION_PARTS.find((p) => p.id === partId);
+      if (!part) return;
+
+      const selectedId = selectedParts[partId];
+      const selectedChoice = part.options.find((opt) => opt.id === selectedId);
+      if (!selectedChoice) return;
+
+      setLoadingFeedback((prev) => ({ ...prev, [partId]: true }));
+
+      try {
+        const res = await fetch("/api/question-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenario: SCENARIO_PLACEHOLDER,
+            question: QUESTION_PLACEHOLDER,
+            responses: [
+              {
+                partId,
+                partLabel: part.label,
+                selectedChoiceId: selectedId,
+                selectedChoiceText: selectedChoice.text,
+                selectedChoiceCorrect: selectedChoice.correct,
+                hardcodedFeedback: selectedChoice.feedback,
+                explanation: explanations[partId] || "",
+              },
+            ],
+          }),
+        });
+
+        const data = await res.json();
+        if (data.feedbackByPart?.[partId]) {
+          setLlmFeedback((prev) => ({
+            ...prev,
+            [partId]: data.feedbackByPart[partId],
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to get LLM feedback:", e);
+      } finally {
+        setLoadingFeedback((prev) => ({ ...prev, [partId]: false }));
+      }
+    }
   };
 
   const handleTryAgainPart = (partId: string) => {
-    setSubmittedParts((prev) => ({
-      ...prev,
-      [partId]: false,
-    }));
-
+    setSubmittedParts((prev) => ({ ...prev, [partId]: false }));
     setSelectedParts((prev) => {
+      const next = { ...prev };
+      delete next[partId];
+      return next;
+    });
+    setExplanations((prev) => {
+      const next = { ...prev };
+      delete next[partId];
+      return next;
+    });
+    setLlmFeedback((prev) => {
       const next = { ...prev };
       delete next[partId];
       return next;
@@ -132,10 +182,7 @@ export default function AuthorQuestionPage() {
         selectedParts={selectedParts}
         onSelectPart={(partId, choiceId) => {
           if (submittedParts[partId]) return;
-          setSelectedParts((prev) => ({
-            ...prev,
-            [partId]: choiceId,
-          }));
+          setSelectedParts((prev) => ({ ...prev, [partId]: choiceId }));
         }}
         submittedParts={submittedParts}
         activePartIndex={activePartIndex}
@@ -143,7 +190,22 @@ export default function AuthorQuestionPage() {
         onTryAgainPart={handleTryAgainPart}
         onNextPart={handleNextPart}
         onContinue={handleContinue}
+        mode={mode}
+        explanations={explanations}
+        onExplanationChange={(partId, value) =>
+          setExplanations((prev) => ({ ...prev, [partId]: value }))
+        }
+        llmFeedback={llmFeedback}
+        loadingFeedback={loadingFeedback}
       />
     </main>
+  );
+}
+
+export default function AuthorQuestionPage() {
+  return (
+    <Suspense>
+      <AuthorQuestionPageContent />
+    </Suspense>
   );
 }

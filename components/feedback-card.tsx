@@ -1,32 +1,37 @@
-import {Card, Flex, Heading, Text} from "@radix-ui/themes";
+import { Card, Flex, Heading, Text } from "@radix-ui/themes";
+import MathDisplay from "@/components/math-display";
 
 type FeedbackCardProps = {
+  feedback: string;
+  llmFeedback?: string;
+  loadingLlm?: boolean;
   title?: string;
-  text?: string;
-  loading?: boolean;
-  emptyMessage?: string;
+  llmLabel?: string;
 };
 
 export default function FeedbackCard({
+  feedback,
+  llmFeedback,
+  loadingLlm = false,
   title = "Feedback",
-  text = "",
-  loading = false,
-  emptyMessage = "Submit to receive AI feedback.",
+  llmLabel = "Explanation feedback",
 }: FeedbackCardProps) {
-  const showEmpty = !loading && !text.trim();
-
   return (
+    <Card size="2">
+      <Flex direction="column" gap="3">
+        <Heading size="4">{title}</Heading>
 
-    <Card size="3" className="h-full">
-      <Flex direction="column" gap="3" className="h-full">
-        <Heading size="5">{title}</Heading>
+        <MathDisplay className="text-md whitespace-pre-wrap leading-7" text={feedback} />
 
-        {loading ? (
-          <Text color="gray">Generating feedback...</Text>
-        ) : text ? (
-          <Text size="3">{text}</Text>
-        ) : (
-          <Text color="gray">{emptyMessage}</Text>
+        {loadingLlm && (
+          <Text size="2" color="gray">Analyzing your explanation…</Text>
+        )}
+
+        {!loadingLlm && llmFeedback && (
+          <Flex direction="column" gap="2">
+            <Text size="2" weight="medium" color="gray">{llmLabel}</Text>
+            <MathDisplay className="text-md whitespace-pre-wrap leading-7" text={llmFeedback} />
+          </Flex>
         )}
       </Flex>
     </Card>

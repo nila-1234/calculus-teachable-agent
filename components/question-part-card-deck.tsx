@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useEffect } from "react";
-import { Button, Card, Flex, Heading, RadioCards, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, RadioCards, Text, TextArea } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
+import FeedbackCard from "@/components/feedback-card";
 
 type Choice = {
   id: string;
@@ -27,6 +28,11 @@ type Props = {
   onTryAgainPart: (partId: string) => void;
   onNextPart: () => void;
   onContinue?: () => void;
+  mode?: number;
+  explanations?: Record<string, string>;
+  onExplanationChange?: (partId: string, value: string) => void;
+  llmFeedback?: Record<string, string>;
+  loadingFeedback?: Record<string, boolean>;
 };
 
 export default function QuestionPartCardDeck({
@@ -39,6 +45,11 @@ export default function QuestionPartCardDeck({
   onTryAgainPart,
   onNextPart,
   onContinue,
+  mode = 1,
+  explanations = {},
+  onExplanationChange,
+  llmFeedback = {},
+  loadingFeedback = {},
 }: Props) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
@@ -53,6 +64,7 @@ export default function QuestionPartCardDeck({
   const isSubmitted = part ? Boolean(submittedParts[part.id]) : false;
   const isCorrect = Boolean(selectedChoice?.correct);
   const canSubmit = Boolean(selectedChoice) && !isSubmitted;
+  const isMode2 = mode === 2;
 
   useEffect(() => {
     if (isSubmitted && feedbackRef.current) {
@@ -79,40 +91,57 @@ export default function QuestionPartCardDeck({
         <Flex direction="column" gap="3">
           <Heading size="3">{part.label}</Heading>
 
-          <RadioCards.Root
-            value={selectedParts[part.id] || ""}
-            onValueChange={(choiceId) => onSelectPart(part.id, choiceId)}
-            columns="1"
-            className="w-full"
-          >
-            {part.options.map((choice, index) => {
-              const isSelected = selectedParts[part.id] === choice.id;
+          <div className={isMode2 ? "grid grid-cols-[3fr_1fr] gap-4 items-stretch" : ""}>
+            <RadioCards.Root
+              value={selectedParts[part.id] || ""}
+              onValueChange={(choiceId) => onSelectPart(part.id, choiceId)}
+              columns="1"
+              className="w-full"
+            >
+              {part.options.map((choice, index) => {
+                const isSelected = selectedParts[part.id] === choice.id;
 
-              return (
-                <RadioCards.Item
-                  key={choice.id}
-                  value={choice.id}
+                return (
+                  <RadioCards.Item
+                    key={choice.id}
+                    value={choice.id}
+                    disabled={isSubmitted}
+                    className="w-full [&_[data-state]]:hidden"
+                  >
+                    <Flex align="start" gap="3" className="w-full text-left">
+                      <div
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
+                            ? "border-lime-500 bg-lime-500 text-white"
+                            : "border-gray-300 text-gray-600"
+                          }`}
+                      >
+                        {index + 1}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <MathDisplay text={choice.text} />
+                      </div>
+                    </Flex>
+                  </RadioCards.Item>
+                );
+              })}
+            </RadioCards.Root>
+
+            {isMode2 && (
+              <Flex direction="column" gap="2" className="h-full">
+                <Text size="2" weight="medium" color="gray">
+                  Explain your reasoning
+                </Text>
+                <TextArea
+                  placeholder="Why did you choose this answer?"
+                  value={explanations[part.id] || ""}
+                  onChange={(e) => onExplanationChange?.(part.id, e.target.value)}
                   disabled={isSubmitted}
-                  className="w-full [&_[data-state]]:hidden"
-                >
-                  <Flex align="start" gap="3" className="w-full text-left">
-                    <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${isSelected
-                          ? "border-lime-500 bg-lime-500 text-white"
-                          : "border-gray-300 text-gray-600"
-                        }`}
-                    >
-                      {index + 1}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <MathDisplay text={choice.text} />
-                    </div>
-                  </Flex>
-                </RadioCards.Item>
-              );
-            })}
-          </RadioCards.Root>
+                  className="flex-1 resize-none min-h-0"
+                />
+              </Flex>
+            )}
+          </div>
         </Flex>
 
         <Flex justify="center">
@@ -124,14 +153,11 @@ export default function QuestionPartCardDeck({
         {isSubmitted ? (
           <div ref={feedbackRef} className="pb-4">
             <Flex direction="column" gap="4">
-              <Card size="2">
-                <Flex direction="column" gap="3">
-                  <Heading size="4">Feedback</Heading>
-
-                  <MathDisplay className="text-md whitespace-pre-wrap leading-7"
-                    text={selectedChoice?.feedback || "No feedback available."} />
-                </Flex>
-              </Card>
+              <FeedbackCard
+                feedback={selectedChoice?.feedback || "No feedback available."}
+                llmFeedback={isMode2 ? llmFeedback[part.id] : undefined}
+                loadingLlm={isMode2 && loadingFeedback[part.id]}
+              />
 
               <Flex justify="center">
                 {isCorrect ? (
