@@ -30,13 +30,12 @@ type ApplyRubricPanelProps = {
   answers: readonly FinalAiAnswer[];
   reviewStates: Record<string, AnswerReviewState>;
   loadingAnswerId?: string | null;
-  onToggleResult: (
-    answerId: string,
-    criterionId: string,
-    value: "pass" | "fail"
-  ) => void;
+  onToggleResult: (answerId: string, criterionId: string, value: "pass" | "fail") => void;
   onSubmitAnswer: (answerId: string) => void;
-};  
+  mode?: number;
+  explanations?: Record<string, Record<string, string>>;
+  onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
+};
 
 export default function ApplyRubricPanel({
   rubric,
@@ -45,7 +44,11 @@ export default function ApplyRubricPanel({
   loadingAnswerId,
   onToggleResult,
   onSubmitAnswer,
+  mode = 1,
+  explanations = {},
+  onExplanationChange,
 }: ApplyRubricPanelProps) {
+  const isMode2 = mode === 2;
   const [currentIndex, setCurrentIndex] = useState(0);
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
@@ -126,13 +129,18 @@ export default function ApplyRubricPanel({
                 <table className="w-full border-collapse table-fixed">
                   <thead className="bg-lime-50">
                     <tr>
-                      <th className="w-[45%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                      <th className={`${isMode2 ? "w-[33%]" : "w-[45%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
                         Criterion
                       </th>
-                      <th className="w-[18%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                      <th className={`${isMode2 ? "w-[12%]" : "w-[18%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
                         Evaluation
                       </th>
-                      <th className="w-[37%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                      {isMode2 && (
+                        <th className="w-[25%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
+                          Reasoning
+                        </th>
+                      )}
+                      <th className={`${isMode2 ? "w-[30%]" : "w-[37%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
                         {currentState?.submitted ? "Feedback" : ""}
                       </th>
                     </tr>
@@ -178,6 +186,18 @@ export default function ApplyRubricPanel({
                               </Button>
                             </Flex>
                           </td>
+                          {isMode2 && (
+                            <td className="border-b border-gray-200 px-4 py-3 align-top">
+                              <textarea
+                                className="w-full min-h-[72px] resize-none rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-gray-400 disabled:opacity-50"
+                                placeholder="Explain your reasoning…"
+                                value={explanations[currentAnswer.id]?.[criterion.id] || ""}
+                                onChange={(e) => onExplanationChange?.(currentAnswer.id, criterion.id, e.target.value)}
+                                disabled={isLoading}
+                              />
+                            </td>
+                          )}
+
                           <td className="border-b border-gray-200 px-4 py-3 align-top">
                             {currentState?.submitted ? (
                               <div

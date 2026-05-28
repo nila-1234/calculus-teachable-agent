@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import ApplyRubricPanel, {
   AnswerReviewState,
   RubricCriterion,
@@ -9,8 +9,10 @@ import ApplyRubricPanel, {
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 
-export default function ApplyRubricPage() {
+function ApplyRubricPageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const mode = parseInt(searchParams.get("applyRubricMode") || "1", 10);
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -22,58 +24,52 @@ export default function ApplyRubricPage() {
   const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } = scenario.schema;
 
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
-  const [reviewStates, setReviewStates] = useState<
-    Record<string, AnswerReviewState>
-  >({});
+  const [reviewStates, setReviewStates] = useState<Record<string, AnswerReviewState>>({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
+  // explanations[answerId][criterionId] = explanation text
+  const [explanations, setExplanations] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
-    const raw = sessionStorage.getItem(
-      `scenario:${scenarioId}:selectedRubricIds`
-    );
+    const raw = sessionStorage.getItem(`scenario:${scenarioId}:selectedRubricIds`);
     const ids: string[] = raw ? JSON.parse(raw) : [];
 
     const selectedRubric = ids.map((id) => {
       const match = RUBRIC_OPTIONS.find((option) => option.id === id);
-      return {
-        id,
-        label: match?.label || id,
-      };
+      return { id, label: match?.label || id };
     });
 
     setRubric(selectedRubric);
 
-    const initialReviewStates: Record<string, AnswerReviewState> =
-      Object.fromEntries(
-        FINAL_AI_ANSWERS.map((answer) => [
-          answer.id,
-          {
-            results: Object.fromEntries(
-              selectedRubric.map((criterion) => [criterion.id, ""])
-            ) as Record<string, "" | "pass" | "fail">,
-            submitted: false,
-            feedback: [],
-          },
-        ])
-      );
+    const initialReviewStates: Record<string, AnswerReviewState> = Object.fromEntries(
+      FINAL_AI_ANSWERS.map((answer) => [
+        answer.id,
+        {
+          results: Object.fromEntries(
+            selectedRubric.map((criterion) => [criterion.id, ""])
+          ) as Record<string, "" | "pass" | "fail">,
+          submitted: false,
+          feedback: [],
+        },
+      ])
+    );
 
     setReviewStates(initialReviewStates);
   }, [RUBRIC_OPTIONS, FINAL_AI_ANSWERS, scenarioId]);
 
-  const handleToggleResult = (
-    answerId: string,
-    criterionId: string,
-    value: "pass" | "fail"
-  ) => {
+  const handleToggleResult = (answerId: string, criterionId: string, value: "pass" | "fail") => {
     setReviewStates((prev) => ({
       ...prev,
       [answerId]: {
         ...prev[answerId],
-        results: {
-          ...prev[answerId].results,
-          [criterionId]: value,
-        },
+        results: { ...prev[answerId].results, [criterionId]: value },
       },
+    }));
+  };
+
+  const handleExplanationChange = (answerId: string, criterionId: string, value: string) => {
+    setExplanations((prev) => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], [criterionId]: value },
     }));
   };
 
@@ -103,6 +99,7 @@ export default function ApplyRubricPage() {
           rubric: rubricWithReviews,
           results: review.results,
           rubricFit: answer.rubricFit,
+          explanations: explanations[answerId] ?? {},
         }),
       });
 
@@ -128,11 +125,7 @@ export default function ApplyRubricPage() {
       setReviewStates((prev) => {
         const next = {
           ...prev,
-          [answerId]: {
-            ...prev[answerId],
-            submitted: true,
-            feedback: []
-          },
+          [answerId]: { ...prev[answerId], submitted: true, feedback: [] },
         };
 
         sessionStorage.setItem(
@@ -159,8 +152,19 @@ export default function ApplyRubricPage() {
           loadingAnswerId={loadingAnswerId}
           onToggleResult={handleToggleResult}
           onSubmitAnswer={handleSubmitAnswer}
+          mode={mode}
+          explanations={explanations}
+          onExplanationChange={handleExplanationChange}
         />
       </div>
     </main>
+  );
+}
+
+export default function ApplyRubricPage() {
+  return (
+    <Suspense>
+      <ApplyRubricPageContent />
+    </Suspense>
   );
 }

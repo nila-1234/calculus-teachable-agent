@@ -24,12 +24,16 @@ export async function POST(req: Request) {
       answerTitle,
       rubric,
       rubricFit,
+      explanations,
     }: {
       answerId?: string;
       answerTitle?: string;
       rubric?: RubricRow[];
       rubricFit?: RubricFit;
+      explanations?: Record<string, string>;
     } = body;
+
+    void explanations;
 
     const rows = Array.isArray(rubric) ? rubric : {};
     const fit = rubricFit ?? {};

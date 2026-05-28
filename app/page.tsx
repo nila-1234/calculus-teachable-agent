@@ -16,6 +16,7 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const questionMode = searchParams.get("questionMode") || "1";
+  const applyRubricMode = searchParams.get("applyRubricMode") || "1";
 
   return (
     <main
@@ -37,7 +38,7 @@ function HomePageContent() {
                   color="lime"
                   variant="soft"
                   onClick={() =>
-                    router.push(`/${scenario.id}/question?questionMode=${questionMode}`)
+                    router.push(`/${scenario.id}/question?questionMode=${questionMode}&applyRubricMode=${applyRubricMode}`)
                   }
                 >
                   {scenario.id}. {scenario.name}

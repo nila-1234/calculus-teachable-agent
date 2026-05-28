@@ -11,6 +11,7 @@ function AuthorQuestionPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const mode = parseInt(searchParams.get("questionMode") || "1", 10);
+  const applyRubricMode = searchParams.get("applyRubricMode") || "1";
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -166,7 +167,7 @@ function AuthorQuestionPageContent() {
       isFullyCorrect ? "true" : "false"
     );
 
-    router.push(`/${scenarioId}/create-rubric`);
+    router.push(`/${scenarioId}/create-rubric?applyRubricMode=${applyRubricMode}`);
   };
 
   return (
