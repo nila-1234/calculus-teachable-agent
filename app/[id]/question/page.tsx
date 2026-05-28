@@ -10,7 +10,7 @@ function AuthorQuestionPageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const mode = parseInt(searchParams.get("mode") || "1", 10);
+  const mode = parseInt(searchParams.get("questionMode") || "1", 10);
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;

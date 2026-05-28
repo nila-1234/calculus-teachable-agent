@@ -15,7 +15,7 @@ const scenarios = [
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") || "1";
+  const questionMode = searchParams.get("questionMode") || "1";
 
   return (
     <main
@@ -37,7 +37,7 @@ function HomePageContent() {
                   color="lime"
                   variant="soft"
                   onClick={() =>
-                    router.push(`/${scenario.id}/question?mode=${mode}`)
+                    router.push(`/${scenario.id}/question?questionMode=${questionMode}`)
                   }
                 >
                   {scenario.id}. {scenario.name}
