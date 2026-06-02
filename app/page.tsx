@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, Flex, Heading } from "@radix-ui/themes";
+import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 const scenarios = [
   { id: 1, name: "Company Profit Analysis" },
@@ -17,6 +18,18 @@ function HomePageContent() {
   const searchParams = useSearchParams();
   const questionMode = searchParams.get("questionMode") || "1";
   const applyRubricMode = searchParams.get("applyRubricMode") || "1";
+
+  const [completedScenarios, setCompletedScenarios] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const completed = new Set<number>();
+    scenarios.forEach(({ id }) => {
+      if (sessionStorage.getItem(`scenario:${id}:rubricCompleted`) === "true") {
+        completed.add(id);
+      }
+    });
+    setCompletedScenarios(completed);
+  }, []);
 
   return (
     <main
@@ -41,7 +54,12 @@ function HomePageContent() {
                     router.push(`/${scenario.id}/question?questionMode=${questionMode}&applyRubricMode=${applyRubricMode}`)
                   }
                 >
-                  {scenario.id}. {scenario.name}
+                  <Flex align="center" justify="between" className="w-full">
+                    <span>{scenario.id}. {scenario.name}</span>
+                    {completedScenarios.has(scenario.id) && (
+                      <CheckCircledIcon width={18} height={18} />
+                    )}
+                  </Flex>
                 </Button>
               ))}
             </Flex>

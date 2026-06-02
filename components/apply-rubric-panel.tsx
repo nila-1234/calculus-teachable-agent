@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon, CheckIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 
@@ -36,6 +36,7 @@ type ApplyRubricPanelProps = {
   onModeChange?: (mode: number) => void;
   explanations?: Record<string, Record<string, string>>;
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
+  onComplete?: () => void;
 };
 
 export default function ApplyRubricPanel({
@@ -49,6 +50,7 @@ export default function ApplyRubricPanel({
   onModeChange,
   explanations = {},
   onExplanationChange,
+  onComplete,
 }: ApplyRubricPanelProps) {
   const isMode2 = mode === 2;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -69,6 +71,8 @@ export default function ApplyRubricPanel({
     () => answers.filter((a) => reviewStates[a.id]?.submitted).length,
     [answers, reviewStates]
   );
+
+  const allSubmitted = completedCount === answers.length && answers.length > 0;
 
   useEffect(() => {
     if (currentState?.submitted && feedbackRef.current) {
@@ -303,6 +307,16 @@ export default function ApplyRubricPanel({
           >
             <ArrowLeftIcon />
             Previous
+          </Button>
+
+          <Button
+            type="button"
+            color="lime"
+            disabled={!allSubmitted}
+            onClick={() => onComplete?.()}
+          >
+            <CheckIcon />
+            Complete Submission
           </Button>
 
           <Button

@@ -71,6 +71,11 @@ function ApplyRubricPageContent() {
     router.replace(`/${scenarioId}/apply-rubric?applyRubricMode=${newMode}`);
   };
 
+  const handleComplete = () => {
+    sessionStorage.setItem(`scenario:${scenarioId}:rubricCompleted`, "true");
+    router.push("/");
+  };
+
   const handleExplanationChange = (answerId: string, criterionId: string, value: string) => {
     setExplanations((prev) => ({
       ...prev,
@@ -161,6 +166,7 @@ function ApplyRubricPageContent() {
           onModeChange={handleModeChange}
           explanations={explanations}
           onExplanationChange={handleExplanationChange}
+          onComplete={handleComplete}
         />
       </div>
     </main>
