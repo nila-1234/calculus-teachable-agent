@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon, CheckIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 
@@ -33,8 +33,10 @@ type ApplyRubricPanelProps = {
   onToggleResult: (answerId: string, criterionId: string, value: "pass" | "fail") => void;
   onSubmitAnswer: (answerId: string) => void;
   mode?: number;
+  onModeChange?: (mode: number) => void;
   explanations?: Record<string, Record<string, string>>;
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
+  onComplete?: () => void;
 };
 
 export default function ApplyRubricPanel({
@@ -45,8 +47,10 @@ export default function ApplyRubricPanel({
   onToggleResult,
   onSubmitAnswer,
   mode = 1,
+  onModeChange,
   explanations = {},
   onExplanationChange,
+  onComplete,
 }: ApplyRubricPanelProps) {
   const isMode2 = mode === 2;
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -68,6 +72,8 @@ export default function ApplyRubricPanel({
     [answers, reviewStates]
   );
 
+  const allSubmitted = completedCount === answers.length && answers.length > 0;
+
   useEffect(() => {
     if (currentState?.submitted && feedbackRef.current) {
       requestAnimationFrame(() => {
@@ -84,6 +90,24 @@ export default function ApplyRubricPanel({
       <Flex direction="column" gap="5" className="h-full">
         <Flex align="center" justify="between">
           <Heading size="6">Apply Rubric</Heading>
+          <Flex gap="2" align="center">
+            <Button
+              size="1"
+              variant={mode === 1 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(1)}
+            >
+              Standard
+            </Button>
+            <Button
+              size="1"
+              variant={mode === 2 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(2)}
+            >
+              Self-Explanation
+            </Button>
+          </Flex>
           <Text size="2" color="gray">
             Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
           </Text>
@@ -283,6 +307,16 @@ export default function ApplyRubricPanel({
           >
             <ArrowLeftIcon />
             Previous
+          </Button>
+
+          <Button
+            type="button"
+            color="lime"
+            disabled={!allSubmitted}
+            onClick={() => onComplete?.()}
+          >
+            <CheckIcon />
+            Complete Submission
           </Button>
 
           <Button

@@ -155,6 +155,10 @@ function AuthorQuestionPageContent() {
     setActivePartIndex((prev) => Math.min(prev + 1, QUESTION_PARTS.length - 1));
   };
 
+  const handleModeChange = (newMode: number) => {
+    router.replace(`/${scenarioId}/question?questionMode=${newMode}&applyRubricMode=${applyRubricMode}`);
+  };
+
   const handleContinue = () => {
     if (!isFullyCorrect || !allAnswered) return;
 
@@ -225,6 +229,7 @@ function AuthorQuestionPageContent() {
         onNextPart={handleNextPart}
         onContinue={handleContinue}
         mode={mode}
+        onModeChange={handleModeChange}
         explanations={explanations}
         onExplanationChange={(partId, value) =>
           setExplanations((prev) => ({ ...prev, [partId]: value }))

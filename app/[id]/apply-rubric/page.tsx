@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import ApplyRubricPanel, {
   AnswerReviewState,
   RubricCriterion,
@@ -11,6 +11,7 @@ import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
 function ApplyRubricPageContent() {
+  const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const mode = parseInt(searchParams.get("applyRubricMode") || "1", 10);
@@ -72,6 +73,15 @@ function ApplyRubricPageContent() {
         results: { ...prev[answerId].results, [criterionId]: value },
       },
     }));
+  };
+
+  const handleModeChange = (newMode: number) => {
+    router.replace(`/${scenarioId}/apply-rubric?applyRubricMode=${newMode}`);
+  };
+
+  const handleComplete = () => {
+    sessionStorage.setItem(`scenario:${scenarioId}:rubricCompleted`, "true");
+    router.push("/");
   };
 
   const handleExplanationChange = (answerId: string, criterionId: string, value: string) => {
@@ -174,8 +184,10 @@ function ApplyRubricPageContent() {
           onToggleResult={handleToggleResult}
           onSubmitAnswer={handleSubmitAnswer}
           mode={mode}
+          onModeChange={handleModeChange}
           explanations={explanations}
           onExplanationChange={handleExplanationChange}
+          onComplete={handleComplete}
         />
       </div>
     </main>
