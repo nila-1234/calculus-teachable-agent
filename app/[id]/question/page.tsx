@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
+import { logEvent } from "@/lib/logger";
 
 function AuthorQuestionPageContent() {
   const router = useRouter();
@@ -60,6 +61,18 @@ function AuthorQuestionPageContent() {
   const handleSubmitPart = async (partId: string) => {
     if (!selectedParts[partId]) return;
 
+    const part = QUESTION_PARTS.find((p) => p.id === partId);
+    const selectedChoice = part?.options.find((opt) => opt.id === selectedParts[partId]);
+    logEvent("question_part_submitted", scenarioId, {
+      part_id: partId,
+      part_label: part?.label,
+      selected_choice_id: selectedParts[partId],
+      selected_choice_text: selectedChoice?.text,
+      is_correct: selectedChoice?.correct ?? false,
+      explanation: explanations[partId] || "",
+      mode,
+    });
+
     setSubmittedParts((prev) => ({ ...prev, [partId]: true }));
 
     if (mode === 2) {
@@ -109,6 +122,7 @@ function AuthorQuestionPageContent() {
   };
 
   const handleTryAgainPart = (partId: string) => {
+    logEvent("question_try_again", scenarioId, { part_id: partId });
     setSubmittedParts((prev) => ({ ...prev, [partId]: false }));
     setSelectedParts((prev) => {
       const next = { ...prev };
@@ -134,11 +148,22 @@ function AuthorQuestionPageContent() {
 
     if (!selectedChoice?.correct) return;
 
+    logEvent("question_next_part", scenarioId, {
+      from_part_id: currentPart.id,
+      from_part_index: activePartIndex,
+    });
     setActivePartIndex((prev) => Math.min(prev + 1, QUESTION_PARTS.length - 1));
   };
 
   const handleContinue = () => {
     if (!isFullyCorrect || !allAnswered) return;
+
+    logEvent("question_continue", scenarioId, {
+      selected_parts: selectedParts,
+      all_correct: isFullyCorrect,
+      composed_question: composedQuestion,
+      mode,
+    });
 
     sessionStorage.setItem(
       `scenario:${scenarioId}:authorScenario`,
@@ -183,6 +208,14 @@ function AuthorQuestionPageContent() {
         selectedParts={selectedParts}
         onSelectPart={(partId, choiceId) => {
           if (submittedParts[partId]) return;
+          const part = QUESTION_PARTS.find((p) => p.id === partId);
+          const choice = part?.options.find((opt) => opt.id === choiceId);
+          logEvent("question_option_selected", scenarioId, {
+            part_id: partId,
+            part_label: part?.label,
+            choice_id: choiceId,
+            choice_text: choice?.text,
+          });
           setSelectedParts((prev) => ({ ...prev, [partId]: choiceId }));
         }}
         submittedParts={submittedParts}

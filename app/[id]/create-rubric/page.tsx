@@ -7,6 +7,7 @@ import CreateRubricPanel, {
 } from "@/components/create-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
+import { logEvent } from "@/lib/logger";
 
 function CreateRubricPageContent() {
   const router = useRouter();
@@ -51,6 +52,13 @@ function CreateRubricPageContent() {
   const handleSetRubricDecision = (id: string, decision: RubricDecision) => {
     if (submitted) return;
 
+    const option = RUBRIC_OPTIONS.find((o) => o.id === id);
+    logEvent("rubric_decision", scenarioId, {
+      criterion_id: id,
+      criterion_label: option?.label,
+      decision,
+    });
+
     setRubricDecisions((prev) => ({
       ...prev,
       [id]: decision,
@@ -58,6 +66,10 @@ function CreateRubricPageContent() {
   };
 
   const handleContinue = () => {
+    logEvent("rubric_continue", scenarioId, {
+      selected_rubric_ids: selectedRubricIds,
+    });
+
     sessionStorage.setItem(
       `scenario:${scenarioId}:selectedRubricIds`,
       JSON.stringify(selectedRubricIds)
@@ -67,6 +79,9 @@ function CreateRubricPageContent() {
   };
 
   const handleTryAgain = () => {
+    logEvent("rubric_try_again", scenarioId, {
+      previous_decisions: rubricDecisions,
+    });
     setSubmitted(false);
     setIsPerfect(false);
   };
@@ -85,6 +100,14 @@ function CreateRubricPageContent() {
 
     const isPerfectSelection =
       wronglyIncluded.length === 0 && missedEssential.length === 0;
+
+    logEvent("rubric_submitted", scenarioId, {
+      decisions: rubricDecisions,
+      included_ids: includedOptions.map((o) => o.id),
+      wrongly_included: wronglyIncluded.map((o) => o.id),
+      missed_essential: missedEssential.map((o) => o.id),
+      is_perfect: isPerfectSelection,
+    });
 
     setIsPerfect(isPerfectSelection);
     setSubmitted(true);

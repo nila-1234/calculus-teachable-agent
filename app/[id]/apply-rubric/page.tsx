@@ -8,6 +8,7 @@ import ApplyRubricPanel, {
 } from "@/components/apply-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
+import { logEvent } from "@/lib/logger";
 
 function ApplyRubricPageContent() {
   const params = useParams();
@@ -57,6 +58,13 @@ function ApplyRubricPageContent() {
   }, [RUBRIC_OPTIONS, FINAL_AI_ANSWERS, scenarioId]);
 
   const handleToggleResult = (answerId: string, criterionId: string, value: "pass" | "fail") => {
+    const criterion = rubric.find((c) => c.id === criterionId);
+    logEvent("apply_rubric_toggle", scenarioId, {
+      answer_id: answerId,
+      criterion_id: criterionId,
+      criterion_label: criterion?.label,
+      value,
+    });
     setReviewStates((prev) => ({
       ...prev,
       [answerId]: {
@@ -78,6 +86,14 @@ function ApplyRubricPageContent() {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
 
     if (!review || !answer) return;
+
+    logEvent("apply_rubric_submitted", scenarioId, {
+      answer_id: answerId,
+      answer_label: answer.label,
+      results: review.results,
+      explanations: explanations[answerId] ?? {},
+      mode,
+    });
 
     const rubricWithReviews = rubric.map((criterion) => ({
       criterionId: criterion.id,
@@ -104,6 +120,11 @@ function ApplyRubricPageContent() {
       });
 
       const data = await res.json();
+
+      logEvent("apply_rubric_feedback_received", scenarioId, {
+        answer_id: answerId,
+        feedback: Array.isArray(data.feedback) ? data.feedback : [],
+      });
 
       setReviewStates((prev) => {
         const next = {
