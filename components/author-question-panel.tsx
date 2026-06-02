@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
 import ScatterPlot from "@/components/scatter-plot";
 import QuestionPartCardDeck from "@/components/question-part-card-deck";
 
@@ -32,6 +32,7 @@ type AuthorQuestionPanelProps = {
   onNextPart: () => void;
   onContinue?: () => void;
   mode?: number;
+  onModeChange?: (mode: number) => void;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
   llmFeedback?: Record<string, string>;
@@ -51,7 +52,8 @@ export default function AuthorQuestionPanel({
   onTryAgainPart,
   onNextPart,
   onContinue,
-  mode,
+  mode = 1,
+  onModeChange,
   explanations,
   onExplanationChange,
   llmFeedback,
@@ -83,7 +85,27 @@ export default function AuthorQuestionPanel({
   return (
     <Card size="3" className="h-full">
       <Flex direction="column" gap="5" className="h-full">
-        <Heading size="6">Scenario</Heading>
+        <Flex align="center" justify="between">
+          <Heading size="6">Scenario</Heading>
+          <Flex gap="2" align="center">
+            <Button
+              size="1"
+              variant={mode === 1 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(1)}
+            >
+              Standard
+            </Button>
+            <Button
+              size="1"
+              variant={mode === 2 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(2)}
+            >
+              Self-Explanation
+            </Button>
+          </Flex>
+        </Flex>
 
         <div className="flex-1 space-y-5">
           <Card size="2">

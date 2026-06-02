@@ -33,6 +33,7 @@ type ApplyRubricPanelProps = {
   onToggleResult: (answerId: string, criterionId: string, value: "pass" | "fail") => void;
   onSubmitAnswer: (answerId: string) => void;
   mode?: number;
+  onModeChange?: (mode: number) => void;
   explanations?: Record<string, Record<string, string>>;
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
 };
@@ -45,6 +46,7 @@ export default function ApplyRubricPanel({
   onToggleResult,
   onSubmitAnswer,
   mode = 1,
+  onModeChange,
   explanations = {},
   onExplanationChange,
 }: ApplyRubricPanelProps) {
@@ -84,6 +86,24 @@ export default function ApplyRubricPanel({
       <Flex direction="column" gap="5" className="h-full">
         <Flex align="center" justify="between">
           <Heading size="6">Apply Rubric</Heading>
+          <Flex gap="2" align="center">
+            <Button
+              size="1"
+              variant={mode === 1 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(1)}
+            >
+              Standard
+            </Button>
+            <Button
+              size="1"
+              variant={mode === 2 ? "solid" : "soft"}
+              color="lime"
+              onClick={() => onModeChange?.(2)}
+            >
+              Self-Explanation
+            </Button>
+          </Flex>
           <Text size="2" color="gray">
             Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
           </Text>
