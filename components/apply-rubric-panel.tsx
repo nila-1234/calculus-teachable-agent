@@ -26,6 +26,7 @@ export type AnswerReviewState = {
 };
 
 type ApplyRubricPanelProps = {
+  question?: string;
   rubric: RubricCriterion[];
   answers: readonly FinalAiAnswer[];
   reviewStates: Record<string, AnswerReviewState>;
@@ -41,6 +42,7 @@ type ApplyRubricPanelProps = {
 };
 
 export default function ApplyRubricPanel({
+  question,
   rubric,
   answers,
   reviewStates,
@@ -121,6 +123,17 @@ export default function ApplyRubricPanel({
         </Text>
 
         <div className="flex-1 space-y-5 overflow-y-auto">
+          {question && (
+            <Card size="2">
+              <Flex direction="column" gap="3">
+                <Heading size="4">Question</Heading>
+                <Text size="3" className="whitespace-pre-wrap leading-7">
+                  <MathDisplay text={question} />
+                </Text>
+              </Flex>
+            </Card>
+          )}
+
           <Card size="2">
             <Flex direction="column" gap="3">
               <Flex align="center" justify="between">

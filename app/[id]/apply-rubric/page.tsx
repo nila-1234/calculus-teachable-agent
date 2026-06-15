@@ -25,11 +25,18 @@ function ApplyRubricPageContent() {
 
   const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } = scenario.schema;
 
+  const [question, setQuestion] = useState("");
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
   const [reviewStates, setReviewStates] = useState<Record<string, AnswerReviewState>>({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   // explanations[answerId][criterionId] = explanation text
   const [explanations, setExplanations] = useState<Record<string, Record<string, string>>>({});
+
+  useEffect(() => {
+    setQuestion(
+      sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) || ""
+    );
+  }, [scenarioId]);
 
   useEffect(() => {
     const raw = sessionStorage.getItem(`scenario:${scenarioId}:selectedRubricIds`);
@@ -181,6 +188,7 @@ function ApplyRubricPageContent() {
     >
       <div className="h-full min-h-0">
         <ApplyRubricPanel
+          question={question}
           rubric={rubric}
           answers={FINAL_AI_ANSWERS}
           reviewStates={reviewStates}
