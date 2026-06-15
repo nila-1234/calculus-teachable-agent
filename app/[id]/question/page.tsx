@@ -65,11 +65,8 @@ function AuthorQuestionPageContent() {
     const selectedChoice = part?.options.find((opt) => opt.id === selectedParts[partId]);
     logEvent("question_part_submitted", scenarioId, {
       part_id: partId,
-      part_label: part?.label,
       selected_choice_id: selectedParts[partId],
-      selected_choice_text: selectedChoice?.text,
       is_correct: selectedChoice?.correct ?? false,
-      explanation: explanations[partId] || "",
       mode,
     });
 
@@ -155,6 +152,13 @@ function AuthorQuestionPageContent() {
     setActivePartIndex((prev) => Math.min(prev + 1, QUESTION_PARTS.length - 1));
   };
 
+  const handleExplanationBlur = (partId: string, value: string) => {
+    logEvent("question_explanation_blur", scenarioId, {
+      part_id: partId,
+      explanation: value,
+    });
+  };
+
   const handleModeChange = (newMode: number) => {
     router.replace(`/${scenarioId}/question?questionMode=${newMode}&applyRubricMode=${applyRubricMode}`);
   };
@@ -216,9 +220,7 @@ function AuthorQuestionPageContent() {
           const choice = part?.options.find((opt) => opt.id === choiceId);
           logEvent("question_option_selected", scenarioId, {
             part_id: partId,
-            part_label: part?.label,
             choice_id: choiceId,
-            choice_text: choice?.text,
           });
           setSelectedParts((prev) => ({ ...prev, [partId]: choiceId }));
         }}
@@ -234,6 +236,7 @@ function AuthorQuestionPageContent() {
         onExplanationChange={(partId, value) =>
           setExplanations((prev) => ({ ...prev, [partId]: value }))
         }
+        onExplanationBlur={handleExplanationBlur}
         llmFeedback={llmFeedback}
         loadingFeedback={loadingFeedback}
       />

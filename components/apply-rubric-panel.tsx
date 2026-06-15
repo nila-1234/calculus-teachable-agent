@@ -36,6 +36,7 @@ type ApplyRubricPanelProps = {
   onModeChange?: (mode: number) => void;
   explanations?: Record<string, Record<string, string>>;
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
+  onExplanationBlur?: (answerId: string, criterionId: string, value: string) => void;
   onComplete?: () => void;
 };
 
@@ -50,6 +51,7 @@ export default function ApplyRubricPanel({
   onModeChange,
   explanations = {},
   onExplanationChange,
+  onExplanationBlur,
   onComplete,
 }: ApplyRubricPanelProps) {
   const isMode2 = mode === 2;
@@ -217,6 +219,7 @@ export default function ApplyRubricPanel({
                                 placeholder="Explain your reasoning…"
                                 value={explanations[currentAnswer.id]?.[criterion.id] || ""}
                                 onChange={(e) => onExplanationChange?.(currentAnswer.id, criterion.id, e.target.value)}
+                                onBlur={(e) => onExplanationBlur?.(currentAnswer.id, criterion.id, e.target.value)}
                                 disabled={isLoading}
                               />
                             </td>

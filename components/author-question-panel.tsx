@@ -35,6 +35,7 @@ type AuthorQuestionPanelProps = {
   onModeChange?: (mode: number) => void;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
+  onExplanationBlur?: (partId: string, value: string) => void;
   llmFeedback?: Record<string, string>;
   loadingFeedback?: Record<string, boolean>;
 };
@@ -56,6 +57,7 @@ export default function AuthorQuestionPanel({
   onModeChange,
   explanations,
   onExplanationChange,
+  onExplanationBlur,
   llmFeedback,
   loadingFeedback,
 }: AuthorQuestionPanelProps) {
@@ -142,6 +144,7 @@ export default function AuthorQuestionPanel({
             mode={mode}
             explanations={explanations}
             onExplanationChange={onExplanationChange}
+            onExplanationBlur={onExplanationBlur}
             llmFeedback={llmFeedback}
             loadingFeedback={loadingFeedback}
           />

@@ -31,6 +31,7 @@ type Props = {
   mode?: number;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
+  onExplanationBlur?: (partId: string, value: string) => void;
   llmFeedback?: Record<string, string>;
   loadingFeedback?: Record<string, boolean>;
 };
@@ -48,6 +49,7 @@ export default function QuestionPartCardDeck({
   mode = 1,
   explanations = {},
   onExplanationChange,
+  onExplanationBlur,
   llmFeedback = {},
   loadingFeedback = {},
 }: Props) {
@@ -136,6 +138,7 @@ export default function QuestionPartCardDeck({
                   placeholder="Why did you choose this answer?"
                   value={explanations[part.id] || ""}
                   onChange={(e) => onExplanationChange?.(part.id, e.target.value)}
+                  onBlur={(e) => onExplanationBlur?.(part.id, e.target.value)}
                   disabled={isSubmitted}
                   className="flex-1 resize-none min-h-0"
                 />

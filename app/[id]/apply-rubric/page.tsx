@@ -59,11 +59,9 @@ function ApplyRubricPageContent() {
   }, [RUBRIC_OPTIONS, FINAL_AI_ANSWERS, scenarioId]);
 
   const handleToggleResult = (answerId: string, criterionId: string, value: "pass" | "fail") => {
-    const criterion = rubric.find((c) => c.id === criterionId);
     logEvent("apply_rubric_toggle", scenarioId, {
       answer_id: answerId,
       criterion_id: criterionId,
-      criterion_label: criterion?.label,
       value,
     });
     setReviewStates((prev) => ({
@@ -91,6 +89,14 @@ function ApplyRubricPageContent() {
     }));
   };
 
+  const handleExplanationBlur = (answerId: string, criterionId: string, value: string) => {
+    logEvent("apply_rubric_explanation_blur", scenarioId, {
+      answer_id: answerId,
+      criterion_id: criterionId,
+      explanation: value,
+    });
+  };
+
   const handleSubmitAnswer = async (answerId: string) => {
     const review = reviewStates[answerId];
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
@@ -99,9 +105,7 @@ function ApplyRubricPageContent() {
 
     logEvent("apply_rubric_submitted", scenarioId, {
       answer_id: answerId,
-      answer_label: answer.label,
       results: review.results,
-      explanations: explanations[answerId] ?? {},
       mode,
     });
 
@@ -187,6 +191,7 @@ function ApplyRubricPageContent() {
           onModeChange={handleModeChange}
           explanations={explanations}
           onExplanationChange={handleExplanationChange}
+          onExplanationBlur={handleExplanationBlur}
           onComplete={handleComplete}
         />
       </div>
