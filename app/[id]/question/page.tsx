@@ -3,6 +3,7 @@
 import { Suspense, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
+import StepProgress from "@/components/step-progress";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
@@ -208,6 +209,7 @@ function AuthorQuestionPageContent() {
       className="min-h-screen p-3 overflow-y-auto"
       style={{ backgroundColor: "var(--lime-8)" }}
     >
+      <StepProgress currentStep={0} />
       <AuthorQuestionPanel
         scenario={SCENARIO_PLACEHOLDER}
         question={QUESTION_PLACEHOLDER}

@@ -7,6 +7,7 @@ import ApplyRubricPanel, {
   RubricCriterion,
 } from "@/components/apply-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
+import StepProgress from "@/components/step-progress";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
@@ -186,6 +187,7 @@ function ApplyRubricPageContent() {
       className="min-h-screen p-3 overflow-y-auto"
       style={{ backgroundColor: "var(--lime-8)" }}
     >
+      <StepProgress currentStep={2} />
       <div className="h-full min-h-0">
         <ApplyRubricPanel
           question={question}
