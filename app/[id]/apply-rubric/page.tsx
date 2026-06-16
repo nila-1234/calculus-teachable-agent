@@ -24,7 +24,7 @@ function ApplyRubricPageContent() {
     return <main className="p-6">Scenario not found.</main>;
   }
 
-  const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } = scenario.schema;
+  const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS, SAMPLE_ANSWERS } = scenario.schema;
 
   const [question, setQuestion] = useState("");
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
@@ -203,6 +203,7 @@ function ApplyRubricPageContent() {
           onExplanationChange={handleExplanationChange}
           onExplanationBlur={handleExplanationBlur}
           onComplete={handleComplete}
+          correctSample={SAMPLE_ANSWERS.correct}
         />
       </div>
     </main>

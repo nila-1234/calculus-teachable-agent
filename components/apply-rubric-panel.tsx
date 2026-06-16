@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Card, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon, CheckIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
@@ -25,6 +25,11 @@ export type AnswerReviewState = {
   feedback: RubricCriterionFeedback[];
 };
 
+type SampleAnswer = {
+  title: string;
+  text: string;
+};
+
 type ApplyRubricPanelProps = {
   question?: string;
   rubric: RubricCriterion[];
@@ -39,6 +44,7 @@ type ApplyRubricPanelProps = {
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
   onExplanationBlur?: (answerId: string, criterionId: string, value: string) => void;
   onComplete?: () => void;
+  correctSample?: SampleAnswer;
 };
 
 export default function ApplyRubricPanel({
@@ -55,9 +61,11 @@ export default function ApplyRubricPanel({
   onExplanationChange,
   onExplanationBlur,
   onComplete,
+  correctSample,
 }: ApplyRubricPanelProps) {
   const isMode2 = mode === 2;
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [hintOpen, setHintOpen] = useState(false);
   const feedbackRef = useRef<HTMLDivElement | null>(null);
 
   const currentAnswer = answers[currentIndex];
@@ -157,7 +165,29 @@ export default function ApplyRubricPanel({
 
           <Card size="2">
             <Flex direction="column" gap="4">
-              <Heading size="4">Evaluate This Answer</Heading>
+              <Flex align="center" gap="3">
+                <Heading size="4">Evaluate This Answer</Heading>
+                {correctSample && (
+                  <Dialog.Root open={hintOpen} onOpenChange={setHintOpen}>
+                    <Dialog.Trigger>
+                      <Button variant="ghost" color="gray" size="2">
+                        View Correct Answer
+                      </Button>
+                    </Dialog.Trigger>
+                    <Dialog.Content maxWidth="600px">
+                      <Dialog.Title>Fully Correct Answer</Dialog.Title>
+                      <Text size="3" className="whitespace-pre-wrap leading-7">
+                        <MathDisplay text={correctSample.text} />
+                      </Text>
+                      <Flex justify="end" mt="4">
+                        <Dialog.Close>
+                          <Button variant="soft" color="gray">Close</Button>
+                        </Dialog.Close>
+                      </Flex>
+                    </Dialog.Content>
+                  </Dialog.Root>
+                )}
+              </Flex>
 
               <Text size="2" color="gray">
                 Review the AI answer above and evaluate it against each selected criterion.
