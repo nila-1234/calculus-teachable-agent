@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Button, Card, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
 
@@ -43,6 +43,7 @@ export default function CreateRubricPanel({
   onTryAgain,
 }: CreateRubricPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
+  const [hintOpen, setHintOpen] = useState(false);
 
   useEffect(() => {
     if (submitted && feedbackRef.current) {
@@ -71,31 +72,6 @@ export default function CreateRubricPanel({
               </Text>
             </Flex>
           </Card>
-
-          <Text size="2" color="gray">
-            Compare the sample answers to identify what a correct solution must
-            include and what should not be required.
-          </Text>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Card size="2">
-              <Flex direction="column" gap="3">
-                <Heading size="4">{correctSample.title}</Heading>
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  <MathDisplay text={correctSample.text} />
-                </Text>
-              </Flex>
-            </Card>
-
-            <Card size="2">
-              <Flex direction="column" gap="3">
-                <Heading size="4">{incorrectSample.title}</Heading>
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  <MathDisplay text={incorrectSample.text} />
-                </Text>
-              </Flex>
-            </Card>
-          </div>
 
           <Card size="2">
             <Flex direction="column" gap="4">
@@ -196,7 +172,44 @@ export default function CreateRubricPanel({
                 </Text>
               ) : null} */}
 
-              <Flex align="center" justify="center">
+              <Flex align="center" justify="center" gap="3">
+                <Dialog.Root open={hintOpen} onOpenChange={setHintOpen}>
+                  <Dialog.Trigger>
+                    <Button variant="ghost" color="gray" size="2">
+                      Show Hint
+                    </Button>
+                  </Dialog.Trigger>
+                  <Dialog.Content maxWidth="700px">
+                    <Dialog.Title>Sample Answers</Dialog.Title>
+                    <Dialog.Description size="2" color="gray" mb="4">
+                      Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect.
+                      Use these to guide your understanding of the correct approach.
+                    </Dialog.Description>
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <Card size="2">
+                        <Flex direction="column" gap="3">
+                          <Heading size="4">{correctSample.title}</Heading>
+                          <Text size="3" className="whitespace-pre-wrap leading-7">
+                            <MathDisplay text={correctSample.text} />
+                          </Text>
+                        </Flex>
+                      </Card>
+                      <Card size="2">
+                        <Flex direction="column" gap="3">
+                          <Heading size="4">{incorrectSample.title}</Heading>
+                          <Text size="3" className="whitespace-pre-wrap leading-7">
+                            <MathDisplay text={incorrectSample.text} />
+                          </Text>
+                        </Flex>
+                      </Card>
+                    </div>
+                    <Flex justify="end" mt="4">
+                      <Dialog.Close>
+                        <Button variant="soft" color="gray">Close</Button>
+                      </Dialog.Close>
+                    </Flex>
+                  </Dialog.Content>
+                </Dialog.Root>
                 <Button
                   onClick={onSubmit}
                   disabled={!allCriteriaDecided || submitted}

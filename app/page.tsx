@@ -16,7 +16,7 @@ const scenarios = [
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const questionMode = searchParams.get("questionMode") || "1";
+  const questionMode = searchParams.get("questionMode") || "2";
   const applyRubricMode = searchParams.get("applyRubricMode") || "1";
 
   const [completedScenarios, setCompletedScenarios] = useState<Set<number>>(new Set());
