@@ -93,7 +93,7 @@ export default function QuestionPartCardDeck({
         <Flex direction="column" gap="3">
           <Heading size="3">{part.label}</Heading>
 
-          <div className={isMode2 ? "grid grid-cols-[3fr_1fr] gap-4 items-stretch" : ""}>
+          <div className={isMode2 ? "grid grid-cols-[3fr_2fr] gap-4 items-stretch" : ""}>
             <RadioCards.Root
               value={selectedParts[part.id] || ""}
               onValueChange={(choiceId) => onSelectPart(part.id, choiceId)}
