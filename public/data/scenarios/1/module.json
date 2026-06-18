@@ -1,4 +1,5 @@
 {
+  "roleplay": "You are a financial analyst hired to investigate an unusual change in a company's monthly profit. The management team is relying on your expertise to make sense of the data and decide which parts of the month deserve closer attention.",
   "scenario": "A company is reviewing its daily profit over the past month to better understand an unusual change in performance. Over the past year, the company’s profit has generally been declining, but during this month it started going up, but later began to decrease again. The company recently made a change in its marketing strategy, which may have contributed to this fluctuation. The company wants to choose a function that best models this month’s data. The goal is to identify the most important features of this month’s profit pattern so the company can decide which parts of the month deserve closer investigation.",
   "question": "Use the function __(1)__ to model the company’s profit. Analyse the company’s situation by finding its __(2)__.",
   "plotDataSrc": "/data/scenarios/1/plot-data.json",
