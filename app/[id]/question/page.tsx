@@ -4,6 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import StepProgress from "@/components/step-progress";
+import StepIntro from "@/components/step-intro";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
@@ -34,6 +35,7 @@ function AuthorQuestionPageContent() {
     QUESTION_PLACEHOLDER,
     QUESTION_PARTS,
     PLOT_DATA_SRC,
+    SCENARIO_IMAGE_SRC,
   } = scenario.schema;
 
   const selectedChoices = QUESTION_PARTS.map((part) => {
@@ -210,10 +212,19 @@ function AuthorQuestionPageContent() {
       style={{ backgroundColor: "var(--lime-8)" }}
     >
       <StepProgress currentStep={0} />
+      <StepIntro
+        className="max-w-2xl"
+        title="Step 1: Create the question"
+        paragraphs={[
+          "Your professor was halfway through writing a new question based on a real-world problem when they were pulled into a meeting. They had started turning the scenario into a function and brainstorming possible models. Pick up where your professor left off by choosing the function that models the situation correctly.",
+          "Next, finish formulating the question for students by specifying what they should analyze to solve the problem.",
+        ]}
+      />
       <AuthorQuestionPanel
         scenario={SCENARIO_PLACEHOLDER}
         question={QUESTION_PLACEHOLDER}
         scatterPlotSrc={PLOT_DATA_SRC}
+        scenarioImageSrc={SCENARIO_IMAGE_SRC}
         parts={QUESTION_PARTS}
         selectedParts={selectedParts}
         onSelectPart={(partId, choiceId) => {

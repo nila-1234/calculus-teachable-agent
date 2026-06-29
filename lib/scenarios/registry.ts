@@ -11,6 +11,7 @@ function mapJsonToSchema(json: any): QuestionSchema {
     SCENARIO_PLACEHOLDER: json.scenario,
     QUESTION_PLACEHOLDER: json.question,
     PLOT_DATA_SRC: json.plotDataSrc,
+    SCENARIO_IMAGE_SRC: json.scenarioImageSrc,
     QUESTION_PARTS: json.questionParts,
     RUBRIC_OPTIONS: json.rubricOptions,
     SAMPLE_ANSWERS: json.sampleAnswers,

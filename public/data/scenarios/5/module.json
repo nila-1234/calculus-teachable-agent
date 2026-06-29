@@ -1,29 +1,36 @@
 {
-  "scenario": "A company is reviewing its daily profit over the past month to better understand its performance and decide which day’s strategy is worth repeating. The scatter plot below shows the company’s daily profit throughout the month. Which of the following questions would best help the company determine which day produced the highest profit pattern worth mimicking?",
-  "question": "Use the function __(1)__ to model the company’s profit and analyse the company’s situation by finding its __(2)__.",
-  "plotDataSrc": "/data/scenarios/5/plot-data.json",
+  "scenario": "A storage company wants to fence a rectangular outdoor storage area along an existing warehouse wall. The wall forms one side, so only the other three sides need fencing. With 100 meters of fencing, the company wants to enclose the largest possible area, and needs at least 1,500 square meters to store its goods.\n\nLet x represent the length of each of the two sides perpendicular to the wall, and let y represent the side parallel to the wall.",
+  "question": "Use the function __(1)__ to model the storage area, and analyse the company’s situation by finding its __(2)__.",
+  "plotDataSrc": "",
+  "scenarioImageSrc": "/images/scenario-5-fence.svg",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the company’s profit.",
+      "label": "Use the function __(1)__ to model the storage area.",
       "options": [
         {
           "id": "f1",
-          "text": "\\(f(x)=0.05x^3-2x^2+15x+80\\)",
+          "text": "\\(A(x)=x(100-2x)\\)",
           "correct": true,
-          "feedback": "This is the strongest choice because it matches the overall shape of the scatter plot: profit rises early in the month, reaches a high point, then drops before increasing again. This model can produce multiple critical points, which helps identify the company’s best-profit day."
+          "feedback": "Correct! The fencing constraint is 2x + y = 100, so y = 100 − 2x. Substituting into the area A = x·y gives a single-variable function A(x) = x(100 − 2x). This is the function that can be optimized."
         },
         {
           "id": "f2",
-          "text": "\\(f(x)=0.05x^3+2x^2+15x+75\\)",
+          "text": "\\(A(x)=x\\cdot y\\)",
           "correct": false,
-          "feedback": "This choice is less appropriate because the positive quadratic term changes the shape of the graph too much. It does not match the pattern in the scatter plot as well as the correct model."
+          "feedback": "Incorrect! This is the area, but it still contains two variables. Without using the constraint to eliminate y, the function cannot be differentiated with respect to x, so the optimum cannot be found."
         },
         {
           "id": "f3",
-          "text": "\\(f(x)=0.5x^3-2x^2+15x+80\\)",
+          "text": "\\(A(x)=2x+y\\)",
           "correct": false,
-          "feedback": "This choice is not the best fit because the larger cubic coefficient makes the function change too rapidly. The graph suggests a smoother trend, so this model exaggerates the behavior."
+          "feedback": "Incorrect! This is the total length of fencing (the constraint itself), not the area. Maximizing this does not answer the company’s question."
+        },
+        {
+          "id": "f4",
+          "text": "\\(A(x)=x^{2}\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is unrelated to the rectangle’s area under the given constraint. It ignores both the side y and the fencing limit."
         }
       ]
     },
@@ -33,123 +40,160 @@
       "options": [
         {
           "id": "a1",
-          "text": "critical points",
+          "text": "critical point(s) of \\(A(x)\\)",
           "correct": true,
-          "feedback": "This is the best choice because critical points identify where profit reaches maximum or minimum values, directly answering the company’s question."
+          "feedback": "Correct! A critical point is a value where A′(x) = 0 or A′(x) is undefined, as long as A(x) exists there. The maximum area occurs at an interior point where A′(x) = 0, so finding the critical point locates the dimensions that maximize the storage area."
         },
         {
           "id": "a2",
-          "text": "average rate of change over the month",
+          "text": "the value of \\(x\\) where \\(A(x)=0\\)",
           "correct": false,
-          "feedback": "This only describes overall change and does not identify the specific day when profit was highest."
+          "feedback": "Incorrect! This finds where the area is zero, not where it is largest. A critical point is defined by the derivative — where A′(x) = 0 or A′(x) is undefined — not by where the function itself equals zero. Setting A(x) = 0 confuses the function with its derivative."
         },
         {
           "id": "a3",
-          "text": "intercepts",
+          "text": "the value of \\(x\\) where \\(A'(x)\\) is largest",
           "correct": false,
-          "feedback": "Intercepts do not help determine the day of maximum profit."
+          "feedback": "Incorrect! A critical point is where A′(x) = 0 (or undefined), not where A′(x) is largest. The maximum area occurs where the rate of change is zero, not where it is greatest; here A′(x) is actually largest at x = 0, where there is no enclosure at all."
+        },
+        {
+          "id": "a4",
+          "text": "the endpoints of the domain",
+          "correct": false,
+          "feedback": "Incorrect! On a closed interval a maximum can occur at an endpoint, but A(x) is a downward parabola whose vertex lies inside the domain. The maximum is at the interior critical point where A′(x) = 0, not at the endpoints, where the area is zero."
         }
       ]
     }
   ],
   "rubricOptions": [
     {
-      "id": "derivative-correct",
-      "label": "Derivative of the function is computed correctly",
+      "id": "derivative",
+      "label": "Correctly computes the derivative \\(A'(x)\\)",
       "correct": true,
-      "feedback": "This is an essential criterion because a correct derivative is required to find critical points accurately."
+      "feedback": "This is an essential criterion because the derivative is required to locate the maximum area."
     },
     {
-      "id": "solve-fprime-zero",
-      "label": "Equation \\(f'(x)=0\\) is solved correctly",
+      "id": "critical-value",
+      "label": "Solves \\(A'(x)=0\\) to find the critical value of \\(x\\)",
       "correct": true,
-      "feedback": "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers."
+      "feedback": "This is an essential criterion because the critical value gives the dimension that maximizes the area."
     },
     {
-      "id": "all-critical-points-identified",
-      "label": "All critical points are identified",
+      "id": "dimensions-area",
+      "label": "From the critical value of \\(x\\), correctly computes \\(y\\) and the area \\(A\\)",
       "correct": true,
-      "feedback": "This is an essential criterion because missing any critical point would lead to an incomplete or incorrect analysis."
+      "feedback": "This is an essential criterion because the company’s question is about the actual enclosed area, so \\(y\\) and \\(A\\) must be found."
     },
     {
-      "id": "maximum-profit-identified",
-      "label": "The critical point corresponding to maximum profit is identified correctly",
+      "id": "maximum-justification",
+      "label": "Explains that the critical point is a maximum because \\(A(x)\\) is a downward parabola",
       "correct": true,
-      "feedback": "This is an essential criterion because the goal is to identify and explain the day of highest profit."
+      "feedback": "This is an essential criterion because a complete answer must justify that the critical point is a maximum rather than a minimum."
     },
     {
-      "id": "whole-number-simplification",
-      "label": "The equation is simplified into whole-number coefficients before solving",
+      "id": "requirement-check",
+      "label": "Compares the area against the 1,500 m² requirement and concludes whether it can be met",
+      "correct": true,
+      "feedback": "This is an essential criterion because the company specifically needs at least 1,500 m², so the answer must address whether that is achievable."
+    },
+    {
+      "id": "second-derivative",
+      "label": "Uses the second derivative to confirm the maximum",
       "correct": false,
-      "feedback": "This is not required, since simplifying the equation can help but is not necessary for obtaining the correct answer."
+      "feedback": "This is not required, since the downward-parabola shape already guarantees a maximum, so the second-derivative test is optional."
     },
     {
-      "id": "graph-verification",
-      "label": "The behavior of the function is verified using a graph or visual inspection",
+      "id": "graph-check",
+      "label": "Verifies the result with a graph",
       "correct": false,
-      "feedback": "This is not required, because visual checking may support the answer but does not determine its correctness."
-    },
-    {
-      "id": "nearby-point-check",
-      "label": "Values of the derivative are checked at nearby points to confirm the result",
-      "correct": false,
-      "feedback": "This is not required, since checking nearby values is optional and not needed to correctly solve the problem."
+      "feedback": "This is not required, because a graph may support the answer but does not determine its correctness."
     }
   ],
   "sampleAnswers": {
     "correct": {
-      "title": "Sample AI Answer 1 (Fully Correct)",
-      "text": "\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)\n\n\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x = \\frac{80 \\pm \\sqrt{2800}}{6}\\)\n\n\\(x \\approx 4.5, 22.2\\)\n\nBoth are critical points. From the graph, the earlier one corresponds to the highest profit.\n\nSo the company should focus on around day 4-5."
-    },
-    "incorrect": {
-      "title": "Sample AI Answer 2 (Fully Incorrect)",
-      "text": "\\(f(x) = 0.05x^3 - 2x^2 + 15x + 80\\)\n\n\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x = \\frac{800 \\pm \\sqrt{604000}}{6}\\)\n\n\\(x \\approx 3.81, 262.86\\)\n\nSo the highest profit happens around day 263."
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-4x\\)\n\n\\(100-4x=0 \\Rightarrow x=25\\)\n\n\\(A(x)\\) is a downward parabola, so this critical point is the maximum.\n\n\\(y=100-2(25)=50\\)\n\n\\(A=25\\times 50=1250\\)\n\nThis maximum area of 1250 m² is below the required 1,500 m², so 100 m of fencing is not enough; the best the company can do is 25 m by 50 m."
     }
   },
   "finalAiAnswers": [
     {
-      "id": "answer-50",
+      "id": "answer-a",
       "label": "AI Student 1",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(3x^2 - 80x + 300 = 0\\)\n\n\\(x \\approx 4.51\\)\n\nSo the critical point is around x = 4.51, which is where profit is highest.",
+      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-4x\\)\n\n\\(100-4x=0 \\Rightarrow x=25\\)\n\n\\(A(x)\\) is a downward parabola, so this critical point is the maximum.\n\n\\(y=100-2(25)=50\\)\n\n\\(A=25\\times 50=1250\\)\n\nThis maximum area of 1250 m² is below the required 1,500 m², so 100 m of fencing is not enough; the best the company can do is 25 m by 50 m.",
       "rubricFit": {
-        "derivative-correct": {
+        "derivative": {
           "pass": true,
-          "feedback": "The derivative is computed correctly."
+          "feedback": "The derivative A′(x) = 100 − 4x is computed correctly."
         },
-        "solve-fprime-zero": {
+        "critical-value": {
           "pass": true,
-          "feedback": "The equation f'(x)=0 is solved correctly."
+          "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
-        "all-critical-points-identified": {
-          "pass": false,
-          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+        "dimensions-area": {
+          "pass": true,
+          "feedback": "From x = 25, the answer correctly finds y = 50 and the area A = 1250 m²."
         },
-        "maximum-profit-identified": {
-          "pass": false,
-          "feedback": "The maximum profit point is not correctly identified."
+        "maximum-justification": {
+          "pass": true,
+          "feedback": "The answer explains the critical point is a maximum because A(x) is a downward parabola."
+        },
+        "requirement-check": {
+          "pass": true,
+          "feedback": "The area 1250 m² is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }
     },
     {
-      "id": "answer-25",
+      "id": "answer-b",
       "label": "AI Student 2",
-      "text": "\\(f'(x) = 0.15x^2 - 4x + 15\\)\n\n\\(0.15x^2 - 4x + 15 = 0\\)\n\n\\(x \\approx 4.51, 22.16\\)\n\nSince 22.16 is larger, that should be the maximum profit day.\n\nSo the company should focus on day 22.",
+      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-4x\\)\n\n\\(A'(x)=0 \\Rightarrow x=25\\)\n\nSo the depth is 25 m.",
       "rubricFit": {
-        "derivative-correct": {
+        "derivative": {
           "pass": true,
-          "feedback": "The derivative is computed correctly."
+          "feedback": "The derivative A′(x) = 100 − 4x is correct."
         },
-        "solve-fprime-zero": {
-          "pass": false,
-          "feedback": "The equation f'(x)=0 is not solved correctly. The second critical point is calculated incorrectly, which leads to an incorrect conclusion about the maximum profit day."
+        "critical-value": {
+          "pass": true,
+          "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
-        "all-critical-points-identified": {
+        "dimensions-area": {
           "pass": false,
-          "feedback": "Only one critical point is identified, but there should be two. This is important because both critical points are needed to fully analyze the profit pattern."
+          "feedback": "The work stops at x = 25 and never finds y or the area A."
         },
-        "maximum-profit-identified": {
+        "maximum-justification": {
           "pass": false,
-          "feedback": "The maximum profit point is not correctly identified due to the incorrect calculation of the second critical point."
+          "feedback": "There is no explanation that the critical point is a maximum."
+        },
+        "requirement-check": {
+          "pass": false,
+          "feedback": "The area is never computed or compared against the 1,500 m² requirement."
+        }
+      }
+    },
+    {
+      "id": "answer-c",
+      "label": "AI Student 3",
+      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-2x\\)\n\n\\(100-2x=0 \\Rightarrow x=50\\)\n\n\\(A(x)\\) is a downward parabola, so this critical point is the maximum.\n\n\\(y=100-2(50)=0\\)\n\n\\(A=50\\times 0=0\\)\n\nThis area of 0 m² is below the required 1,500 m², so 100 m of fencing is not enough.",
+      "rubricFit": {
+        "derivative": {
+          "pass": false,
+          "feedback": "The derivative is wrong: the derivative of −2x² is −4x, not −2x."
+        },
+        "critical-value": {
+          "pass": false,
+          "feedback": "Because the derivative is wrong, the critical value x = 50 is incorrect (it should be x = 25)."
+        },
+        "dimensions-area": {
+          "pass": true,
+          "feedback": "From the (incorrect) x = 50, y = 0 and the area A = 0 are computed correctly from that value."
+        },
+        "maximum-justification": {
+          "pass": true,
+          "feedback": "The answer correctly justifies the maximum using the downward-parabola shape."
+        },
+        "requirement-check": {
+          "pass": true,
+          "feedback": "The area is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }
     }

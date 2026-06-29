@@ -4,13 +4,14 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Card, Flex, Heading } from "@radix-ui/themes";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
+import StepIntro from "@/components/step-intro";
 
 const scenarios = [
   { id: 1, name: "Company Profit Analysis" },
   { id: 2, name: "Water Reservoir Levels" },
   { id: 3, name: "Machine Risk Scores" },
   { id: 4, name: "Delivery Cost Analysis" },
-  // { id: 5, name: "Company Profit Analysis Pt. 2" },
+  { id: 5, name: "Storage Area Optimization" },
 ];
 
 function HomePageContent() {
@@ -38,6 +39,15 @@ function HomePageContent() {
     >
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         <Heading size="8">Teachable Calculus Agent</Heading>
+
+        <StepIntro
+          tone="light"
+          eyebrow="Welcome"
+          paragraphs={[
+            "It's your first week as a calculus TA. As part of your TA duties, you help your professor prepare calculus questions, clarify what strong student answers should include, and grade the work students submit.",
+          ]}
+          className="max-w-xl"
+        />
 
         <Card size="3" className="w-full max-w-xl">
           <Flex direction="column" gap="5" align="center">

@@ -16,7 +16,7 @@ type SampleAnswer = {
 type CreateRubricPanelProps = {
   question: string;
   correctSample: SampleAnswer;
-  incorrectSample: SampleAnswer;
+  incorrectSample?: SampleAnswer;
   rubricOptions: readonly RubricOption[];
   rubricDecisions: Record<string, RubricDecision>;
   submitted: boolean;
@@ -182,10 +182,15 @@ export default function CreateRubricPanel({
                   <Dialog.Content maxWidth="700px">
                     <Dialog.Title>Sample Answers</Dialog.Title>
                     <Dialog.Description size="2" color="gray" mb="4">
-                      Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect.
-                      Use these to guide your understanding of the correct approach.
+                      {incorrectSample
+                        ? "Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect. Use these to guide your understanding of the correct approach."
+                        : "Look at the following sample answer, which would be completely correct. Use it to guide your understanding of the correct approach."}
                     </Dialog.Description>
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div
+                      className={`grid grid-cols-1 gap-4 ${
+                        incorrectSample ? "lg:grid-cols-2" : ""
+                      }`}
+                    >
                       <Card size="2">
                         <Flex direction="column" gap="3">
                           <Heading size="4">{correctSample.title}</Heading>
@@ -194,14 +199,16 @@ export default function CreateRubricPanel({
                           </Text>
                         </Flex>
                       </Card>
-                      <Card size="2">
-                        <Flex direction="column" gap="3">
-                          <Heading size="4">{incorrectSample.title}</Heading>
-                          <Text size="3" className="whitespace-pre-wrap leading-7">
-                            <MathDisplay text={incorrectSample.text} />
-                          </Text>
-                        </Flex>
-                      </Card>
+                      {incorrectSample ? (
+                        <Card size="2">
+                          <Flex direction="column" gap="3">
+                            <Heading size="4">{incorrectSample.title}</Heading>
+                            <Text size="3" className="whitespace-pre-wrap leading-7">
+                              <MathDisplay text={incorrectSample.text} />
+                            </Text>
+                          </Flex>
+                        </Card>
+                      ) : null}
                     </div>
                     <Flex justify="end" mt="4">
                       <Dialog.Close>

@@ -22,6 +22,7 @@ type AuthorQuestionPanelProps = {
   scenario: string;
   question: string;
   scatterPlotSrc: string;
+  scenarioImageSrc?: string;
   parts: readonly QuestionPart[];
   selectedParts: Record<string, string>;
   submittedParts: Record<string, boolean>;
@@ -44,6 +45,7 @@ export default function AuthorQuestionPanel({
   scenario,
   question,
   scatterPlotSrc,
+  scenarioImageSrc,
   parts,
   selectedParts,
   submittedParts,
@@ -111,23 +113,36 @@ export default function AuthorQuestionPanel({
 
         <div className="flex-1 space-y-5">
           <Card size="2">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div
+              className={
+                scatterPlotSrc || scenarioImageSrc
+                  ? "grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center"
+                  : "grid grid-cols-1"
+              }
+            >
               <div>
                 <Text size="3" className="whitespace-pre-wrap leading-7">
                   {scenario}
                 </Text>
               </div>
 
-              <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
-                {scatterPlotSrc ? (
+              {scatterPlotSrc ? (
+                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
                   <ScatterPlot
                     filePath={scatterPlotSrc}
                     equation={selectedEquation}
                   />
-                ) : (
-                  <Text color="gray">Scatter plot placeholder</Text>
-                )}
-              </div>
+                </div>
+              ) : scenarioImageSrc ? (
+                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50 p-4">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={scenarioImageSrc}
+                    alt="Scenario diagram"
+                    className="max-h-[320px] w-full rounded-lg object-contain"
+                  />
+                </div>
+              ) : null}
             </div>
           </Card>
 
