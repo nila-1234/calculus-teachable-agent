@@ -15,7 +15,7 @@ type StepProgressProps = {
 
 export default function StepProgress({ currentStep }: StepProgressProps) {
   const columns = STEPS.map((_, index) =>
-    index < STEPS.length - 1 ? "auto 1fr" : "auto"
+    index < STEPS.length - 1 ? "28px 1fr" : "28px"
   ).join(" ");
 
   return (
@@ -46,11 +46,12 @@ export default function StepProgress({ currentStep }: StepProgressProps) {
               style={{ gridRow: 1, gridColumn: index * 2 + 1 }}
             >
               {isCompleted ? (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600">
-                  <CheckIcon className="text-white" width={16} height={16} />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600 text-white font-bold">
+                  {/* <CheckIcon className="text-white" width={16} height={16} /> */}
+                  {index + 1}
                 </div>
               ) : isActive ? (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600 text-xs font-bold text-white ring-4 ring-lime-50">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime-600 text-base font-bold text-white">
                   {index + 1}
                 </div>
               ) : (
