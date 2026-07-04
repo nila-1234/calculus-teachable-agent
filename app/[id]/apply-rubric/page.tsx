@@ -9,6 +9,7 @@ import ApplyRubricPanel, {
 import { getScenario } from "@/lib/scenarios/registry";
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
+import AppHeader from "@/components/app-header";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
@@ -184,20 +185,19 @@ function ApplyRubricPageContent() {
   };
 
   return (
-    <main
-      className="min-h-screen p-3 overflow-y-auto"
-      style={{ backgroundColor: "var(--lime-8)" }}
-    >
-      <StepProgress currentStep={2} />
-      <StepIntro
-        className="max-w-2xl"
-        title="Evaluate AI student answers"
-        paragraphs={[
-          "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
-          "Use your rubric to evaluate each solution: what's right, what's missing, and what's wrong?",
-        ]}
-      />
-      <div className="h-full min-h-0">
+    <main className="min-h-screen bg-stone-100">
+      <AppHeader />
+      <div className="mx-auto max-w-6xl overflow-y-auto p-3 py-6 sm:px-6">
+        <StepProgress currentStep={2} />
+        <StepIntro
+          className="max-w-6xl"
+          eyebrow="Your task"
+          title="Step 3 · Evaluate AI student answers"
+          paragraphs={[
+            "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
+            "Use your rubric to evaluate each solution: what's right, what's missing, and what's wrong?",
+          ]}
+        />
         <ApplyRubricPanel
           question={question}
           rubric={rubric}

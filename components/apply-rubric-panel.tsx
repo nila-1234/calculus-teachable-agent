@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Card, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
-import { ArrowLeftIcon, ArrowRightIcon, CheckCircledIcon, CrossCircledIcon, CheckIcon } from "@radix-ui/react-icons";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  Cross1Icon,
+  Cross2Icon,
+  EyeOpenIcon,
+} from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
+import Button from "@/components/button";
+import PassFailToggle from "@/components/pass-fail-toggle";
 
 export type RubricCriterion = {
   id: string;
@@ -97,286 +105,236 @@ export default function ApplyRubricPanel({
     }
   }, [currentAnswer.id, currentState?.submitted]);
 
+  const templateColumns = isMode2
+    ? "minmax(160px,1.1fr) auto minmax(160px,1fr) minmax(160px,1.3fr)"
+    : "minmax(160px,1.4fr) auto minmax(160px,1.6fr)";
+
   return (
-    <Card size="3" className="h-full">
-      <Flex direction="column" gap="5" className="h-full">
-        <Flex align="center" justify="between">
-          <Heading size="6">Apply Rubric</Heading>
-          <Flex gap="2" align="center">
-            <Button
-              size="1"
-              variant={mode === 1 ? "solid" : "soft"}
-              color="lime"
-              onClick={() => onModeChange?.(1)}
-            >
-              Standard
-            </Button>
-            <Button
-              size="1"
-              variant={mode === 2 ? "solid" : "soft"}
-              color="lime"
-              onClick={() => onModeChange?.(2)}
-            >
-              Self-Explanation
-            </Button>
-          </Flex>
-          <Text size="2" color="gray">
-            Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
-          </Text>
-        </Flex>
-
-        <Text size="3" color="gray">
-          In this step, you will apply your rubric to evaluate a fresh set of AI-generated answers.
-          Review each answer carefully and use the criteria you defined to assess whether it meets the requirements.
-        </Text>
-
-        <div className="flex-1 space-y-5 overflow-y-auto">
-          {question && (
-            <Card size="2">
-              <Flex direction="column" gap="3">
-                <Heading size="4">Question</Heading>
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  <MathDisplay text={question} />
-                </Text>
-              </Flex>
-            </Card>
-          )}
-
-          <Card size="2">
-            <Flex direction="column" gap="3">
-              <Flex align="center" justify="between">
-                <Heading size="4">{currentAnswer.label}</Heading>
-                {currentState?.submitted ? (
-                  <Text size="2" color="green">
-                    Submitted
-                  </Text>
-                ) : (
-                  <Text size="2" color="gray">
-                    Not submitted
-                  </Text>
-                )}
-              </Flex>
-
-              <Text size="3" className="whitespace-pre-wrap leading-7">
-                <MathDisplay text={currentAnswer.text} />
-              </Text>
-            </Flex>
-          </Card>
-
-          <Card size="2">
-            <Flex direction="column" gap="4">
-              <Flex align="center" gap="3">
-                <Heading size="4">Evaluate This Answer</Heading>
-                {correctSample && (
-                  <Dialog.Root open={hintOpen} onOpenChange={setHintOpen}>
-                    <Dialog.Trigger>
-                      <Button variant="ghost" color="gray" size="2">
-                        View Correct Answer
-                      </Button>
-                    </Dialog.Trigger>
-                    <Dialog.Content maxWidth="600px">
-                      <Dialog.Title>Fully Correct Answer</Dialog.Title>
-                      <Text size="3" className="whitespace-pre-wrap leading-7">
-                        <MathDisplay text={correctSample.text} />
-                      </Text>
-                      <Flex justify="end" mt="4">
-                        <Dialog.Close>
-                          <Button variant="soft" color="gray">Close</Button>
-                        </Dialog.Close>
-                      </Flex>
-                    </Dialog.Content>
-                  </Dialog.Root>
-                )}
-              </Flex>
-
-              <Text size="2" color="gray">
-                Review the AI answer above and evaluate it against each selected criterion.
-                Mark “Pass” only if the criterion is fully satisfied, and “Fail” if it is missing, incorrect, or incomplete.
-              </Text>
-
-              <div className="overflow-hidden rounded-2xl border border-gray-200">
-                <table className="w-full border-collapse table-fixed">
-                  <thead className="bg-lime-50">
-                    <tr>
-                      <th className={`${isMode2 ? "w-[33%]" : "w-[45%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
-                        Criterion
-                      </th>
-                      <th className={`${isMode2 ? "w-[12%]" : "w-[18%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
-                        Evaluation
-                      </th>
-                      {isMode2 && (
-                        <th className="w-[25%] border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900">
-                          Reasoning
-                        </th>
-                      )}
-                      <th className={`${isMode2 ? "w-[30%]" : "w-[37%]"} border-b border-gray-300 px-4 py-3 text-left text-sm font-semibold text-slate-900`}>
-                        {currentState?.submitted ? "Feedback" : ""}
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {rubric.map((criterion) => {
-                      const selectedValue =
-                        currentState?.results?.[criterion.id] ?? "";
-                      const criterionFeedback = Array.isArray(currentState?.feedback)
-                        ? currentState.feedback.find((item) => item.criterionId === criterion.id)
-                        : undefined;
-                      return (
-                        <tr key={criterion.id} className="bg-white">
-                          <td className="border-b border-gray-200 px-4 py-3 align-middle text-sm font-medium text-slate-900">
-                            <MathDisplay text={criterion.label} />
-                          </td>
-
-                          <td className="border-b border-gray-200 px-4 py-3 align-middle">
-                            <Flex gap="2" wrap="wrap">
-                              <Button
-                                type="button"
-                                variant={selectedValue === "pass" ? "solid" : "soft"}
-                                color="green"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  onToggleResult(currentAnswer.id, criterion.id, "pass")
-                                }
-                              >
-                                Pass
-                              </Button>
-
-                              <Button
-                                type="button"
-                                variant={selectedValue === "fail" ? "solid" : "soft"}
-                                color="red"
-                                disabled={isLoading}
-                                onClick={() =>
-                                  onToggleResult(currentAnswer.id, criterion.id, "fail")
-                                }
-                              >
-                                Fail
-                              </Button>
-                            </Flex>
-                          </td>
-                          {isMode2 && (
-                            <td className="border-b border-gray-200 px-4 py-3 align-top">
-                              <textarea
-                                className="w-full min-h-[72px] resize-none rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-gray-400 disabled:opacity-50"
-                                placeholder="Explain your reasoning…"
-                                value={explanations[currentAnswer.id]?.[criterion.id] || ""}
-                                onChange={(e) => onExplanationChange?.(currentAnswer.id, criterion.id, e.target.value)}
-                                onBlur={(e) => onExplanationBlur?.(currentAnswer.id, criterion.id, e.target.value)}
-                                disabled={isLoading}
-                              />
-                            </td>
-                          )}
-
-                          <td className="border-b border-gray-200 px-4 py-3 align-top">
-                            {currentState?.submitted ? (
-                              <div
-                                className={`min-h-[40px] flex items-center gap-2 ${criterionFeedback?.correct
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                  }`}
-                              >
-                                {!isLoading && (criterionFeedback?.correct
-                                  ? <CheckCircledIcon className="shrink-0 mt-0.5" width={25} height={25} />
-                                  : <CrossCircledIcon className="shrink-0 mt-0.5" width={25} height={25} />
-                                )}
-                                <div>
-                                  {isLoading ? (
-                                    "Loading feedback..."
-                                  ) : criterionFeedback?.feedback ? (
-                                    <MathDisplay text={criterionFeedback.feedback} />
-                                  ) : (
-                                    "No feedback returned for this criterion."
-                                  )}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="min-h-[40px]" />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <Flex justify="center">
-                <Button
-                  type="button"
-                  onClick={() => onSubmitAnswer(currentAnswer.id)}
-                  disabled={!allFilled || isLoading}
-                  color="lime"
-                >
-                  {isLoading
-                    ? "Submitting..."
-                    : currentState?.submitted
-                      ? "Resubmit"
-                      : "Submit"}
-                </Button>
-              </Flex>
-            </Flex>
-          </Card>
-
-          {/* {currentState?.submitted ? (
-            <div ref={feedbackRef}>
-              <Card size="2">
-                <Flex direction="column" gap="3">
-                  <Heading size="4">Feedback for This Answer</Heading>
-
-                  {isLoading ? (
-                    <Text size="3" color="gray">
-                      Generating feedback...
-                    </Text>
-                  ) : currentState?.feedback ? (
-                    <Text size="3" className="whitespace-pre-wrap leading-7">
-                      {currentState.feedback}
-                    </Text>
-                  ) : (
-                    <Text size="3" color="gray">
-                      Submit this answer’s rubric evaluation to receive feedback.
-                    </Text>
-                  )}
-                </Flex>
-              </Card>
-            </div>
-          ) : null} */}
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex gap-1 rounded-lg bg-stone-100 p-1">
+          <button
+            type="button"
+            onClick={() => onModeChange?.(1)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 1 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            onClick={() => onModeChange?.(2)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 2 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Self-Explanation
+          </button>
         </div>
 
-        <Flex align="center" justify="between">
-          <Button
-            type="button"
-            variant="soft"
-            color="gray"
-            disabled={!hasPrevious}
-            onClick={() => setCurrentIndex((prev) => prev - 1)}
-          >
-            <ArrowLeftIcon />
-            Previous
-          </Button>
+        <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+          Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
+        </span>
+      </div>
 
-          <Button
-            type="button"
-            color="lime"
-            disabled={!allSubmitted}
-            onClick={() => onComplete?.()}
-          >
-            <CheckIcon />
-            Complete Submission
-          </Button>
+      {question && (
+        <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
+            Question
+          </span>
+          <div className="whitespace-pre-wrap text-base leading-7 text-stone-700">
+            <MathDisplay text={question} />
+          </div>
+        </div>
+      )}
 
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-bold text-stone-800">{currentAnswer.label}</h3>
+          {currentState?.submitted ? (
+            <span className="rounded-full bg-lime-50 px-2.5 py-1 text-xs font-semibold text-lime-700">
+              Submitted
+            </span>
+          ) : (
+            <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-500">
+              Not submitted
+            </span>
+          )}
+        </div>
+        <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
+          <MathDisplay text={currentAnswer.text} />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-base font-bold text-stone-800">Evaluate this answer</h3>
+            {correctSample && (
+              <button
+                type="button"
+                onClick={() => setHintOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border-2 border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-700"
+              >
+                <EyeOpenIcon width={14} height={14} />
+                View correct answer
+              </button>
+            )}
+          </div>
+        </div>
+
+        <p className="mb-4 text-sm text-stone-500">
+          Review the AI answer above and evaluate it against each selected criterion. Mark
+          &ldquo;Pass&rdquo; only if the criterion is fully satisfied, and &ldquo;Fail&rdquo; if it is
+          missing, incorrect, or incomplete.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {rubric.map((criterion) => {
+            const selectedValue = currentState?.results?.[criterion.id] ?? "";
+            const criterionFeedback = Array.isArray(currentState?.feedback)
+              ? currentState.feedback.find((item) => item.criterionId === criterion.id)
+              : undefined;
+
+            return (
+              <div
+                key={criterion.id}
+                className="grid items-center gap-4 rounded-xl border border-stone-200 px-4 py-3"
+                style={{ gridTemplateColumns: templateColumns }}
+              >
+                <div className="text-sm font-medium text-stone-800">
+                  <MathDisplay text={criterion.label} />
+                </div>
+
+                <PassFailToggle
+                  value={selectedValue}
+                  onChange={(value) => onToggleResult(currentAnswer.id, criterion.id, value)}
+                  disabled={isLoading}
+                />
+
+                {isMode2 ? (
+                  <textarea
+                    placeholder="Explain your reasoning…"
+                    value={explanations[currentAnswer.id]?.[criterion.id] || ""}
+                    onChange={(e) =>
+                      onExplanationChange?.(currentAnswer.id, criterion.id, e.target.value)
+                    }
+                    onBlur={(e) =>
+                      onExplanationBlur?.(currentAnswer.id, criterion.id, e.target.value)
+                    }
+                    disabled={isLoading}
+                    className="min-h-[44px] w-full resize-none rounded-lg border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"
+                  />
+                ) : null}
+
+                {currentState?.submitted ? (
+                  <div
+                    className={`flex items-start gap-2 text-sm ${
+                      criterionFeedback?.correct ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <span className="text-stone-500">Loading feedback...</span>
+                    ) : (
+                      <>
+                        {criterionFeedback?.correct ? (
+                          <CheckIcon className="mt-0.5 shrink-0" width={18} height={18} />
+                        ) : (
+                          <Cross2Icon className="mt-0.5 shrink-0" width={18} height={18} />
+                        )}
+                        <div>
+                          {criterionFeedback?.feedback ? (
+                            <MathDisplay text={criterionFeedback.feedback} />
+                          ) : (
+                            "No feedback returned for this criterion."
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center">
           <Button
-            type="button"
-            variant="soft"
-            color="gray"
-            disabled={!hasNext}
-            onClick={() => setCurrentIndex((prev) => prev + 1)}
+            onClick={() => onSubmitAnswer(currentAnswer.id)}
+            disabled={!allFilled || isLoading}
           >
-            Next
-            <ArrowRightIcon />
+            {isLoading ? "Submitting..." : currentState?.submitted ? "Resubmit" : "Submit"}
           </Button>
-        </Flex>
-      </Flex>
-    </Card>
+        </div>
+      </div>
+
+      {hintOpen && correctSample && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
+          onClick={() => setHintOpen(false)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-stone-200 bg-stone-100 p-6 shadow-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setHintOpen(false)}
+                aria-label="Close"
+                className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+              >
+                <Cross1Icon width={16} height={16} />
+              </button>
+
+              <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-400">
+                Fully correct answer
+              </span>
+              <h3 className="pr-8 text-lg font-bold text-stone-800">{correctSample.title}</h3>
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                <MathDisplay text={correctSample.text} />
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-center">
+              <Button variant="secondary" onClick={() => setHintOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div ref={feedbackRef} className="flex items-center justify-between">
+        <Button
+          variant="secondary"
+          disabled={!hasPrevious}
+          onClick={() => setCurrentIndex((prev) => prev - 1)}
+        >
+          <ArrowLeftIcon />
+          Previous
+        </Button>
+
+        <Button disabled={!allSubmitted} onClick={() => onComplete?.()}>
+          <CheckIcon />
+          Complete Submission
+        </Button>
+
+        <Button
+          variant="secondary"
+          disabled={!hasNext}
+          onClick={() => setCurrentIndex((prev) => prev + 1)}
+        >
+          Next
+          <ArrowRightIcon />
+        </Button>
+      </div>
+    </div>
   );
 }
