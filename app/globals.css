@@ -24,21 +24,21 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: #d6d3d1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #666666;
+  background: #a8a29e;
 }
 
 * {
   /* scrollbar-width: thin; */
-  scrollbar-color: #4a4a4a #1a1a1a;
+  scrollbar-color: #d6d3d1 transparent;
 }
 
 @keyframes ripple {
