@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Card, Flex, Heading } from "@radix-ui/themes";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
-import StepIntro from "@/components/step-intro";
+import { CheckIcon } from "@radix-ui/react-icons";
+import AppHeader from "@/components/app-header";
+import RippleButton from "@/components/ripple-button";
 
 const scenarios = [
   { id: 1, name: "Company Profit Analysis" },
@@ -32,49 +32,62 @@ function HomePageContent() {
     setCompletedScenarios(completed);
   }, []);
 
+  const goToScenario = (id: number) =>
+    router.push(`/${id}/question?questionMode=${questionMode}&applyRubricMode=${applyRubricMode}`);
+
+  const doneCount = completedScenarios.size;
+
   return (
-    <main
-      className="h-screen p-3 flex"
-      style={{ backgroundColor: "var(--lime-5)" }}
-    >
-      <div className="flex-1 flex flex-col items-center justify-center gap-6">
-        <Heading size="8">Teachable Calculus Agent</Heading>
+    <main className="min-h-screen bg-stone-100">
+      <AppHeader />
 
-        <StepIntro
-          tone="light"
-          eyebrow="Welcome"
-          paragraphs={[
-            "It's your first week as a calculus TA. As part of your TA duties, you help your professor prepare calculus questions, clarify what strong student answers should include, and grade the work students submit.",
-          ]}
-          className="max-w-xl"
-        />
+      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+        <h1 className="text-3xl font-bold text-stone-800">
+          Welcome 👋
+        </h1>
+        <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
+          It&apos;s your first week as a calculus TA. As part of your TA duties,
+          you help your professor prepare calculus questions, clarify what
+          strong student answers should include, and grade the work students
+          submit.
+        </p>
 
-        <Card size="3" className="w-full max-w-xl">
-          <Flex direction="column" gap="5" align="center">
-            <Heading size="6">Choose a Scenario</Heading>
+        <div className="mt-8 flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Choose a scenario
+          </span>
+          <span className="rounded-full bg-lime-50 px-3 py-1 text-xs font-semibold text-lime-700">
+            {doneCount} of {scenarios.length} done
+          </span>
+        </div>
 
-            <Flex direction="column" gap="3" className="w-full">
-              {scenarios.map((scenario) => (
-                <Button
-                  key={scenario.id}
-                  size="3"
-                  color="lime"
-                  variant="soft"
-                  onClick={() =>
-                    router.push(`/${scenario.id}/question?questionMode=${questionMode}&applyRubricMode=${applyRubricMode}`)
-                  }
-                >
-                  <Flex align="center" justify="between" className="w-full">
-                    <span>{scenario.id}. {scenario.name}</span>
-                    {completedScenarios.has(scenario.id) && (
-                      <CheckCircledIcon width={18} height={18} />
-                    )}
-                  </Flex>
-                </Button>
-              ))}
-            </Flex>
-          </Flex>
-        </Card>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {scenarios.map((scenario) => {
+            const isDone = completedScenarios.has(scenario.id);
+
+            return (
+              <RippleButton
+                key={scenario.id}
+                onClick={() => goToScenario(scenario.id)}
+                className="flex items-center gap-3 rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-600 text-sm font-bold text-white">
+                  {scenario.id}
+                </span>
+
+                <span className="flex-1 text-base font-bold text-stone-800">
+                  {scenario.name}
+                </span>
+
+                {isDone && (
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime-600">
+                    <CheckIcon className="text-white" width={12} height={12} />
+                  </span>
+                )}
+              </RippleButton>
+            );
+          })}
+        </div>
       </div>
     </main>
   );

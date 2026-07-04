@@ -11,7 +11,7 @@ export default function Providers({
     <Theme
       appearance="light"
       accentColor="lime"
-      grayColor="slate"
+      grayColor="sand"
       radius="large"
       scaling="100%"
     >

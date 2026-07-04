@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
+import AppHeader from "@/components/app-header";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
@@ -207,52 +208,53 @@ function AuthorQuestionPageContent() {
   };
 
   return (
-    <main
-      className="min-h-screen p-3 overflow-y-auto"
-      style={{ backgroundColor: "var(--lime-8)" }}
-    >
-      <StepProgress currentStep={0} />
-      <StepIntro
-        className="max-w-2xl"
-        title="Step 1: Create the question"
-        paragraphs={[
-          "Your professor was halfway through writing a new question based on a real-world problem when they were pulled into a meeting. They had started turning the scenario into a function and brainstorming possible models. Pick up where your professor left off by choosing the function that models the situation correctly.",
-          "Next, finish formulating the question for students by specifying what they should analyze to solve the problem.",
-        ]}
-      />
-      <AuthorQuestionPanel
-        scenario={SCENARIO_PLACEHOLDER}
-        question={QUESTION_PLACEHOLDER}
-        scatterPlotSrc={PLOT_DATA_SRC}
-        scenarioImageSrc={SCENARIO_IMAGE_SRC}
-        parts={QUESTION_PARTS}
-        selectedParts={selectedParts}
-        onSelectPart={(partId, choiceId) => {
-          if (submittedParts[partId]) return;
-          const part = QUESTION_PARTS.find((p) => p.id === partId);
-          const choice = part?.options.find((opt) => opt.id === choiceId);
-          logEvent("question_option_selected", scenarioId, {
-            part_id: partId,
-            choice_id: choiceId,
-          });
-          setSelectedParts((prev) => ({ ...prev, [partId]: choiceId }));
-        }}
-        submittedParts={submittedParts}
-        activePartIndex={activePartIndex}
-        onSubmitPart={handleSubmitPart}
-        onTryAgainPart={handleTryAgainPart}
-        onNextPart={handleNextPart}
-        onContinue={handleContinue}
-        mode={mode}
-        onModeChange={handleModeChange}
-        explanations={explanations}
-        onExplanationChange={(partId, value) =>
-          setExplanations((prev) => ({ ...prev, [partId]: value }))
-        }
-        onExplanationBlur={handleExplanationBlur}
-        llmFeedback={llmFeedback}
-        loadingFeedback={loadingFeedback}
-      />
+    <main className="min-h-screen bg-stone-100">
+      <AppHeader />
+      <div className="mx-auto max-w-6xl overflow-y-auto p-3 py-6 sm:px-6">
+        <StepProgress currentStep={0} />
+        <StepIntro
+          className="max-w-6xl"
+          eyebrow="Your task"
+          title="Step 1 · Create the question"
+          paragraphs={[
+            "Your professor was halfway through writing a new question based on a real-world problem when they were pulled into a meeting. They had started turning the scenario into a function and brainstorming possible models. Pick up where your professor left off by choosing the function that models the situation correctly.",
+            "Next, finish formulating the question for students by specifying what they should analyze to solve the problem.",
+          ]}
+        />
+        <AuthorQuestionPanel
+          scenario={SCENARIO_PLACEHOLDER}
+          question={QUESTION_PLACEHOLDER}
+          scatterPlotSrc={PLOT_DATA_SRC}
+          scenarioImageSrc={SCENARIO_IMAGE_SRC}
+          parts={QUESTION_PARTS}
+          selectedParts={selectedParts}
+          onSelectPart={(partId, choiceId) => {
+            if (submittedParts[partId]) return;
+            const part = QUESTION_PARTS.find((p) => p.id === partId);
+            const choice = part?.options.find((opt) => opt.id === choiceId);
+            logEvent("question_option_selected", scenarioId, {
+              part_id: partId,
+              choice_id: choiceId,
+            });
+            setSelectedParts((prev) => ({ ...prev, [partId]: choiceId }));
+          }}
+          submittedParts={submittedParts}
+          activePartIndex={activePartIndex}
+          onSubmitPart={handleSubmitPart}
+          onTryAgainPart={handleTryAgainPart}
+          onNextPart={handleNextPart}
+          onContinue={handleContinue}
+          mode={mode}
+          onModeChange={handleModeChange}
+          explanations={explanations}
+          onExplanationChange={(partId, value) =>
+            setExplanations((prev) => ({ ...prev, [partId]: value }))
+          }
+          onExplanationBlur={handleExplanationBlur}
+          llmFeedback={llmFeedback}
+          loadingFeedback={loadingFeedback}
+        />
+      </div>
     </main>
   );
 }

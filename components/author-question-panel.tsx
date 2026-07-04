@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button, Card, Flex, Heading, Text } from "@radix-ui/themes";
+import { Flex, Text } from "@radix-ui/themes";
 import ScatterPlot from "@/components/scatter-plot";
 import QuestionPartCardDeck from "@/components/question-part-card-deck";
 
@@ -87,84 +87,84 @@ export default function AuthorQuestionPanel({
   }, [parts, selectedParts]);
 
   return (
-    <Card size="3" className="h-full">
-      <Flex direction="column" gap="5" className="h-full">
-        <Flex align="center" justify="between">
-          <Heading size="6">Scenario</Heading>
-          <Flex gap="2" align="center">
-            <Button
-              size="1"
-              variant={mode === 1 ? "solid" : "soft"}
-              color="lime"
-              onClick={() => onModeChange?.(1)}
-            >
-              Standard
-            </Button>
-            <Button
-              size="1"
-              variant={mode === 2 ? "solid" : "soft"}
-              color="lime"
-              onClick={() => onModeChange?.(2)}
-            >
-              Self-Explanation
-            </Button>
-          </Flex>
-        </Flex>
-
-        <div className="flex-1 space-y-5">
-          <Card size="2">
-            <div
-              className={
-                scatterPlotSrc || scenarioImageSrc
-                  ? "grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center"
-                  : "grid grid-cols-1"
-              }
-            >
-              <div>
-                <Text size="3" className="whitespace-pre-wrap leading-7">
-                  {scenario}
-                </Text>
-              </div>
-
-              {scatterPlotSrc ? (
-                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50">
-                  <ScatterPlot
-                    filePath={scatterPlotSrc}
-                    equation={selectedEquation}
-                  />
-                </div>
-              ) : scenarioImageSrc ? (
-                <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-gray-50 p-4">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={scenarioImageSrc}
-                    alt="Scenario diagram"
-                    className="max-h-[320px] w-full rounded-lg object-contain"
-                  />
-                </div>
-              ) : null}
-            </div>
-          </Card>
-
-          <QuestionPartCardDeck
-            parts={parts}
-            selectedParts={selectedParts}
-            submittedParts={submittedParts}
-            activeIndex={activePartIndex}
-            onSelectPart={onSelectPart}
-            onSubmitPart={onSubmitPart}
-            onTryAgainPart={onTryAgainPart}
-            onNextPart={onNextPart}
-            onContinue={onContinue}
-            mode={mode}
-            explanations={explanations}
-            onExplanationChange={onExplanationChange}
-            onExplanationBlur={onExplanationBlur}
-            llmFeedback={llmFeedback}
-            loadingFeedback={loadingFeedback}
-          />
+    <Flex direction="column" gap="5">
+      <Flex align="center" justify="end">
+        <div className="inline-flex gap-1 rounded-lg bg-stone-100 p-1">
+          <button
+            type="button"
+            onClick={() => onModeChange?.(1)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 1 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            onClick={() => onModeChange?.(2)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+              mode === 2 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Self-Explanation
+          </button>
         </div>
       </Flex>
-    </Card>
+
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div
+          className={
+            scatterPlotSrc || scenarioImageSrc
+              ? "grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center"
+              : "grid grid-cols-1"
+          }
+        >
+          <div>
+            <Text size="1" weight="bold" className="mb-2 block uppercase tracking-wider text-stone-400">
+              Scenario
+            </Text>
+            <Text size="3" className="whitespace-pre-wrap leading-7 text-stone-700">
+              {scenario}
+            </Text>
+          </div>
+
+          {scatterPlotSrc ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-stone-50">
+              <ScatterPlot
+                filePath={scatterPlotSrc}
+                equation={selectedEquation}
+              />
+            </div>
+          ) : scenarioImageSrc ? (
+            <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-stone-50 p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={scenarioImageSrc}
+                alt="Scenario diagram"
+                className="max-h-[320px] w-full rounded-lg object-contain"
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <QuestionPartCardDeck
+        parts={parts}
+        selectedParts={selectedParts}
+        submittedParts={submittedParts}
+        activeIndex={activePartIndex}
+        onSelectPart={onSelectPart}
+        onSubmitPart={onSubmitPart}
+        onTryAgainPart={onTryAgainPart}
+        onNextPart={onNextPart}
+        onContinue={onContinue}
+        mode={mode}
+        explanations={explanations}
+        onExplanationChange={onExplanationChange}
+        onExplanationBlur={onExplanationBlur}
+        llmFeedback={llmFeedback}
+        loadingFeedback={loadingFeedback}
+      />
+    </Flex>
   );
 }
