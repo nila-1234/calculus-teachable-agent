@@ -6,6 +6,7 @@ import CreateRubricPanel, {
   RubricDecision,
 } from "@/components/create-rubric-panel";
 import StepProgress from "@/components/step-progress";
+import StepIntro from "@/components/step-intro";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
@@ -120,6 +121,13 @@ function CreateRubricPageContent() {
       style={{ backgroundColor: "var(--lime-8)" }}
     >
       <StepProgress currentStep={1} />
+      <StepIntro
+        className="max-w-2xl"
+        title="Step 2: Create the rubric"
+        paragraphs={[
+          "The question is ready, and your professor has provided a reference solution. Before grading student answers, create a rubric that defines what a correct answer should show. This rubric will guide your evaluation.",
+        ]}
+      />
       <div className="flex-1 min-h-0">
         <CreateRubricPanel
           question={question}

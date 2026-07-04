@@ -34,11 +34,12 @@ export type QuestionSchema = {
   SCENARIO_PLACEHOLDER: string;
   QUESTION_PLACEHOLDER: string;
   PLOT_DATA_SRC: string;
+  SCENARIO_IMAGE_SRC?: string;
   QUESTION_PARTS: readonly QuestionPart[];
   RUBRIC_OPTIONS: readonly RubricOption[];
   SAMPLE_ANSWERS: {
     correct: SampleAnswer;
-    incorrect: SampleAnswer;
+    incorrect?: SampleAnswer;
   };
   FINAL_AI_ANSWERS: readonly FinalAiAnswer[];
 };

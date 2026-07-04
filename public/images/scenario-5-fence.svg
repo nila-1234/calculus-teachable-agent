@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 660 300" width="660" height="300" role="img" aria-label="Rectangular storage area against a wall: top side labeled y, left and right sides labeled x.">
+  <rect width="660" height="300" fill="#ffffff"/>
+
+  <!-- Ground / warehouse wall (the unfenced side) -->
+  <line x1="40" y1="250" x2="520" y2="250" stroke="#222222" stroke-width="3"/>
+
+  <!-- Storage area rectangle (three fenced sides) -->
+  <rect x="110" y="50" width="410" height="200" fill="#cfe0f1" stroke="#3a4a5a" stroke-width="2"/>
+
+  <!-- Labels -->
+  <text x="315" y="34" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#111111" text-anchor="middle">y</text>
+  <text x="92" y="158" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#111111" text-anchor="middle">x</text>
+  <text x="540" y="158" font-family="Arial, Helvetica, sans-serif" font-size="30" fill="#111111" text-anchor="middle">x</text>
+</svg>
