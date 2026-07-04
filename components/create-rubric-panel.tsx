@@ -2,7 +2,7 @@
 
 import MathDisplay from "@/components/math-display";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRightIcon, CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
+import { ArrowRightIcon, CheckIcon, Cross2Icon, Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
 import Button from "@/components/button";
 import IncludeExcludeToggle from "@/components/include-exclude-toggle";
@@ -32,7 +32,6 @@ type CreateRubricPanelProps = {
 export default function CreateRubricPanel({
   question,
   correctSample,
-  incorrectSample,
   rubricOptions,
   rubricDecisions,
   submitted,
@@ -65,7 +64,17 @@ export default function CreateRubricPanel({
 
       <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-bold text-stone-800">Select rubric criteria</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-base font-bold text-stone-800">Select rubric criteria</h3>
+            <button
+              type="button"
+              onClick={() => setHintOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border-2 border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-700"
+            >
+              <EyeOpenIcon width={16} height={16} />
+              Show Hint
+            </button>
+          </div>
           <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
             Include / exclude each
           </span>
@@ -120,15 +129,7 @@ export default function CreateRubricPanel({
           })}
         </div>
 
-        <div className="mt-5 flex items-center justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => setHintOpen(true)}
-            className="text-sm font-semibold text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-stone-700"
-          >
-            Show hint
-          </button>
-
+        <div className="mt-5 flex items-center justify-center">
           <Button onClick={onSubmit} disabled={!allCriteriaDecided || submitted}>
             {submitted ? "Submitted" : "Submit"}
           </Button>
@@ -137,38 +138,39 @@ export default function CreateRubricPanel({
 
       {hintOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 p-4"
           onClick={() => setHintOpen(false)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-xl border border-stone-200 bg-stone-100 p-6 shadow-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-stone-800">Sample answers</h3>
-            <p className="mt-1 text-sm text-stone-500">
-              {incorrectSample
-                ? "Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect. Use these to guide your understanding of the correct approach."
-                : "Look at the following sample answer, which would be completely correct. Use it to guide your understanding of the correct approach."}
-            </p>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setHintOpen(false)}
+                aria-label="Close"
+                className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+              >
+                <Cross1Icon width={16} height={16} />
+              </button>
 
-            <div className={`mt-4 grid grid-cols-1 gap-4 ${incorrectSample ? "lg:grid-cols-2" : ""}`}>
-              <div className="rounded-xl border border-stone-200 p-4">
-                <h4 className="mb-2 text-sm font-bold text-stone-800">{correctSample.title}</h4>
-                <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
-                  <MathDisplay text={correctSample.text} />
-                </div>
-              </div>
-              {incorrectSample && (
-                <div className="rounded-xl border border-stone-200 p-4">
-                  <h4 className="mb-2 text-sm font-bold text-stone-800">{incorrectSample.title}</h4>
-                  <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
-                    <MathDisplay text={incorrectSample.text} />
-                  </div>
-                </div>
-              )}
+              <span className="mb-1 block text-xs font-bold uppercase tracking-wider text-stone-400">
+                Sample fully correct solution
+              </span>
+              <h3 className="pr-8 text-lg font-bold text-stone-800">{correctSample.title}</h3>
+              <p className="mt-1 pr-8 text-sm text-stone-500">
+                This would be a completely correct answer. Use it to guide your understanding of the correct approach.
+              </p>
             </div>
 
-            <div className="mt-4 flex justify-end">
+            <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                <MathDisplay text={correctSample.text} />
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-center">
               <Button variant="secondary" onClick={() => setHintOpen(false)}>
                 Close
               </Button>
