@@ -1,11 +1,11 @@
 {
   "scenario": "A manufacturing company uses an automated monitoring system to review machine risk during an 8-hour shift. The system flagged the middle of the shift as a possible important point and suggested that the manager should inspect the machine around that time. Before changing the inspection schedule, the company wants to check whether the system’s claim is mathematically valid. The company collected risk-score data from the shift.",
-  "question": "Use the function __(1)__ to model the machine’s estimated risk score. The system marked t=4 as a critical point of the model. To check this claim, determine whether __(2)__.",
+  "question": "Use the function ____ to model the machine’s estimated risk score. The system marked t=4 as a critical point of the model. To check this claim, determine whether ____.",
   "plotDataSrc": "/data/scenarios/3/plot-data.json",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the machine’s estimated risk score.",
+      "label": "Use the function ____ to model the machine’s estimated risk score.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether __(2)__.",
+      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether ____.",
       "options": [
         {
           "id": "c1",

@@ -1,12 +1,12 @@
 {
   "scenario": "A storage company wants to fence a rectangular outdoor storage area along an existing warehouse wall. The wall forms one side, so only the other three sides need fencing. With 100 meters of fencing, the company wants to enclose the largest possible area, and needs at least 1,500 square meters to store its goods.\n\nLet x represent the length of each of the two sides perpendicular to the wall, and let y represent the side parallel to the wall.",
-  "question": "Use the function __(1)__ to model the storage area, and analyse the company’s situation by finding its __(2)__.",
+  "question": "Use the function ____ to model the storage area, and analyse the company’s situation by finding its ____.",
   "plotDataSrc": "",
   "scenarioImageSrc": "/images/scenario-5-fence.svg",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the storage area.",
+      "label": "Use the function ____ to model the storage area.",
       "options": [
         {
           "id": "f1",
@@ -36,7 +36,7 @@
     },
     {
       "id": "2",
-      "label": "Analyse the company’s situation by finding its __(2)__.",
+      "label": "Analyse the company’s situation by finding its ____.",
       "options": [
         {
           "id": "a1",

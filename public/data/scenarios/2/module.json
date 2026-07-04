@@ -1,11 +1,11 @@
 {
   "scenario": "During a heavy rainstorm, water flows into a city reservoir. The rate of water flow into the reservoir is modeled in thousands of gallons per hour, where t is the number of hours since the storm began. The reservoir has a maximum capacity of 500 thousand gallons, and at the start of the storm, it already contains 450 thousand gallons. The city engineers need to determine whether the reservoir will overflow during the first 4 hours of the storm.",
-  "question": "Use the function __(1)__ to model the reservoir inflow rate. To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__, and determine if the reservoir will overflow or not.",
+  "question": "Use the function ____ to model the reservoir inflow rate. To determine how much additional water enters the reservoir during the first 4 hours, apply ____, and determine if the reservoir will overflow or not.",
   "plotDataSrc": "/data/scenarios/2/plot-data.json",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the reservoir inflow rate.",
+      "label": "Use the function ____ to model the reservoir inflow rate.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply __(2)__, and determine if the reservoir will overflow or not.",
+      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply ____, and determine if the reservoir will overflow or not.",
       "options": [
         {
           "id": "op1",

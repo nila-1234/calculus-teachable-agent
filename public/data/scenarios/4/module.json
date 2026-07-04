@@ -1,11 +1,11 @@
 {
   "scenario": "A delivery company is reviewing transportation data from one city. The company has collected records of extra delivery cost at different distances from the city center, but the pattern is not immediately clear. Managers want to identify a function that best models the data so they can better decide where to place a temporary distribution station.",
-  "question": "Use the function __(1)__ to model the company’s extra delivery cost. Analyse the company’s situation by finding its __(2)__.",
+  "question": "Use the function ____ to model the company’s extra delivery cost. Analyse the company’s situation by finding its ____.",
   "plotDataSrc": "/data/scenarios/4/plot-data.json",
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function __(1)__ to model the company’s extra delivery cost.",
+      "label": "Use the function ____ to model the company’s extra delivery cost.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "Analyse the company’s situation by finding its __(2)__.",
+      "label": "Analyse the company’s situation by finding its ____.",
       "options": [
         {
           "id": "a1",
