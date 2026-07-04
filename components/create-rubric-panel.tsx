@@ -1,10 +1,11 @@
 "use client";
 
-import { Button, Card, Dialog, Flex, Heading, Text } from "@radix-ui/themes";
 import MathDisplay from "@/components/math-display";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRightIcon, CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
+import { ArrowRightIcon, CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
+import Button from "@/components/button";
+import IncludeExcludeToggle from "@/components/include-exclude-toggle";
 
 export type RubricDecision = "include" | "exclude";
 
@@ -52,223 +53,169 @@ export default function CreateRubricPanel({
   }, [submitted]);
 
   return (
-    <Card size="3" className="h-full">
-      <Flex direction="column" gap="5" className="h-full">
-        <Heading size="6">Create Rubric</Heading>
-
-        <Text size="3" color="gray">
-          In this step, you will create a grading rubric by deciding whether each
-          criterion should be included or excluded. Use the sample answers to
-          decide which criteria are essential for evaluating the student&apos;s
-          solution.
-        </Text>
-
-        <div className="flex-1 space-y-5 overflow-y-auto">
-          <Card size="2">
-            <Flex direction="column" gap="3">
-              <Heading size="4">Question</Heading>
-              <Text size="3" className="whitespace-pre-wrap leading-7">
-                <MathDisplay text={question} />
-              </Text>
-            </Flex>
-          </Card>
-
-          <Card size="2">
-            <Flex direction="column" gap="4">
-              <div>
-                <Heading size="4">Select Rubric Criteria</Heading>
-                <Text size="2" color="gray">
-                  For each criterion, choose whether it should be included in the
-                  rubric or excluded. You must make a choice for every row before
-                  submitting.
-                </Text>
-              </div>
-
-              <div className="overflow-hidden rounded-2xl border border-gray-300 bg-white">
-                <table className="w-full border-collapse text-sm">
-                  <thead className="bg-lime-50">
-                    <tr>
-                      <th className="border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
-                        Criterion
-                      </th>
-                      <th className="w-44 border-b border-gray-300 px-4 py-3 text-center font-semibold text-slate-900">
-                        Select
-                      </th>
-                      <th className="w-[45%] border-b border-gray-300 px-4 py-3 text-left font-semibold text-slate-900">
-                        {submitted ? "Feedback" : ""}
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {rubricOptions.map((option) => {
-                      const decision = rubricDecisions[option.id];
-                      const included = decision === "include";
-                      const excluded = decision === "exclude";
-
-                      const isCorrectDecision =
-                        (option.correct && included) ||
-                        (!option.correct && excluded);
-
-                      return (
-                        <tr key={option.id} className="align-middle">
-                          <td className="border-b border-gray-200 px-4 py-4 font-medium text-slate-900">
-                            <MathDisplay text={option.label} />
-                          </td>
-
-                          <td className="border-b border-gray-200 px-4 py-4 text-center">
-                            <Flex gap="2" justify="center">
-                              <Button
-                                variant="soft"
-                                color={included ? "green" : "gray"}
-                                onClick={() => onSetRubricDecision(option.id, "include")}
-                                disabled={submitted}
-                                size="2"
-                                className={`${!included ? "!bg-white" : ""}`}
-                              >
-                                Include
-                              </Button>
-                              <Button
-                                variant="soft"
-                                color={excluded ? "red" : "gray"}
-                                onClick={() => onSetRubricDecision(option.id, "exclude")}
-                                disabled={submitted}
-                                size="2"
-                                className={`${!excluded ? "!bg-white" : ""}`}
-                              >
-                                Exclude
-                              </Button>
-                            </Flex>
-                          </td>
-
-                          <td className="w-[45%] border-b border-gray-200 px-4 py-4">
-                            {submitted ? (
-                              <div className="flex flex-col gap-1">
-                                <div className={`min-h-[40px] flex items-center gap-2 ${isCorrectDecision ? "text-green-600" : "text-red-700"}`}>
-                                  {isCorrectDecision
-                                    ? <><CheckCircledIcon className="shrink-0 mt-0.5" width={25} height={25} /> <div>
-                                      <MathDisplay text={"Correct: " + option.feedback} />
-                                    </div></>
-                                    : <><CrossCircledIcon className="shrink-0 mt-0.5" width={25} height={25} /> <div>
-                                      <MathDisplay text={"Incorrect: " + option.feedback} />
-                                    </div></>
-                                  }
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="min-h-[40px]" />
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* {!allCriteriaDecided && !submitted ? (
-                <Text size="2" color="gray">
-                  Select include or exclude for every criterion to enable submit.
-                </Text>
-              ) : null} */}
-
-              <Flex align="center" justify="center" gap="3">
-                <Dialog.Root open={hintOpen} onOpenChange={setHintOpen}>
-                  <Dialog.Trigger>
-                    <Button variant="ghost" color="gray" size="2">
-                      Show Hint
-                    </Button>
-                  </Dialog.Trigger>
-                  <Dialog.Content maxWidth="700px">
-                    <Dialog.Title>Sample Answers</Dialog.Title>
-                    <Dialog.Description size="2" color="gray" mb="4">
-                      {incorrectSample
-                        ? "Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect. Use these to guide your understanding of the correct approach."
-                        : "Look at the following sample answer, which would be completely correct. Use it to guide your understanding of the correct approach."}
-                    </Dialog.Description>
-                    <div
-                      className={`grid grid-cols-1 gap-4 ${
-                        incorrectSample ? "lg:grid-cols-2" : ""
-                      }`}
-                    >
-                      <Card size="2">
-                        <Flex direction="column" gap="3">
-                          <Heading size="4">{correctSample.title}</Heading>
-                          <Text size="3" className="whitespace-pre-wrap leading-7">
-                            <MathDisplay text={correctSample.text} />
-                          </Text>
-                        </Flex>
-                      </Card>
-                      {incorrectSample ? (
-                        <Card size="2">
-                          <Flex direction="column" gap="3">
-                            <Heading size="4">{incorrectSample.title}</Heading>
-                            <Text size="3" className="whitespace-pre-wrap leading-7">
-                              <MathDisplay text={incorrectSample.text} />
-                            </Text>
-                          </Flex>
-                        </Card>
-                      ) : null}
-                    </div>
-                    <Flex justify="end" mt="4">
-                      <Dialog.Close>
-                        <Button variant="soft" color="gray">Close</Button>
-                      </Dialog.Close>
-                    </Flex>
-                  </Dialog.Content>
-                </Dialog.Root>
-                <Button
-                  onClick={onSubmit}
-                  disabled={!allCriteriaDecided || submitted}
-                  color="lime"
-                >
-                  {submitted ? "Submitted" : "Submit"}
-                </Button>
-              </Flex>
-            </Flex>
-          </Card>
-
-          {submitted ? (
-            <Card size="2" ref={feedbackRef}>
-              <Flex direction="column" gap="3">
-
-                {isPerfect ? (
-                  <>
-                    <Heading size="4">Perfect!</Heading>
-
-                    <Text size="3" className="leading-7">
-
-                      Perfect! You included all essential criteria.
-                    </Text>
-                  </>) : (
-                  <>
-                    <Heading size="4">Not Quite!</Heading>
-
-                    <Text size="3" className="leading-7">
-                      Not quite. Review the feedback for each
-                      criterion and try again.
-                    </Text>
-                  </>
-                )}
-
-
-                <Flex justify="center" gap="3">
-                  {isPerfect ? (
-                    <Button onClick={onContinue} color="lime">
-                      Continue
-                      <ArrowRightIcon />
-                    </Button>
-                  ) : (
-                    <Button onClick={onTryAgain} variant="soft" color="gray">
-                      Try Again
-                    </Button>
-                  )}
-                </Flex>
-              </Flex>
-            </Card>
-          ) : null}
+    <div className="flex flex-col gap-5">
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
+          Question
+        </span>
+        <div className="whitespace-pre-wrap text-base leading-7 text-stone-700">
+          <MathDisplay text={question} />
         </div>
-      </Flex>
-    </Card>
+      </div>
+
+      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-base font-bold text-stone-800">Select rubric criteria</h3>
+          <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+            Include / exclude each
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {rubricOptions.map((option) => {
+            const decision = rubricDecisions[option.id];
+            const included = decision === "include";
+            const excluded = decision === "exclude";
+
+            const isCorrectDecision =
+              (option.correct && included) || (!option.correct && excluded);
+
+            return (
+              <div
+                key={option.id}
+                className="grid grid-cols-[minmax(160px,1.4fr)_auto_1.6fr] items-center gap-4 rounded-xl border border-stone-200 px-4 py-3"
+              >
+                <div className="text-sm font-medium text-stone-800">
+                  <MathDisplay text={option.label} />
+                </div>
+
+                <IncludeExcludeToggle
+                  value={decision}
+                  onChange={(value) => onSetRubricDecision(option.id, value)}
+                  disabled={submitted}
+                />
+
+                {submitted ? (
+                  <div
+                    className={`flex items-start gap-2 text-sm ${
+                      isCorrectDecision ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {isCorrectDecision ? (
+                      <CheckIcon className="mt-0.5 shrink-0" width={18} height={18} />
+                    ) : (
+                      <Cross2Icon className="mt-0.5 shrink-0" width={18} height={18} />
+                    )}
+                    <div>
+                      <MathDisplay
+                        text={`${isCorrectDecision ? "Correct" : "Incorrect"}: ${option.feedback}`}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => setHintOpen(true)}
+            className="text-sm font-semibold text-stone-500 underline decoration-stone-300 underline-offset-4 hover:text-stone-700"
+          >
+            Show hint
+          </button>
+
+          <Button onClick={onSubmit} disabled={!allCriteriaDecided || submitted}>
+            {submitted ? "Submitted" : "Submit"}
+          </Button>
+        </div>
+      </div>
+
+      {hintOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setHintOpen(false)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-stone-800">Sample answers</h3>
+            <p className="mt-1 text-sm text-stone-500">
+              {incorrectSample
+                ? "Look at the following sample answers. The first solution would be completely correct, and the second would be incorrect. Use these to guide your understanding of the correct approach."
+                : "Look at the following sample answer, which would be completely correct. Use it to guide your understanding of the correct approach."}
+            </p>
+
+            <div className={`mt-4 grid grid-cols-1 gap-4 ${incorrectSample ? "lg:grid-cols-2" : ""}`}>
+              <div className="rounded-xl border border-stone-200 p-4">
+                <h4 className="mb-2 text-sm font-bold text-stone-800">{correctSample.title}</h4>
+                <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                  <MathDisplay text={correctSample.text} />
+                </div>
+              </div>
+              {incorrectSample && (
+                <div className="rounded-xl border border-stone-200 p-4">
+                  <h4 className="mb-2 text-sm font-bold text-stone-800">{incorrectSample.title}</h4>
+                  <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                    <MathDisplay text={incorrectSample.text} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Button variant="secondary" onClick={() => setHintOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {submitted && (
+        <div ref={feedbackRef} className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${
+                isPerfect ? "bg-green-600" : "bg-red-600"
+              }`}
+            >
+              {isPerfect ? (
+                <CheckIcon className="text-white" width={14} height={14} />
+              ) : (
+                <Cross2Icon className="text-white" width={14} height={14} />
+              )}
+            </div>
+            <h3 className="text-base font-bold text-stone-800">
+              {isPerfect ? "Perfect!" : "Not quite!"}
+            </h3>
+          </div>
+
+          <p className="mt-3 text-sm leading-7 text-stone-600">
+            {isPerfect
+              ? "Perfect! You included all essential criteria."
+              : "Not quite. Review the feedback for each criterion and try again."}
+          </p>
+
+          <div className="mt-4 flex justify-center">
+            {isPerfect ? (
+              <Button onClick={onContinue}>
+                Continue
+                <ArrowRightIcon />
+              </Button>
+            ) : (
+              <Button variant="secondary" onClick={onTryAgain}>
+                Try Again
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
