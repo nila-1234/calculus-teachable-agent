@@ -38,10 +38,10 @@ function HomePageContent() {
   const doneCount = completedScenarios.size;
 
   return (
-    <main className="min-h-screen bg-stone-100">
+    <main className="flex min-h-screen flex-col bg-stone-100">
       <AppHeader />
 
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+      <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-bold text-stone-800">
           Welcome 👋
         </h1>

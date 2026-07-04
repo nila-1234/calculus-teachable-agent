@@ -5,6 +5,7 @@ import "katex/dist/katex.min.css";
 import "./globals.css";
 import { Theme } from "@radix-ui/themes";
 import Providers from "@/components/providers";
+import AppFooter from "@/components/app-footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <Providers>
           {children}
+          <AppFooter />
         </Providers>
       </body>
     </html>
