@@ -5,6 +5,6 @@ const client = new OpenAI({
   baseURL: process.env.LITELLM_PROXY_URL,
 });
 
-console.log("API KEY LOADED:", process.env.LITELLM_PROXY_KEY?.slice(0, 10));
+// console.log("API KEY LOADED:", process.env.LITELLM_PROXY_KEY?.slice(0, 10));
 
 export default client;
