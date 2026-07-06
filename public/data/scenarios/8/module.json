@@ -1,0 +1,163 @@
+{
+  "scenario": "A data center monitors the power its main server draws over a 12-hour period. The company wants the average power draw over those 12 hours, for instance to estimate energy cost.",
+  "question": "Let \\(P(t)\\) be the power in watts at hour \\(t\\). Use the function (1) that best fits the power data, then (2) to find the average power.",
+  "plotDataSrc": "/data/scenarios/8/plot-data.json",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Use the function ____ that best fits the power data.",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(P(t)=-t^{3}+21t^{2}-120t+300\\)",
+          "correct": true,
+          "feedback": "Correct! The data starts high, dips to a low near hour 4, climbs to a second peak near hour 10, then eases off. This down-then-up bend with two turning points is the shape of a cubic."
+        },
+        {
+          "id": "f2",
+          "text": "\\(P(t)=196+104\\cos(0.52t)\\)",
+          "correct": false,
+          "feedback": "Incorrect! This dip-and-peak looks like one cycle of a sinusoid, but a sine or cosine is periodic: it would keep repeating the same dip and peak hour after hour. The power over this single 12-hour window is not a repeating cycle, so a periodic model imposes structure the data does not have."
+        },
+        {
+          "id": "f3",
+          "text": "\\(P(t)=200\\)",
+          "correct": false,
+          "feedback": "Incorrect! A constant would be a flat horizontal line, but the power clearly dips and rises by over 200 watts across the window. It does not fit."
+        },
+        {
+          "id": "f4",
+          "text": "\\(P(t)=-t^{3}+18t^{2}-120t+300\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is a cubic of the same form, but with these coefficients it only declines and never rises to the second peak the data shows near hour 10. The right family, but the wrong coefficients."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "To find the average power, compute ____.",
+      "options": [
+        {
+          "id": "a1",
+          "text": "the integral over \\([0,12]\\) divided by the length of the interval",
+          "correct": true,
+          "feedback": "Correct! The average value over an interval is its integral divided by the length of the interval. Integrate the power, then divide by 12 to turn the accumulated total into an average."
+        },
+        {
+          "id": "a2",
+          "text": "the integral over \\([0,12]\\) only",
+          "correct": false,
+          "feedback": "Incorrect! The integral alone gives the accumulated total (watt-hours), not the average. Dividing by the interval length, 12, is what produces the average power."
+        },
+        {
+          "id": "a3",
+          "text": "the average of the starting and ending power values",
+          "correct": false,
+          "feedback": "Incorrect! Averaging two endpoint values ignores how the power behaves in between. The average value uses the integral over the whole interval, divided by its length."
+        },
+        {
+          "id": "a4",
+          "text": "the average rate of change over \\([0,12]\\)",
+          "correct": false,
+          "feedback": "Incorrect! The average rate of change describes how fast the power changes, not its average level."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "finds-antiderivative",
+      "label": "Correctly finds an antiderivative of \\(P(t)\\)",
+      "correct": true,
+      "feedback": "This is an essential criterion for applying the Fundamental Theorem of Calculus."
+    },
+    {
+      "id": "evaluates-integral",
+      "label": "Correctly evaluates the integral over \\([0,12]\\) (obtaining 1872)",
+      "correct": true,
+      "feedback": "This is an essential criterion because the accumulated total is needed before finding the average."
+    },
+    {
+      "id": "divides-by-interval-length",
+      "label": "Correctly divides by the length of the interval, 12, to get the average",
+      "correct": true,
+      "feedback": "This is an essential criterion because dividing by the interval length is the step that distinguishes the average value from the plain integral."
+    },
+    {
+      "id": "interprets-result",
+      "label": "Correctly interprets the result: the average power is 156 watts",
+      "correct": true,
+      "feedback": "This is an essential criterion because the goal is to determine the average power."
+    },
+    {
+      "id": "graph-verification",
+      "label": "Verifies the result using a graph",
+      "correct": false,
+      "feedback": "This is not necessary, because visual checking may support the answer but does not determine its correctness."
+    },
+    {
+      "id": "checks-range-bounds",
+      "label": "Checks that the average lies between the lowest and highest power values",
+      "correct": false,
+      "feedback": "This is not necessary, since this sanity check is optional and not needed to correctly solve the problem."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(\\text{average}=\\dfrac{1}{12}\\int_0^{12}(-t^3+21t^2-120t+300)\\,dt\\)\n\nAn antiderivative is \\(-\\dfrac{t^4}{4}+7t^3-60t^2+300t\\):\n\n\\(\\left[-\\dfrac{t^4}{4}+7t^3-60t^2+300t\\right]_0^{12}=1872\\)\n\n\\(\\text{average}=1872/12=156\\)\n\nThe average power over the 12 hours is 156 watts."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(\\dfrac{P(0)+P(12)}{2}=\\dfrac{300+156}{2}=228\\)\n\nSo the average power is 228 watts.\n\nThe power is never integrated. The average value comes from the integral over the interval divided by its length, not from averaging the two endpoint values."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "\\(\\int_0^{12}(-t^3+21t^2-120t+300)\\,dt=1872\\)\n\nSo the average power is 1872 watts.",
+      "rubricFit": {
+        "finds-antiderivative": {
+          "pass": true,
+          "feedback": "The antiderivative of P(t) is found correctly."
+        },
+        "evaluates-integral": {
+          "pass": true,
+          "feedback": "The integral over [0, 12] is evaluated correctly, obtaining 1872."
+        },
+        "divides-by-interval-length": {
+          "pass": false,
+          "feedback": "The result is never divided by the interval length 12; 1872 is the accumulated total in watt-hours, not the average."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "The stated average (1872 watts) is wrong; the average is 1872 / 12 = 156 watts."
+        }
+      }
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "\\(\\dfrac{1}{12}\\int_0^{12}(-t^3+21t^2-120t)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+7t^3-60t^2\\right]_0^{12}=-1728,\\ -1728/12=-144\\)\n\nSo the average power is \\(-144\\) watts.",
+      "rubricFit": {
+        "finds-antiderivative": {
+          "pass": false,
+          "feedback": "The constant term 300 is dropped when integrating, so the antiderivative is incomplete."
+        },
+        "evaluates-integral": {
+          "pass": false,
+          "feedback": "Because the antiderivative is incomplete, the evaluated integral (−1728) is incorrect."
+        },
+        "divides-by-interval-length": {
+          "pass": true,
+          "feedback": "The result is correctly divided by the interval length, 12, showing the average step is understood."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "A negative average power is impossible, and the stated result (−144 watts) is wrong."
+        }
+      }
+    }
+  ]
+}

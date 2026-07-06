@@ -1,0 +1,31 @@
+{
+  "title": "Power Draw",
+  "xAxisLabel": "Hour",
+  "yAxisLabel": "Power (watts)",
+  "data": [
+    { "hour": 0, "power": 298 },
+    { "hour": 0.5, "power": 249 },
+    { "hour": 1, "power": 195 },
+    { "hour": 1.5, "power": 162 },
+    { "hour": 2, "power": 131 },
+    { "hour": 2.5, "power": 113 },
+    { "hour": 3, "power": 97 },
+    { "hour": 3.5, "power": 94 },
+    { "hour": 4, "power": 96 },
+    { "hour": 4.5, "power": 100 },
+    { "hour": 5, "power": 110 },
+    { "hour": 5.5, "power": 122 },
+    { "hour": 6, "power": 133 },
+    { "hour": 6.5, "power": 143 },
+    { "hour": 7, "power": 159 },
+    { "hour": 7.5, "power": 174 },
+    { "hour": 8, "power": 177 },
+    { "hour": 8.5, "power": 186 },
+    { "hour": 9, "power": 201 },
+    { "hour": 9.5, "power": 198 },
+    { "hour": 10, "power": 200 },
+    { "hour": 10.5, "power": 196 },
+    { "hour": 11, "power": 182 },
+    { "hour": 12, "power": 155 }
+  ]
+}

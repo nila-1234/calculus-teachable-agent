@@ -187,7 +187,14 @@ function buildCombinedData(
   //     equationY: evaluator ? evaluator(x) : null,
   //   }));
 
-  const MAX_Y = 150;
+  const yValues = data
+    .map((point) => point[yKey])
+    .filter(
+      (value): value is number =>
+        typeof value === "number" && !Number.isNaN(value)
+    );
+  const maxAbsY = yValues.length > 0 ? Math.max(...yValues.map(Math.abs)) : 150;
+  const MAX_Y = Math.max(maxAbsY * 2, 150);
 
   const step = (maxX - minX) / 200;
 
@@ -349,7 +356,7 @@ export default function ScatterPlot({
 
             <YAxis
               type="number"
-              domain={["auto", (dataMax: number) => Math.min(dataMax, 150),]}
+              domain={["auto", "auto"]}
               name={plot.yAxisLabel}
               allowDataOverflow
               label={{
