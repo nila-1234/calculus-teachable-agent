@@ -211,7 +211,7 @@ function AuthorQuestionPageContent() {
     <main className="min-h-screen bg-stone-100">
       <AppHeader />
       <div className="mx-auto max-w-6xl overflow-y-auto p-3 py-6 sm:px-6">
-        <StepProgress currentStep={0} />
+        <StepProgress currentStep={0} scenarioId={scenarioId} />
         <StepIntro
           className="max-w-6xl"
           eyebrow="Your task"

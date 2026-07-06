@@ -12,7 +12,7 @@ export default function AppHeader() {
           <span className="text-sm font-bold">A</span>
         </div>
         <Text size="3" weight="bold" className="text-stone-800">
-          Teachable Calculus Agent
+          <a href="/">Teachable Calculus Agent</a>
         </Text>
       </Flex>
 

@@ -120,7 +120,7 @@ function CreateRubricPageContent() {
     <main className="min-h-screen bg-stone-100">
       <AppHeader />
       <div className="mx-auto max-w-6xl overflow-y-auto p-3 py-6 sm:px-6">
-        <StepProgress currentStep={1} />
+        <StepProgress currentStep={1} scenarioId={scenarioId} />
         <StepIntro
           className="max-w-6xl"
           eyebrow="Your task"

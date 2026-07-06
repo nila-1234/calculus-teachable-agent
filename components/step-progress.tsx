@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CheckIcon } from "@radix-ui/react-icons";
 
 const STEPS = [
@@ -9,11 +10,14 @@ const STEPS = [
   "Complete",
 ];
 
+const STEP_PATHS = ["question", "create-rubric", "apply-rubric", "complete"];
+
 type StepProgressProps = {
   currentStep: number; // 0-indexed: 0=question, 1=create-rubric, 2=apply-rubric, 3=complete
+  scenarioId?: string | number;
 };
 
-export default function StepProgress({ currentStep }: StepProgressProps) {
+export default function StepProgress({ currentStep, scenarioId }: StepProgressProps) {
   const columns = STEPS.map((_, index) =>
     index < STEPS.length - 1 ? "28px 1fr" : "28px"
   ).join(" ");
@@ -38,6 +42,22 @@ export default function StepProgress({ currentStep }: StepProgressProps) {
         {STEPS.map((label, index) => {
           const isCompleted = index < currentStep;
           const isActive = index === currentStep;
+          const isClickable = scenarioId != null && (isCompleted || isActive);
+
+          const circle = isCompleted ? (
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600 text-white font-bold">
+              {/* <CheckIcon className="text-white" width={16} height={16} /> */}
+              {index + 1}
+            </div>
+          ) : isActive ? (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime-600 text-base font-bold text-white">
+              {index + 1}
+            </div>
+          ) : (
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-stone-200 text-xs font-bold text-stone-400">
+              {index + 1}
+            </div>
+          );
 
           return (
             <div
@@ -45,19 +65,10 @@ export default function StepProgress({ currentStep }: StepProgressProps) {
               className="flex justify-center"
               style={{ gridRow: 1, gridColumn: index * 2 + 1 }}
             >
-              {isCompleted ? (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600 text-white font-bold">
-                  {/* <CheckIcon className="text-white" width={16} height={16} /> */}
-                  {index + 1}
-                </div>
-              ) : isActive ? (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-lime-600 text-base font-bold text-white">
-                  {index + 1}
-                </div>
+              {isClickable ? (
+                <Link href={`/${scenarioId}/${STEP_PATHS[index]}`}>{circle}</Link>
               ) : (
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-stone-200 text-xs font-bold text-stone-400">
-                  {index + 1}
-                </div>
+                circle
               )}
             </div>
           );
