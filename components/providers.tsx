@@ -14,6 +14,7 @@ export default function Providers({
       grayColor="sand"
       radius="large"
       scaling="100%"
+      style={{ "--default-font-family": "var(--font-app-sans)" } as React.CSSProperties}
     >
       {children}
     </Theme>

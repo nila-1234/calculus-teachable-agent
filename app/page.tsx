@@ -43,7 +43,7 @@ function HomePageContent() {
 
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
         <h1 className="text-3xl font-bold text-stone-800">
-          Welcome 👋
+          Welcome
         </h1>
         <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
           It&apos;s your first week as a calculus TA. As part of your TA duties,
