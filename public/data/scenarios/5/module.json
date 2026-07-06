@@ -1,6 +1,6 @@
 {
   "scenario": "A storage company wants to fence a rectangular outdoor storage area along an existing warehouse wall. The wall forms one side, so only the other three sides need fencing. With 100 meters of fencing, the company wants to enclose the largest possible area, and needs at least 1,500 square meters to store its goods.\n\nLet x represent the length of each of the two sides perpendicular to the wall, and let y represent the side parallel to the wall.",
-  "question": "Use the function ____ to model the storage area, and analyse the company’s situation by finding its ____.",
+  "question": "Use the function \\(A(x)=x(100-2x)\\) to model the storage area, and analyse the company’s situation by finding its critical point(s) of \\(A(x)\\).",
   "plotDataSrc": "",
   "scenarioImageSrc": "/images/scenario-5-fence.svg",
   "questionParts": [
