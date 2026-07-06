@@ -78,11 +78,11 @@ export default function AuthorQuestionPanel({
       .replace(/^\\\(/, "")
       .replace(/\\\)$/, "")
       .replace(/^f\(x\)\s*=\s*/, "y=")
-      .replace(/\\sin/g, "sin")
+      .replace(/\\(sin|cos)/g, "$1")
       .replace(/\^\{(\d+)\}/g, "^$1")
       .replace(/e\^\{([^}]+)\}/g, "exp($1)")
       .replace(/(\d)(x)/g, "$1*$2")
-      .replace(/(\d)(sin\()/g, "$1*$2")
+      .replace(/(\d)((sin|cos)\()/g, "$1*$2")
       .replace(/\s+/g, "");
   }, [parts, selectedParts]);
 

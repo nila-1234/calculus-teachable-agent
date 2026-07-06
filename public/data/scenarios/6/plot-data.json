@@ -1,0 +1,28 @@
+{
+  "title": "Daily New-User Rate",
+  "xAxisLabel": "Day",
+  "yAxisLabel": "New users per day (thousands)",
+  "data": [
+    { "day": 0, "rate": 27 },
+    { "day": 0.5, "rate": 18 },
+    { "day": 1, "rate": 21 },
+    { "day": 1.5, "rate": 26 },
+    { "day": 2, "rate": 29 },
+    { "day": 2.5, "rate": 39 },
+    { "day": 3, "rate": 46 },
+    { "day": 3.5, "rate": 64 },
+    { "day": 4, "rate": 83 },
+    { "day": 4.5, "rate": 95 },
+    { "day": 5, "rate": 106 },
+    { "day": 5.5, "rate": 113 },
+    { "day": 6, "rate": 130 },
+    { "day": 6.5, "rate": 136 },
+    { "day": 7, "rate": 132 },
+    { "day": 7.5, "rate": 134 },
+    { "day": 8, "rate": 121 },
+    { "day": 8.5, "rate": 109 },
+    { "day": 9, "rate": 91 },
+    { "day": 9.5, "rate": 63 },
+    { "day": 10, "rate": 32 }
+  ]
+}

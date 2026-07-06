@@ -76,6 +76,9 @@ function normalizeEquation(equation: string) {
     .replace(/^[a-z]\([xt]\)=/i, "")
     .replace(/^[a-z]=/i, "")
 
+    // \sin, \cos → sin, cos
+    .replace(/\\(sin|cos)/g, "$1")
+
     // x^2 → x**2
     .replace(/\^/g, "**")
 
@@ -85,7 +88,11 @@ function normalizeEquation(equation: string) {
     .replace(/([xt])\(/gi, "$1*(")
     .replace(/(\))([xt\d])/gi, "$1*$2")
     .replace(/(\d)(exp\()/gi, "$1*$2")
-    .replace(/(\d)(abs\()/gi, "$1*$2");
+    .replace(/(\d)(abs\()/gi, "$1*$2")
+    .replace(/(\d)((sin|cos)\()/gi, "$1*$2")
+
+    // disambiguate unary minus before exponentiation: -x**2 → -(x**2)
+    .replace(/(^|[-+*/(,])-([xt])(\*\*\d+)/gi, "$1-($2$3)");
 }
 
 function buildEquationEvaluator(equation: string) {
@@ -99,7 +106,7 @@ function buildEquationEvaluator(equation: string) {
     throw new Error(`Equation contains unsupported characters: ${offenders?.join(" ")}`);
   }
 
-  const allowedFunctions = ["sin", "exp", "abs"];
+  const allowedFunctions = ["sin", "cos", "exp", "abs"];
   const identifiers = normalized.match(/[a-zA-Z_][a-zA-Z0-9_]*/g) ?? [];
 
   const invalidIdentifiers = identifiers.filter(
@@ -118,6 +125,7 @@ function buildEquationEvaluator(equation: string) {
   try {
     const jsExpression = normalized
       .replace(/\bsin\(/g, "Math.sin(")
+      .replace(/\bcos\(/g, "Math.cos(")
       .replace(/\bexp\(/g, "Math.exp(")
       .replace(/\babs\(/g, "Math.abs(");
 

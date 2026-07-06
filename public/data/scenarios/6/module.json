@@ -1,0 +1,163 @@
+{
+  "scenario": "An app company tracks how fast it gains new users. It has recorded the daily new-user rate over the first 10 days after launch. The company wants to know the total number of new users gained over those 10 days.",
+  "question": "Let \\(r(t)\\) be the new-user rate in thousands of users per day, where \\(t\\) is the number of days since launch. Use the function (1) that best fits the rate data, then (2) to find the total new users.",
+  "plotDataSrc": "/data/scenarios/6/plot-data.json",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Use the function ____ that best fits the rate data.",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(r(t)=-t^{3}+12t^{2}-20t+30\\)",
+          "correct": true,
+          "feedback": "Correct! The data rises slowly, climbs to a peak near day 7, and then falls off. This rise-and-fall with a skewed peak is the shape of a cubic."
+        },
+        {
+          "id": "f2",
+          "text": "\\(r(t)=80-55\\cos(0.6t)\\)",
+          "correct": false,
+          "feedback": "Incorrect! A sinusoid can rise and fall to match the data over these 10 days, but it is periodic: it repeats the same up-and-down cycle forever, implying the new-user rate keeps oscillating in regular waves. A one-time launch-growth pattern does not repeat, so a periodic model is the wrong choice even though the shape looks similar here."
+        },
+        {
+          "id": "f3",
+          "text": "\\(r(t)=30\\)",
+          "correct": false,
+          "feedback": "Incorrect! A constant rate is a flat horizontal line, but the data clearly rises and falls. It does not fit at all."
+        },
+        {
+          "id": "f4",
+          "text": "\\(r(t)=2t^{3}-12t^{2}+20t+30\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is a cubic of the same form, but with a positive leading coefficient it shoots upward at the end instead of falling back down like the data. The right family, but the wrong coefficients."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "To find the total new users, compute ____.",
+      "options": [
+        {
+          "id": "a1",
+          "text": "the integral of the rate over \\([0,10]\\)",
+          "correct": true,
+          "feedback": "Correct! The total accumulated from a rate is the integral of that rate over the interval. By the Fundamental Theorem of Calculus, find an antiderivative and evaluate it at the upper and lower bounds."
+        },
+        {
+          "id": "a2",
+          "text": "the derivative of the rate",
+          "correct": false,
+          "feedback": "Incorrect! Differentiating is the opposite operation; it describes how fast the rate is changing, not how many users have accumulated."
+        },
+        {
+          "id": "a3",
+          "text": "the value of the rate at \\(t=10\\)",
+          "correct": false,
+          "feedback": "Incorrect! Evaluating the rate at one instant gives a daily rate, not the total accumulated over the interval."
+        },
+        {
+          "id": "a4",
+          "text": "the average rate of change of the rate over \\([0,10]\\)",
+          "correct": false,
+          "feedback": "Incorrect! This describes how the rate changes from start to end. It does not give the total users accumulated."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "sets-up-integral",
+      "label": "Correctly sets up the total as the integral of the rate over \\([0,10]\\)",
+      "correct": true,
+      "feedback": "This is an essential criterion because the accumulated total comes from integrating the rate."
+    },
+    {
+      "id": "finds-antiderivative",
+      "label": "Correctly finds an antiderivative of the rate",
+      "correct": true,
+      "feedback": "This is an essential criterion for applying the Fundamental Theorem of Calculus."
+    },
+    {
+      "id": "evaluates-bounds-ftc",
+      "label": "Correctly evaluates the antiderivative at the bounds (FTC) to get the number",
+      "correct": true,
+      "feedback": "This is an essential criterion because the total accumulated value requires evaluating at the bounds."
+    },
+    {
+      "id": "interprets-result",
+      "label": "Correctly interprets the result: 800 thousand new users over the first 10 days",
+      "correct": true,
+      "feedback": "This is an essential criterion because the goal is to determine the total new users gained."
+    },
+    {
+      "id": "graph-verification",
+      "label": "Verifies the result using a graph or area estimate",
+      "correct": false,
+      "feedback": "This is not required, because visual checking may support the answer but does not determine its correctness."
+    },
+    {
+      "id": "checks-units",
+      "label": "Checks the units of the result",
+      "correct": false,
+      "feedback": "This is not required, since checking units is optional and not needed to correctly solve the problem."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(\\int_0^{10}(-t^3+12t^2-20t+30)\\,dt\\)\n\nThe total is the integral of the rate. An antiderivative is \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\):\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\right]_0^{10}=800\\)\n\nAbout 800 thousand new users are gained over the first 10 days."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(r(10)=-(10)^3+12(10)^2-20(10)+30=30\\)\n\nSo about 30 thousand new users.\n\nThe rate is never integrated. The total comes from integrating \\(r(t)\\), not from evaluating it at one day; \\(r(10)\\) is the rate on day 10, not a total."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "\\(\\int_0^{10}(-t^3+12t^2-20t+30)\\,dt\\)\n\nantiderivative: \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\)\n\nSo the total is \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\).",
+      "rubricFit": {
+        "sets-up-integral": {
+          "pass": true,
+          "feedback": "The integral is correctly set up over [0, 10]."
+        },
+        "finds-antiderivative": {
+          "pass": true,
+          "feedback": "The antiderivative of the rate is found correctly."
+        },
+        "evaluates-bounds-ftc": {
+          "pass": false,
+          "feedback": "The antiderivative is never evaluated at the bounds, so no total is produced."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "No numerical total or interpretation is given."
+        }
+      }
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "\\(\\int_0^{10}(-t^3+12t^2-20t)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-10t^2\\right]_0^{10}=500\\)\n\nSo about 500 thousand new users.",
+      "rubricFit": {
+        "sets-up-integral": {
+          "pass": true,
+          "feedback": "The integral is correctly set up over [0, 10]."
+        },
+        "finds-antiderivative": {
+          "pass": false,
+          "feedback": "The constant term 30 is dropped when integrating, so a piece of the rate is left out."
+        },
+        "evaluates-bounds-ftc": {
+          "pass": false,
+          "feedback": "Bounds are evaluated, but on an incorrect antiderivative, giving 500 instead of 800."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "The stated total (500 thousand) is wrong because the antiderivative was incomplete."
+        }
+      }
+    }
+  ]
+}
