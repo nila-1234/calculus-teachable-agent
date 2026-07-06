@@ -1,0 +1,163 @@
+{
+  "scenario": "A company tracks its net cash flow rate (money coming in minus money going out) over the first 8 months of a project. It starts positive and later turns negative as costs grow. The company wants the net change in cash over those 8 months.",
+  "question": "Let \\(r(t)\\) be the net cash flow rate in thousand dollars per month, where \\(t\\) is months since the project began. A positive rate means cash is coming in; a negative rate means cash is going out. Use the function (1) that best fits the rate data, then (2) to find the net change in cash.",
+  "plotDataSrc": "/data/scenarios/7/plot-data.json",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Use the function ____ that best fits the rate data.",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(r(t)=-t^{3}+12t^{2}-48t+72\\)",
+          "correct": true,
+          "feedback": "Correct! The data starts positive near 72, declines in a curved way that flattens around the middle, crosses zero near month 6, and continues down. This S-shaped decline is a cubic."
+        },
+        {
+          "id": "f2",
+          "text": "\\(r(t)=72\\cos(0.26t)\\)",
+          "correct": false,
+          "feedback": "Incorrect! A cosine can start high and fall through zero like the data, but it is periodic: it would swing back up and repeat, implying the cash flow rate oscillates in regular cycles. A project's cash flow here is not cyclic, so a periodic model is the wrong choice despite the similar early shape."
+        },
+        {
+          "id": "f3",
+          "text": "\\(r(t)=72\\)",
+          "correct": false,
+          "feedback": "Incorrect! A constant rate is a flat horizontal line, but the data falls steadily and crosses below zero. It does not fit."
+        },
+        {
+          "id": "f4",
+          "text": "\\(r(t)=-t^{3}+9t^{2}-36t+72\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is a cubic with the same starting value, but these coefficients make it drop far too steeply, ending well below the data. The right family, but the wrong coefficients."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "To find the net change in cash, compute ____.",
+      "options": [
+        {
+          "id": "a1",
+          "text": "the integral of the rate over \\([0,8]\\), keeping the sign",
+          "correct": true,
+          "feedback": "Correct! The net change is the signed integral of the rate over the interval. Keeping the sign lets the outflow (negative) cancel part of the inflow (positive), giving the true net change in cash."
+        },
+        {
+          "id": "a2",
+          "text": "the integral of the absolute value of the rate",
+          "correct": false,
+          "feedback": "Incorrect! Taking the absolute value measures the total cash that moved (in plus out), not the net change. For net change the sign must be kept."
+        },
+        {
+          "id": "a3",
+          "text": "the integral only over the part where the rate is positive",
+          "correct": false,
+          "feedback": "Incorrect! This ignores the outflow after the rate turns negative. The net change must include both phases with their signs."
+        },
+        {
+          "id": "a4",
+          "text": "the change in the rate, \\(r(8)-r(0)\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is the change in the rate, not the change in cash. Net change comes from integrating the rate, not subtracting rate values."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "sets-up-signed-integral",
+      "label": "Correctly sets up the net change as the signed integral of the rate over \\([0,8]\\)",
+      "correct": true,
+      "feedback": "This is an essential criterion because net change is the signed integral, not the absolute value."
+    },
+    {
+      "id": "finds-antiderivative",
+      "label": "Correctly finds an antiderivative of the rate",
+      "correct": true,
+      "feedback": "This is an essential criterion for applying the Fundamental Theorem of Calculus."
+    },
+    {
+      "id": "evaluates-keeping-sign",
+      "label": "Correctly evaluates over the whole interval and keeps the sign, so the outflow is subtracted from the inflow",
+      "correct": true,
+      "feedback": "This is an essential criterion because keeping the sign is the key idea of net change."
+    },
+    {
+      "id": "interprets-result",
+      "label": "Correctly interprets the result: the net change is +64 thousand dollars, so the company ends with 64 thousand dollars more than it started",
+      "correct": true,
+      "feedback": "This is an essential criterion because the goal is to determine the net change in cash."
+    },
+    {
+      "id": "graph-verification",
+      "label": "Verifies the result using a graph",
+      "correct": false,
+      "feedback": "This is not necessary, because visual checking may support the answer but does not determine its correctness."
+    },
+    {
+      "id": "total-cash-moved",
+      "label": "Computes the total cash moved (in plus out)",
+      "correct": false,
+      "feedback": "This is not necessary, since it answers a different question than the net change."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(\\int_0^{8}(-t^3+12t^2-48t+72)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\right]_0^{8}=64\\)\n\nThe net change is +64 thousand dollars. Cash comes in for the first 6 months and goes out afterward, and keeping the sign, the inflow outweighs the outflow."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(r(8)-r(0)=-56-72=-128\\)\n\nSo the cash changed by \\(-128\\) thousand dollars.\n\nThe rate is never integrated. Net change comes from the signed integral of the rate, not from subtracting the rate values \\(r(8)\\) and \\(r(0)\\); this computes the change in the rate, a different quantity."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\)\n\ninflow \\([0,6]\\): 108\noutflow \\([6,8]\\): 44\n\ntotal: \\(108+44=152\\)\n\nSo the cash changed by 152 thousand dollars.",
+      "rubricFit": {
+        "sets-up-signed-integral": {
+          "pass": true,
+          "feedback": "The net change is correctly set up as the integral of the rate over [0, 8], split into the [0, 6] and [6, 8] phases."
+        },
+        "finds-antiderivative": {
+          "pass": true,
+          "feedback": "The antiderivative of the rate is found correctly."
+        },
+        "evaluates-keeping-sign": {
+          "pass": false,
+          "feedback": "The outflow is added rather than subtracted, so the sign is not kept."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "Keeping the sign gives a net change of +64, not 152, so the stated total is wrong."
+        }
+      }
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "\\(\\int_0^{6}(-t^3+12t^2-48t+72)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\right]_0^{6}=108\\)\n\nSo the cash increased by 108 thousand dollars.",
+      "rubricFit": {
+        "sets-up-signed-integral": {
+          "pass": false,
+          "feedback": "Only the inflow phase [0, 6] is integrated; the interval should be the full [0, 8]."
+        },
+        "finds-antiderivative": {
+          "pass": true,
+          "feedback": "The antiderivative of the rate is found correctly."
+        },
+        "evaluates-keeping-sign": {
+          "pass": false,
+          "feedback": "The outflow after month 6 is left out entirely, so the sign of the later phase is never applied."
+        },
+        "interprets-result": {
+          "pass": false,
+          "feedback": "This is not the net change over the full 8 months, which is +64, not 108."
+        }
+      }
+    }
+  ]
+}

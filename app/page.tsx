@@ -13,6 +13,7 @@ const scenarios = [
   { id: 4, name: "Delivery Cost Analysis" },
   { id: 5, name: "Storage Area Optimization" },
   { id: 6, name: "App User Growth" },
+  { id: 7, name: "Project Cash Flow" },
 ];
 
 function HomePageContent() {

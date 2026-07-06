@@ -1,0 +1,24 @@
+{
+  "title": "Net Cash Flow Rate",
+  "xAxisLabel": "Month",
+  "yAxisLabel": "Net cash flow (thousand $/month)",
+  "data": [
+    { "month": 0, "rate": 74 },
+    { "month": 0.5, "rate": 50 },
+    { "month": 1, "rate": 34 },
+    { "month": 1.5, "rate": 22 },
+    { "month": 2, "rate": 14 },
+    { "month": 2.5, "rate": 13 },
+    { "month": 3, "rate": 9 },
+    { "month": 3.5, "rate": 5 },
+    { "month": 4, "rate": 8 },
+    { "month": 4.5, "rate": 7 },
+    { "month": 5, "rate": 9 },
+    { "month": 5.5, "rate": 5 },
+    { "month": 6, "rate": 1 },
+    { "month": 6.5, "rate": -8 },
+    { "month": 7, "rate": -17 },
+    { "month": 7.5, "rate": -33 },
+    { "month": 8, "rate": -56 }
+  ]
+}

@@ -27,7 +27,7 @@ async function main() {
       "scenarios"
     );
 
-    const scenarioIds = ["1", "2", "3", "4", "5", "6"];
+    const scenarioIds = ["1", "2", "3", "4", "5", "6", "7"];
 
     for (const scenarioId of scenarioIds) {
       const scenarioDir = path.join(scenariosRoot, scenarioId);
