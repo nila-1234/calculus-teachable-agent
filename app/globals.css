@@ -56,3 +56,8 @@ body {
   animation: ripple 600ms ease-out;
 }
 
+.katex {
+  font-family: var(--font-app-sans), serif;
+  font-size: 1em;
+}
+
