@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import LineRubricPanel, {
   LinePlacement,
   LinePlacementsState,
@@ -10,6 +9,8 @@ import LineRubricPanel, {
 } from "@/components/line-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
 import AppHeader from "@/components/app-header";
+import StepProgress from "@/components/step-progress";
+import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 
 function GradeLinesPageContent() {
@@ -55,22 +56,16 @@ function GradeLinesPageContent() {
     <main className="min-h-screen bg-stone-100">
       <AppHeader />
       <div className="mx-auto max-w-7xl p-3 py-6 sm:px-6">
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-dashed border-stone-300 bg-white px-4 py-3">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-lime-700">
-              Experimental
-            </span>
-            <p className="text-sm text-stone-500">
-              Trying a line-by-line grading UI: drag rubric items onto the exact line they apply to.
-            </p>
-          </div>
-          <Link
-            href={`/${scenarioId}/grade`}
-            className="text-xs font-semibold text-stone-500 underline-offset-2 hover:text-stone-700 hover:underline"
-          >
-            Back to standard grading
-          </Link>
-        </div>
+        <StepProgress currentStep={2} scenarioId={scenarioId} />
+        <StepIntro
+          className="max-w-7xl"
+          eyebrow="Your task"
+          title="Step 3 · Evaluate AI student answers"
+          paragraphs={[
+            "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
+            "Drag each rubric item onto the exact line of the answer it applies to, then mark that line pass or fail.",
+          ]}
+        />
 
         <LineRubricPanel
           question={question}
