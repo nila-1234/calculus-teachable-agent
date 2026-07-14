@@ -78,7 +78,7 @@ function CreateRubricPageContent() {
       JSON.stringify(selectedRubricIds)
     );
 
-    router.push(`/${scenarioId}/grade?applyRubricMode=${applyRubricMode}`);
+    router.push(`/${scenarioId}/grade-lines?applyRubricMode=${applyRubricMode}`);
   };
 
   const handleTryAgain = () => {

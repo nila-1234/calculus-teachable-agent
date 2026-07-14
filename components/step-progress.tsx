@@ -10,7 +10,7 @@ const STEPS = [
   "Complete",
 ];
 
-const STEP_PATHS = ["question", "create-rubric", "grade", "complete"];
+const STEP_PATHS = ["question", "create-rubric", "grade-lines", "complete"];
 
 type StepProgressProps = {
   currentStep: number; // 0-indexed: 0=question, 1=create-rubric, 2=apply-rubric, 3=complete
