@@ -27,7 +27,7 @@ async function main() {
       "scenarios"
     );
 
-    const scenarioIds = ["1", "2", "3", "4", "5", "6", "7", "8"];
+    const scenarioIds = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
     for (const scenarioId of scenarioIds) {
       const scenarioDir = path.join(scenariosRoot, scenarioId);
@@ -36,7 +36,10 @@ async function main() {
       const plotDataPath = path.join(scenarioDir, "plot-data.json");
 
       const module = JSON.parse(await fs.readFile(modulePath, "utf-8"));
-      const plotData = JSON.parse(await fs.readFile(plotDataPath, "utf-8"));
+      const plotData = await fs
+        .readFile(plotDataPath, "utf-8")
+        .then(JSON.parse)
+        .catch(() => null);
 
       delete module.plotDataSrc;
 

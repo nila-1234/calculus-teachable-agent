@@ -1,0 +1,163 @@
+{
+  "scenario": "A company is setting the price of a product. Market research shows that the weekly quantity sold depends on the unit price \\(p\\) (in dollars) as \\(q=1200-20p\\). The company wants the price that earns the most revenue each week, but under its contract with the sales platform the price may not exceed 25 dollars.",
+  "question": "Use the function (1) to model the company's weekly revenue, then (2) to find the best price.",
+  "plotDataSrc": "",
+  "questionParts": [
+    {
+      "id": "1",
+      "label": "Use the function ____ to model the company's weekly revenue.",
+      "options": [
+        {
+          "id": "f1",
+          "text": "\\(R(p)=p(1200-20p)\\)",
+          "correct": true,
+          "feedback": "Correct! Revenue is unit price times quantity sold. Substituting \\(q=1200-20p\\) into \\(R=p\\cdot q\\) gives \\(R(p)=p(1200-20p)\\), a single-variable function of price."
+        },
+        {
+          "id": "f2",
+          "text": "\\(R(p)=1200-20p\\)",
+          "correct": false,
+          "feedback": "Incorrect! This is the quantity sold \\(q\\), not revenue. Revenue requires multiplying price by quantity."
+        },
+        {
+          "id": "f3",
+          "text": "\\(R(p)=p+(1200-20p)\\)",
+          "correct": false,
+          "feedback": "Incorrect! Revenue is price times quantity, not price plus quantity. Adding the two has no meaning here."
+        },
+        {
+          "id": "f4",
+          "text": "\\(R(p)=1200p\\)",
+          "correct": false,
+          "feedback": "Incorrect! This ignores that raising the price reduces the quantity sold. It does not capture the demand relationship."
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "label": "To find the best price, ____.",
+      "options": [
+        {
+          "id": "a1",
+          "text": "find the critical point, then check whether the price it gives is allowed under the contract",
+          "correct": true,
+          "feedback": "Correct! A critical point is a value where \\(R'(p)=0\\) or \\(R'(p)\\) is undefined, as long as \\(R(p)\\) exists there. The critical point gives the revenue-maximizing price with no restriction; because the contract caps the price at 25 dollars, the answer must then check whether that price is allowed, and if it is not, the maximum on the allowed range falls at the boundary."
+        },
+        {
+          "id": "a2",
+          "text": "find the critical point, then confirm the second derivative is positive",
+          "correct": false,
+          "feedback": "Incorrect! A critical point is still where \\(R'(p)=0\\) or is undefined, but a positive second derivative would confirm a minimum, while the company wants the maximum. This test points the wrong way and also ignores the contract limit."
+        },
+        {
+          "id": "a3",
+          "text": "find the value of \\(p\\) where \\(R(p)\\) is largest by checking values",
+          "correct": false,
+          "feedback": "Incorrect! Checking values cannot pinpoint the exact best price. The maximum of a smooth function occurs at a critical point, where \\(R'(p)=0\\); the derivative is needed to locate it, not a scan of outputs."
+        },
+        {
+          "id": "a4",
+          "text": "find the average rate of change of revenue over the price range",
+          "correct": false,
+          "feedback": "Incorrect! The average rate of change summarizes how revenue changes from one end of the range to the other. It does not locate the price at which revenue is greatest, and it has nothing to do with a critical point."
+        }
+      ]
+    }
+  ],
+  "rubricOptions": [
+    {
+      "id": "computes-derivative",
+      "label": "Correctly computes the derivative \\(R'(p)\\)",
+      "correct": true,
+      "feedback": "This is an essential criterion because the derivative is needed to find where revenue is largest."
+    },
+    {
+      "id": "solves-critical-price",
+      "label": "Correctly solves \\(R'(p)=0\\) to find the unconstrained critical price",
+      "correct": true,
+      "feedback": "This is an essential criterion because this critical price is the candidate optimum."
+    },
+    {
+      "id": "checks-constraint",
+      "label": "Correctly checks the critical price against the constraint \\(p\\le 25\\) and recognizes whether it is allowed",
+      "correct": true,
+      "feedback": "This is an essential criterion because this is the step a simpler approach misses."
+    },
+    {
+      "id": "concludes-endpoint-max",
+      "label": "Correctly concludes that the maximum occurs at the endpoint \\(p=25\\) and interprets the result: a price of 25 dollars gives the most allowed revenue, 17,500 dollars",
+      "correct": true,
+      "feedback": "This is an essential criterion because the goal is to find and interpret the best allowed price."
+    },
+    {
+      "id": "second-derivative-check",
+      "label": "Computes the second derivative",
+      "correct": false,
+      "feedback": "This is not necessary, since \\(R(p)\\) is a downward parabola, so the critical point is a maximum without further testing."
+    },
+    {
+      "id": "graph-verification",
+      "label": "Verifies the result using a graph",
+      "correct": false,
+      "feedback": "This is not necessary, because a graph may support the answer but does not determine its correctness."
+    }
+  ],
+  "sampleAnswers": {
+    "correct": {
+      "title": "Sample AI Answer 1 (100%)",
+      "text": "\\(R(p)=1200p-20p^2\\)\n\n\\(R'(p)=1200-40p\\)\n\nSetting the derivative to zero gives the unconstrained best price:\n\n\\(1200-40p=0\\rightarrow p=30\\)\n\nBut the contract caps the price at 25 dollars, so 30 is not allowed. Since \\(R(p)\\) rises all the way up to \\(p=30\\), the most revenue on the allowed range is at the cap:\n\n\\(R(25)=25(1200-500)=25\\times700=17500\\)\n\nThe company should set the price at 25 dollars, earning 17,500 dollars per week."
+    },
+    "incorrect": {
+      "title": "Sample AI Answer 2 (0%)",
+      "text": "\\(R(p)=1200p-20p^2\\)\n\nA critical point is where the function is zero, so set \\(R(p)=0\\):\n\n\\(1200p-20p^2=0\\)\n\n\\(p(1200-20p)=0\\rightarrow p=0\\text{ or }p=60\\)\n\nSo the company should set the price at 60 dollars.\n\nThe derivative is never taken — a critical point comes from \\(R'(p)=0\\), not \\(R(p)=0\\) — so solving \\(R(p)=0\\) finds where revenue is zero, giving \\(p=60\\), which is both wrong and far above the 25-dollar cap."
+    }
+  },
+  "finalAiAnswers": [
+    {
+      "id": "answer-50",
+      "label": "AI Student 1",
+      "text": "\\(R(p)=1200p-20p^2\\)\n\n\\(R'(p)=1200-40p\\)\n\n\\(1200-40p=0\\rightarrow p=30\\)\n\n\\(R(30)=30(1200-600)=30\\times600=18000\\)\n\nSo the company should set the price at 30 dollars for 18,000 dollars in revenue.",
+      "rubricFit": {
+        "computes-derivative": {
+          "pass": true,
+          "feedback": "The derivative R'(p) is computed correctly."
+        },
+        "solves-critical-price": {
+          "pass": true,
+          "feedback": "The unconstrained optimum p = 30 is found correctly."
+        },
+        "checks-constraint": {
+          "pass": false,
+          "feedback": "The critical price is never checked against the 25-dollar cap."
+        },
+        "concludes-endpoint-max": {
+          "pass": false,
+          "feedback": "The recommended price of 30 dollars is one the company is not allowed to charge; the maximum on the allowed range is at p = 25."
+        }
+      }
+    },
+    {
+      "id": "answer-25",
+      "label": "AI Student 2",
+      "text": "\\(R(p)=1200p-20p^2\\)\n\n\\(R'(p)=1200-40p\\)\n\n\\(1200-40p=0\\rightarrow p=40\\)\n\nSo the company should set the price at 40 dollars.",
+      "rubricFit": {
+        "computes-derivative": {
+          "pass": true,
+          "feedback": "The derivative R'(p) is computed correctly."
+        },
+        "solves-critical-price": {
+          "pass": false,
+          "feedback": "1200 − 40p = 0 is solved carelessly as p = 40 instead of the correct p = 30."
+        },
+        "checks-constraint": {
+          "pass": false,
+          "feedback": "The result is never checked against the contract cap."
+        },
+        "concludes-endpoint-max": {
+          "pass": false,
+          "feedback": "Because the critical price itself is wrong, the concluded price of 40 dollars is incorrect."
+        }
+      }
+    }
+  ]
+}

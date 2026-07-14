@@ -15,6 +15,7 @@ const scenarios = [
   { id: 6, name: "App User Growth" },
   { id: 7, name: "Project Cash Flow" },
   { id: 8, name: "Data Center Power Draw" },
+  { id: 9, name: "Product Pricing Optimization" },
 ];
 
 function HomePageContent() {

@@ -6,6 +6,7 @@ import schema5Json from "../../public/data/scenarios/5/module.json";
 import schema6Json from "../../public/data/scenarios/6/module.json";
 import schema7Json from "../../public/data/scenarios/7/module.json";
 import schema8Json from "../../public/data/scenarios/8/module.json";
+import schema9Json from "../../public/data/scenarios/9/module.json";
 
 import type { QuestionSchema, ScenarioModule } from "./types";
 
@@ -31,6 +32,7 @@ const scenarioRegistry: Record<number, ScenarioModule> = {
   6: { id: 6, schema: mapJsonToSchema(schema6Json) },
   7: { id: 7, schema: mapJsonToSchema(schema7Json) },
   8: { id: 8, schema: mapJsonToSchema(schema8Json) },
+  9: { id: 9, schema: mapJsonToSchema(schema9Json) },
 };
 
 export function getScenario(id: number): ScenarioModule | null {
