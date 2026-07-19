@@ -9,6 +9,8 @@ type TestResultsPanelProps = {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  /** Heading for the summary row, e.g. "Pre-Test results". */
+  title?: string;
 };
 
 const VERDICT_STYLES = {
@@ -39,6 +41,7 @@ export default function TestResultsPanel({
   loading,
   error,
   onRetry,
+  title = "Your results",
 }: TestResultsPanelProps) {
   if (loading) {
     return (
@@ -71,7 +74,7 @@ export default function TestResultsPanel({
     <div className="mt-4 space-y-4">
       <div className="flex items-center justify-between rounded-xl border-2 border-stone-200 bg-white px-5 py-4 shadow-sm">
         <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
-          Your results
+          {title}
         </span>
         <span className="rounded-full bg-lime-50 px-3 py-1 text-sm font-bold text-lime-700">
           {totalPoints} / {totalMax} points
