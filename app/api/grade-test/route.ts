@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnthropicClient } from "@/lib/anthropic";
 import { getTest } from "@/lib/tests/definitions";
+import { formatStudentAnswer } from "@/lib/tests/format";
 import {
   GradedCriterion,
   GradedItem,
@@ -72,22 +73,6 @@ type ModelResult = {
   feedback: string;
 };
 
-function formatAnswer(item: TestItem, answers: TestAnswers): string {
-  const answer = answers[item.id] || {};
-
-  if (item.kind === "multiple-choice") {
-    const choice = item.choices?.find((c) => c.id === answer.choiceId);
-    const parts = [
-      `Selected choice: ${answer.choiceId ?? "(none)"}${choice ? ` — ${choice.text}` : ""}`,
-    ];
-    if (answer.otherText) parts.push(`Other: ${answer.otherText}`);
-    if (answer.explanation) parts.push(`Explanation: ${answer.explanation}`);
-    return parts.join("\n");
-  }
-
-  return answer.text?.trim() || "(no answer)";
-}
-
 /** Apply the item's official scoring rule to the model's verdicts. */
 function computePoints(item: TestItem, criteria: GradedCriterion[]): number {
   const maxPoints = item.maxPoints ?? 0;
@@ -155,13 +140,13 @@ export async function POST(req: NextRequest) {
       rubric: item.rubric
         ? { criteria: item.rubric.criteria, scoringNote: item.rubric.scoringNote }
         : null,
-      studentAnswer: formatAnswer(item, body.answers),
+      studentAnswer: formatStudentAnswer(item, body.answers),
       ...(earlierItem
         ? {
             studentsEarlierAnswer: {
               itemId: earlierItem.id,
               note: "The student's own rubric from the earlier item — evaluate their verdicts against it.",
-              answer: formatAnswer(earlierItem, body.answers),
+              answer: formatStudentAnswer(earlierItem, body.answers),
             },
           }
         : {}),

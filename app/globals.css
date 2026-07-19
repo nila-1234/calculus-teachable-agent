@@ -5,6 +5,12 @@
   --foreground: #292524;
 }
 
+/* Larger base type across the site — Tailwind sizes are rem-based, so
+   everything scales proportionally from this. */
+html {
+  font-size: 18px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

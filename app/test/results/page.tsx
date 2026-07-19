@@ -6,7 +6,8 @@ import { LockClosedIcon } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
 import TestResultsPanel from "@/components/test-results-panel";
 import Button from "@/components/button";
-import { GradedItem, TestId } from "@/lib/tests/types";
+import { getTest } from "@/lib/tests/definitions";
+import { GradedItem, TestAnswers, TestId } from "@/lib/tests/types";
 import { logEvent } from "@/lib/logger";
 
 const TESTS: { id: TestId; label: string }[] = [
@@ -30,6 +31,7 @@ export default function TestResultsPage() {
   // null = still checking; false = locked; true = both tests finished
   const [unlocked, setUnlocked] = useState<boolean | null>(null);
   const [grading, setGrading] = useState<Record<TestId, PerTestState>>(INITIAL_STATE);
+  const [answersByTest, setAnswersByTest] = useState<Partial<Record<TestId, TestAnswers>>>({});
 
   const setTestState = (testId: TestId, patch: Partial<PerTestState>) => {
     setGrading((prev) => ({ ...prev, [testId]: { ...prev[testId], ...patch } }));
@@ -73,6 +75,18 @@ export default function TestResultsPage() {
     );
     setUnlocked(bothComplete);
     if (!bothComplete) return;
+
+    const loadedAnswers: Partial<Record<TestId, TestAnswers>> = {};
+    TESTS.forEach(({ id }) => {
+      const saved = sessionStorage.getItem(`test:${id}:answers`);
+      if (saved) {
+        try {
+          loadedAnswers[id] = JSON.parse(saved);
+        } catch {
+        }
+      }
+    });
+    setAnswersByTest(loadedAnswers);
 
     TESTS.forEach(({ id }) => {
       const saved = sessionStorage.getItem(`test:${id}:grading`);
@@ -127,6 +141,8 @@ export default function TestResultsPage() {
                   loading={grading[id].loading}
                   error={grading[id].error}
                   onRetry={() => gradeTest(id)}
+                  test={getTest(id)}
+                  answers={answersByTest[id] ?? null}
                 />
               ))}
 

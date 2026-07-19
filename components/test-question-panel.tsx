@@ -2,6 +2,7 @@
 
 import MathDisplay from "@/components/math-display";
 import OptionRow, { OptionRowState } from "@/components/option-row";
+import TestMathInput from "@/components/test-math-input";
 import { TestItem, TestItemAnswer, TestSection } from "@/lib/tests/types";
 
 type TestQuestionPanelProps = {
@@ -10,9 +11,6 @@ type TestQuestionPanelProps = {
   answer: TestItemAnswer;
   onAnswerChange: (next: TestItemAnswer) => void;
 };
-
-const TEXTAREA_CLASS =
-  "w-full resize-y rounded-xl border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50";
 
 export default function TestQuestionPanel({
   section,
@@ -98,25 +96,21 @@ export default function TestQuestionPanel({
               <p className="text-sm font-medium text-stone-600">
                 {item.explanationPrompt}
               </p>
-              <textarea
+              <TestMathInput
                 placeholder={item.placeholder || "Explain your reasoning…"}
                 value={answer.explanation || ""}
-                onChange={(e) =>
-                  onAnswerChange({ ...answer, explanation: e.target.value })
-                }
+                onChange={(explanation) => onAnswerChange({ ...answer, explanation })}
                 rows={4}
-                className={TEXTAREA_CLASS}
               />
             </div>
           )}
 
           {item.kind === "free-response" && (
-            <textarea
+            <TestMathInput
               placeholder={item.placeholder || "Type your answer…"}
               value={answer.text || ""}
-              onChange={(e) => onAnswerChange({ ...answer, text: e.target.value })}
+              onChange={(text) => onAnswerChange({ ...answer, text })}
               rows={10}
-              className={TEXTAREA_CLASS}
             />
           )}
 
