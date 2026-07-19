@@ -172,13 +172,11 @@ export default function TestPage() {
                 {test.id === "pretest" ? "Pre-test complete" : "Post-test complete"}
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-stone-500">
-                Your answers have been recorded.{" "}
-                {test.id === "pretest"
-                  ? "You're ready to start your TA duties — head back home and pick a scenario."
-                  : "Thank you for completing the study."}
+                Your answers have been recorded. Thank you for completing this
+                assessment.
               </p>
-              <Button className="mt-6" onClick={() => router.push("/")}>
-                Back to home
+              <Button className="mt-6" onClick={() => router.push("/test")}>
+                Back to assessments
               </Button>
             </div>
           </div>

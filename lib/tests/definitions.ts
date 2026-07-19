@@ -10,7 +10,7 @@ const PRE_TEST: TestDefinition = {
   id: "pretest",
   title: "Assessment — Optimization (Pre-Test)",
   intro: [
-    "Before you start your TA duties, complete this short assessment. It has three questions: a worked optimization problem, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
+    "This assessment has three questions: a worked optimization problem, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
     "Answer each part in order. You can go back to revise an answer before finishing the test.",
   ],
   goals: ASSESSMENT_GOALS,
@@ -135,7 +135,7 @@ const POST_TEST: TestDefinition = {
   id: "posttest",
   title: "Assessment — Optimization (Post-Test)",
   intro: [
-    "Now that you have finished your TA duties, complete this final assessment. Like the pre-test, it has three questions: a worked optimization problem, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
+    "Like the pre-test, this assessment has three questions: a worked optimization problem, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
     "Answer each part in order. You can go back to revise an answer before finishing the test.",
   ],
   goals: ASSESSMENT_GOALS,
