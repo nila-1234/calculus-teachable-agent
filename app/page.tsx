@@ -24,6 +24,7 @@ function HomePageContent() {
   const applyRubricMode = searchParams.get("applyRubricMode") || "1";
 
   const [completedScenarios, setCompletedScenarios] = useState<Set<number>>(new Set());
+  const [completedTests, setCompletedTests] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const completed = new Set<number>();
@@ -33,6 +34,14 @@ function HomePageContent() {
       }
     });
     setCompletedScenarios(completed);
+
+    const tests = new Set<string>();
+    ["pretest", "posttest"].forEach((id) => {
+      if (sessionStorage.getItem(`test:${id}:completed`) === "true") {
+        tests.add(id);
+      }
+    });
+    setCompletedTests(tests);
   }, []);
 
   const goToScenario = (id: number) =>
@@ -55,9 +64,41 @@ function HomePageContent() {
           submit.
         </p>
 
+        <div className="mt-8">
+          <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Step 1 · Before you begin
+          </span>
+        </div>
+
+        <div className="mt-3">
+          <RippleButton
+            onClick={() => router.push("/test/pretest")}
+            className="flex w-full items-center gap-3 rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-700 text-sm font-bold text-white">
+              P
+            </span>
+
+            <span className="flex-1">
+              <span className="block text-base font-bold text-stone-800">
+                Pre-Test
+              </span>
+              <span className="block text-xs text-stone-500">
+                Take this short assessment before starting the scenarios.
+              </span>
+            </span>
+
+            {completedTests.has("pretest") && (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime-600">
+                <CheckIcon className="text-white" width={12} height={12} />
+              </span>
+            )}
+          </RippleButton>
+        </div>
+
         <div className="mt-8 flex items-center justify-between">
           <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
-            Choose a scenario
+            Step 2 · Choose a scenario
           </span>
           <span className="rounded-full bg-lime-50 px-3 py-1 text-xs font-semibold text-lime-700">
             {doneCount} of {scenarios.length} done
@@ -90,6 +131,38 @@ function HomePageContent() {
               </RippleButton>
             );
           })}
+        </div>
+
+        <div className="mt-8">
+          <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Step 3 · After the scenarios
+          </span>
+        </div>
+
+        <div className="mt-3">
+          <RippleButton
+            onClick={() => router.push("/test/posttest")}
+            className="flex w-full items-center gap-3 rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-700 text-sm font-bold text-white">
+              P
+            </span>
+
+            <span className="flex-1">
+              <span className="block text-base font-bold text-stone-800">
+                Post-Test
+              </span>
+              <span className="block text-xs text-stone-500">
+                Take this final assessment after finishing the scenarios.
+              </span>
+            </span>
+
+            {completedTests.has("posttest") && (
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-lime-600">
+                <CheckIcon className="text-white" width={12} height={12} />
+              </span>
+            )}
+          </RippleButton>
         </div>
       </div>
     </main>
