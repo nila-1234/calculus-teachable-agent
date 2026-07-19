@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckIcon } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
 import StepIntro from "@/components/step-intro";
 import TestProgress from "@/components/test-progress";
 import TestQuestionPanel from "@/components/test-question-panel";
+import TestResultsPanel from "@/components/test-results-panel";
 import Button from "@/components/button";
 import { getTest } from "@/lib/tests/definitions";
-import { TestAnswers, TestItemAnswer } from "@/lib/tests/types";
+import { GradedItem, TestAnswers, TestItemAnswer } from "@/lib/tests/types";
 import { logEvent } from "@/lib/logger";
 
 export default function TestPage() {
@@ -21,6 +22,9 @@ export default function TestPage() {
   // -1 = intro screen, 0..n-1 = question screens, n = complete screen
   const [screenIndex, setScreenIndex] = useState(-1);
   const [answers, setAnswers] = useState<TestAnswers>({});
+  const [gradingResults, setGradingResults] = useState<GradedItem[] | null>(null);
+  const [gradingLoading, setGradingLoading] = useState(false);
+  const [gradingError, setGradingError] = useState<string | null>(null);
 
   const items = useMemo(
     () =>
@@ -43,11 +47,55 @@ export default function TestPage() {
     }
   }, [test]);
 
+  const isComplete = screenIndex >= items.length;
+
+  const requestGrading = useCallback(
+    async (testId: string, testAnswers: TestAnswers) => {
+      setGradingLoading(true);
+      setGradingError(null);
+      try {
+        const res = await fetch("/api/grade-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ testId, answers: testAnswers }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Grading failed. Please try again.");
+        }
+        setGradingResults(data.results);
+        sessionStorage.setItem(`test:${testId}:grading`, JSON.stringify(data.results));
+        logEvent("test_graded", testId, { results: data.results });
+      } catch (e) {
+        setGradingError(
+          e instanceof Error ? e.message : "Grading failed. Please try again."
+        );
+      } finally {
+        setGradingLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!test || !isComplete || gradingResults || gradingLoading) return;
+
+    const saved = sessionStorage.getItem(`test:${test.id}:grading`);
+    if (saved) {
+      try {
+        setGradingResults(JSON.parse(saved));
+        return;
+      } catch {
+      }
+    }
+
+    requestGrading(test.id, answers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [test, isComplete]);
+
   if (!test) {
     return <main className="p-6">Test not found.</main>;
   }
-
-  const isComplete = screenIndex >= items.length;
   const current = screenIndex >= 0 && !isComplete ? items[screenIndex] : null;
 
   const progressLabels = [...test.sections.map((s) => s.title), "Complete"];
@@ -179,6 +227,13 @@ export default function TestPage() {
                 Back to assessments
               </Button>
             </div>
+
+            <TestResultsPanel
+              results={gradingResults}
+              loading={gradingLoading}
+              error={gradingError}
+              onRetry={() => requestGrading(test.id, answers)}
+            />
           </div>
         )}
       </div>

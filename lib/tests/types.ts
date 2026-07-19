@@ -22,6 +22,22 @@ export type TestItem = {
   note?: string;
   /** Reference solution / grading rubric from the assessment doc. Not shown to students. */
   reference?: string;
+  /** Maximum points for this item. Items without maxPoints are not graded (self-report). */
+  maxPoints?: number;
+};
+
+export type GradedCriterion = {
+  name: string;
+  verdict: "met" | "not_met" | "unverifiable";
+  comment: string;
+};
+
+export type GradedItem = {
+  itemId: string;
+  points: number;
+  maxPoints: number;
+  criteria: GradedCriterion[];
+  feedback: string;
 };
 
 export type TestSection = {

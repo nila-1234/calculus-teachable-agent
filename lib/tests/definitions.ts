@@ -21,6 +21,7 @@ const PRE_TEST: TestDefinition = {
       items: [
         {
           id: "1",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "A gardener wants to enclose a rectangular garden along a straight river. No fencing is needed on the river side, so only the other three sides must be fenced. The gardener has 60 meters of fencing. Find the dimensions that make the enclosed area as large as possible, and state that maximum area. Show your work.",
@@ -38,6 +39,7 @@ const PRE_TEST: TestDefinition = {
       items: [
         {
           id: "2.1",
+          maxPoints: 3,
           kind: "multiple-choice",
           prompt:
             "Which function would correctly model the truck's daily revenue? Explain your choice.",
@@ -54,6 +56,7 @@ const PRE_TEST: TestDefinition = {
         },
         {
           id: "2.2",
+          maxPoints: 3,
           kind: "free-response",
           prompt:
             "What is the truck trying to understand from this situation? What mathematical information would help it make this decision? Explain your reasoning.",
@@ -63,6 +66,7 @@ const PRE_TEST: TestDefinition = {
         },
         {
           id: "2.3",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "Imagine you are a grader. Create a rubric for this problem; that is, what does a student's solution need to include to earn full marks?",
@@ -75,6 +79,7 @@ const PRE_TEST: TestDefinition = {
         },
         {
           id: "2.4",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "Use the rubric you created in Question 2.3 to evaluate the AI student's answer above. Explain how the AI student's answer meets each part of your rubric or not.",
@@ -96,6 +101,7 @@ const PRE_TEST: TestDefinition = {
       items: [
         {
           id: "3.1",
+          maxPoints: 3,
           kind: "link",
           prompt: "Share the link to your AI interaction.",
           placeholder: "https://…",
@@ -146,6 +152,7 @@ const POST_TEST: TestDefinition = {
       items: [
         {
           id: "1",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "An open-top box is made from a square sheet of cardboard 18 cm on each side by cutting an equal square of side x from each corner and folding up the sides. Find the value of x that maximizes the volume of the box, and state that maximum volume. Show your work.",
@@ -163,6 +170,7 @@ const POST_TEST: TestDefinition = {
       items: [
         {
           id: "2.1",
+          maxPoints: 3,
           kind: "multiple-choice",
           prompt:
             "Which function would correctly model the company's weekly revenue? Explain your choice.",
@@ -179,6 +187,7 @@ const POST_TEST: TestDefinition = {
         },
         {
           id: "2.2",
+          maxPoints: 3,
           kind: "free-response",
           prompt:
             "What is the company trying to understand from this situation? What mathematical information would help the company make this decision? Explain your reasoning.",
@@ -188,6 +197,7 @@ const POST_TEST: TestDefinition = {
         },
         {
           id: "2.3",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "Imagine you are a grader. Create a rubric for this problem; that is, what does a student's solution need to include to earn full marks?",
@@ -200,6 +210,7 @@ const POST_TEST: TestDefinition = {
         },
         {
           id: "2.4",
+          maxPoints: 5,
           kind: "free-response",
           prompt:
             "Use the rubric you created in Question 2.3 to evaluate the AI student's answer above. Explain how the AI student's answer meets each part of your rubric or not.",
@@ -221,6 +232,7 @@ const POST_TEST: TestDefinition = {
       items: [
         {
           id: "3.1",
+          maxPoints: 3,
           kind: "link",
           prompt: "Share the link to your AI interaction.",
           placeholder: "https://…",
