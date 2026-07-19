@@ -7,6 +7,24 @@ export type TestChoice = {
   allowsOtherText?: boolean;
 };
 
+export type RubricCriterion = {
+  name: string;
+  /** Verbatim criterion description from the assessment doc. */
+  description: string;
+};
+
+export type ItemRubric = {
+  criteria: RubricCriterion[];
+  /** Verbatim scoring / judging rules from the assessment doc. */
+  scoringNote?: string;
+  /**
+   * How points are computed from verdicts:
+   * - "count_met" (default): 1 point per criterion judged met.
+   * - "net": met minus not_met, floored at 0 (used for rubric-application items).
+   */
+  scoring?: "count_met" | "net";
+};
+
 export type TestItem = {
   id: string;
   kind: TestItemKind;
@@ -20,10 +38,14 @@ export type TestItem = {
   placeholder?: string;
   /** Small note under the item (e.g. "This question is not graded."). */
   note?: string;
-  /** Reference solution / grading rubric from the assessment doc. Not shown to students. */
+  /** Reference solution from the assessment doc. Not shown to students. */
   reference?: string;
+  /** Official grading rubric from the assessment doc. Not shown to students. */
+  rubric?: ItemRubric;
   /** Maximum points for this item. Items without maxPoints are not graded (self-report). */
   maxPoints?: number;
+  /** Grading this item requires the student's answer to another item (e.g. 2.4 uses 2.3). */
+  usesAnswerFrom?: string;
 };
 
 export type GradedCriterion = {

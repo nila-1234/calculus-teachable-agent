@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckIcon, Cross2Icon, QuestionMarkIcon } from "@radix-ui/react-icons";
 import Button from "@/components/button";
 import { GradedItem } from "@/lib/tests/types";
 
@@ -12,29 +11,6 @@ type TestResultsPanelProps = {
   /** Heading for the summary row, e.g. "Pre-Test results". */
   title?: string;
 };
-
-const VERDICT_STYLES = {
-  met: { badge: "bg-green-600", row: "text-stone-700" },
-  not_met: { badge: "bg-red-600", row: "text-stone-700" },
-  unverifiable: { badge: "bg-stone-400", row: "text-stone-500" },
-} as const;
-
-function VerdictIcon({ verdict }: { verdict: GradedItem["criteria"][number]["verdict"] }) {
-  const style = VERDICT_STYLES[verdict];
-  return (
-    <span
-      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${style.badge}`}
-    >
-      {verdict === "met" ? (
-        <CheckIcon className="text-white" width={12} height={12} />
-      ) : verdict === "not_met" ? (
-        <Cross2Icon className="text-white" width={12} height={12} />
-      ) : (
-        <QuestionMarkIcon className="text-white" width={12} height={12} />
-      )}
-    </span>
-  );
-}
 
 export default function TestResultsPanel({
   results,
@@ -95,23 +71,9 @@ export default function TestResultsPanel({
             </span>
           </div>
 
-          <ul className="mt-3 space-y-2">
-            {result.criteria.map((criterion) => (
-              <li key={criterion.name} className="flex items-start gap-2">
-                <VerdictIcon verdict={criterion.verdict} />
-                <span className={`text-sm leading-5 ${VERDICT_STYLES[criterion.verdict].row}`}>
-                  <span className="font-semibold">{criterion.name}:</span>{" "}
-                  {criterion.comment}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          {result.feedback && (
-            <p className="mt-3 rounded-lg bg-stone-50 px-3 py-2 text-sm leading-6 text-stone-600">
-              {result.feedback}
-            </p>
-          )}
+          <p className="mt-3 text-sm leading-6 text-stone-700">
+            {result.feedback}
+          </p>
         </div>
       ))}
     </div>

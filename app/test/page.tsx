@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon, FileTextIcon } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
 import RippleButton from "@/components/ripple-button";
 import { TestId } from "@/lib/tests/types";
@@ -86,6 +86,37 @@ export default function TestHomePage() {
             );
           })}
         </div>
+
+        {completedTests.size === tests.length && (
+          <>
+            <div className="mt-8">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+                Your results
+              </span>
+            </div>
+
+            <div className="mt-3">
+              <RippleButton
+                onClick={() => router.push("/test/results")}
+                className="flex w-full items-center gap-3 rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-600 text-white">
+                  <FileTextIcon width={16} height={16} />
+                </span>
+
+                <span className="flex-1">
+                  <span className="block text-base font-bold text-stone-800">
+                    Grading &amp; Feedback
+                  </span>
+                  <span className="block text-xs text-stone-500">
+                    You have finished both assessments — view your scores and
+                    feedback.
+                  </span>
+                </span>
+              </RippleButton>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );
