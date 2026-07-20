@@ -244,96 +244,105 @@ export default function LineRubricPanel({
                           const placement = currentPlacements[criterion.id];
                           const criterionFeedback = currentReview?.feedback?.[criterion.id];
 
+                          const showComment =
+                            isSubmitted &&
+                            !criterionFeedback?.correct &&
+                            (currentCommentsPending[criterion.id] || currentComments[criterion.id]);
+
                           return (
-                            <div
-                              key={criterion.id}
-                              draggable={!isLoading}
-                              onDragStart={handleDragStart(criterion.id)}
-                              onDragEnd={handleDragEnd}
-                              className={`flex flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                                isSubmitted
-                                  ? criterionFeedback?.correct
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-red-200 bg-red-50"
-                                  : "border-stone-200 bg-stone-50"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                {isSubmitted ? (
-                                  criterionFeedback?.correct ? (
-                                    <CheckIcon className="shrink-0 text-green-700" />
+                            <div key={criterion.id} className="flex flex-wrap items-start gap-3">
+                              <div
+                                draggable={!isLoading}
+                                onDragStart={handleDragStart(criterion.id)}
+                                onDragEnd={handleDragEnd}
+                                className={`flex min-w-[240px] flex-1 basis-[240px] flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
+                                  isSubmitted
+                                    ? criterionFeedback?.correct
+                                      ? "border-green-200 bg-green-50"
+                                      : "border-red-200 bg-red-50"
+                                    : "border-stone-200 bg-stone-50"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  {isSubmitted ? (
+                                    criterionFeedback?.correct ? (
+                                      <CheckIcon className="shrink-0 text-green-700" />
+                                    ) : (
+                                      <Cross2Icon className="shrink-0 text-red-700" />
+                                    )
                                   ) : (
-                                    <Cross2Icon className="shrink-0 text-red-700" />
-                                  )
-                                ) : (
-                                  <DragHandleDots2Icon className="shrink-0 text-stone-400" />
-                                )}
-                                <span className="flex-1 font-medium text-stone-700">
-                                  <MathDisplay text={criterion.label} />
-                                </span>
-                                <div className="inline-flex shrink-0 gap-1">
+                                    <DragHandleDots2Icon className="shrink-0 text-stone-400" />
+                                  )}
+                                  <span className="flex-1 font-medium text-stone-700">
+                                    <MathDisplay text={criterion.label} />
+                                  </span>
+                                  <div className="inline-flex shrink-0 gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={isLoading}
+                                      onClick={() => setStatus(criterion.id, "pass")}
+                                      className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                        placement?.status === "pass"
+                                          ? "border-green-600 bg-green-50 text-green-700"
+                                          : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                      }`}
+                                    >
+                                      Pass
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isLoading}
+                                      onClick={() => setStatus(criterion.id, "fail")}
+                                      className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                        placement?.status === "fail"
+                                          ? "border-red-600 bg-red-50 text-red-700"
+                                          : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                      }`}
+                                    >
+                                      Fail
+                                    </button>
+                                  </div>
                                   <button
                                     type="button"
                                     disabled={isLoading}
-                                    onClick={() => setStatus(criterion.id, "pass")}
-                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
-                                      placement?.status === "pass"
-                                        ? "border-green-600 bg-green-50 text-green-700"
-                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                                    }`}
+                                    onClick={() => unassign(criterion.id)}
+                                    className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed"
+                                    aria-label="Remove rubric item from this line"
                                   >
-                                    Pass
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={isLoading}
-                                    onClick={() => setStatus(criterion.id, "fail")}
-                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
-                                      placement?.status === "fail"
-                                        ? "border-red-600 bg-red-50 text-red-700"
-                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                                    }`}
-                                  >
-                                    Fail
+                                    <Cross2Icon />
                                   </button>
                                 </div>
-                                <button
-                                  type="button"
-                                  disabled={isLoading}
-                                  onClick={() => unassign(criterion.id)}
-                                  className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed"
-                                  aria-label="Remove rubric item from this line"
-                                >
-                                  <Cross2Icon />
-                                </button>
+
+                                {isSubmitted && !criterionFeedback?.correct ? (
+                                  <p className="pl-5 text-[11px] text-red-700">
+                                    {!criterionFeedback?.lineCorrect &&
+                                      `Expected on line${criterionFeedback && criterionFeedback.expectedLines.length > 1 ? "s" : ""} ${criterionFeedback?.expectedLines.join(", ")}. `}
+                                    {!criterionFeedback?.statusCorrect &&
+                                      `Expected: ${criterionFeedback?.expectedStatus}. `}
+                                    {criterionFeedback?.feedback}
+                                  </p>
+                                ) : null}
                               </div>
 
-                              {isSubmitted && !criterionFeedback?.correct ? (
-                                <p className="pl-5 text-[11px] text-red-700">
-                                  {!criterionFeedback?.lineCorrect &&
-                                    `Expected on line${criterionFeedback && criterionFeedback.expectedLines.length > 1 ? "s" : ""} ${criterionFeedback?.expectedLines.join(", ")}. `}
-                                  {!criterionFeedback?.statusCorrect &&
-                                    `Expected: ${criterionFeedback?.expectedStatus}. `}
-                                  {criterionFeedback?.feedback}
-                                </p>
-                              ) : null}
-
-                              {isSubmitted && !criterionFeedback?.correct ? (
-                                <div className="ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                                  <ChatBubbleIcon className="mt-0.5 shrink-0 text-sky-600" />
-                                  {currentCommentsPending[criterion.id] ? (
-                                    <span className="italic text-sky-700">
-                                      {currentAnswer.label} is thinking...
-                                    </span>
-                                  ) : currentComments[criterion.id] ? (
-                                    <div>
-                                      <span className="font-semibold">{currentAnswer.label}: </span>
-                                      <MathDisplay
-                                        text={currentComments[criterion.id]}
-                                        className="inline text-xs text-sky-900"
-                                      />
-                                    </div>
-                                  ) : null}
+                              {showComment ? (
+                                <div className="relative mt-1 w-56 shrink-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-lime-800 shadow-md">
+                                  {/* <span className="absolute -left-[7px] top-4 h-3 w-3 -rotate-45 border-b border-l border-sky-200 bg-sky-50" /> */}
+                                  <div className="flex items-start gap-1.5">
+                                    <ChatBubbleIcon className="mt-0.5 shrink-0 text-lime-500" />
+                                    {currentCommentsPending[criterion.id] ? (
+                                      <span className="italic text-gray-700">
+                                        {currentAnswer.label} is thinking...
+                                      </span>
+                                    ) : (
+                                      <div>
+                                        <span className="font-semibold">{currentAnswer.label}: </span>
+                                        <MathDisplay
+                                          text={currentComments[criterion.id]}
+                                          className="inline text-xs text-lime-900"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ) : null}
                             </div>
