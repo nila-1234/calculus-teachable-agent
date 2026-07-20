@@ -396,15 +396,6 @@ export default function LineRubricPanel({
               </div>
             )}
           </div>
-
-          <div className="flex justify-center">
-            <Button
-              onClick={() => onSubmitAnswer(currentAnswer.id)}
-              disabled={!allPlaced || isLoading}
-            >
-              {isLoading ? "Submitting..." : isSubmitted ? "Resubmit" : "Submit"}
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -416,6 +407,13 @@ export default function LineRubricPanel({
         >
           <ArrowLeftIcon />
           Previous
+        </Button>
+
+        <Button
+          onClick={() => onSubmitAnswer(currentAnswer.id)}
+          disabled={!allPlaced || isLoading}
+        >
+          {isLoading ? "Submitting..." : isSubmitted ? "Resubmit" : "Submit"}
         </Button>
 
         <Button
