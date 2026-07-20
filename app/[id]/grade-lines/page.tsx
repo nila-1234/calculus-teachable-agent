@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import LineRubricPanel, {
   LinePlacement,
   LinePlacementsState,
+  LineReviewState,
   RubricCriterion,
 } from "@/components/line-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
@@ -12,6 +13,7 @@ import AppHeader from "@/components/app-header";
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
+import { logEvent } from "@/lib/logger";
 
 function GradeLinesPageContent() {
   const params = useParams();
@@ -27,6 +29,8 @@ function GradeLinesPageContent() {
   const [question, setQuestion] = useState("");
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
   const [placements, setPlacements] = useState<LinePlacementsState>({});
+  const [reviewStates, setReviewStates] = useState<LineReviewState>({});
+  const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -52,6 +56,59 @@ function GradeLinesPageContent() {
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
   };
 
+  const handleSubmitAnswer = async (answerId: string) => {
+    const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
+    const answerPlacements = placements[answerId];
+
+    if (!answer || !answerPlacements) return;
+
+    logEvent("grade_lines_submitted", scenarioId, {
+      answer_id: answerId,
+      placements: answerPlacements,
+    });
+
+    try {
+      setLoadingAnswerId(answerId);
+
+      const res = await fetch("/api/grade-lines-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenarioId,
+          answerId,
+          answerTitle: answer.label,
+          rubric: rubric.map((criterion) => ({
+            criterionId: criterion.id,
+            criterion: criterion.label,
+          })),
+          rubricFit: answer.rubricFit,
+          placements: answerPlacements,
+        }),
+      });
+
+      const data = await res.json();
+
+      const feedbackByCriterion: LineReviewState[string]["feedback"] = Object.fromEntries(
+        (Array.isArray(data.feedback) ? data.feedback : []).map((item: { criterionId: string }) => [
+          item.criterionId,
+          item,
+        ])
+      );
+
+      setReviewStates((prev) => ({
+        ...prev,
+        [answerId]: { submitted: true, feedback: feedbackByCriterion },
+      }));
+    } catch {
+      setReviewStates((prev) => ({
+        ...prev,
+        [answerId]: { submitted: true, feedback: {} },
+      }));
+    } finally {
+      setLoadingAnswerId(null);
+    }
+  };
+
   return (
     <main className="min-h-screen bg-stone-100">
       <AppHeader />
@@ -73,6 +130,9 @@ function GradeLinesPageContent() {
           answers={FINAL_AI_ANSWERS}
           placements={placements}
           onPlacementsChange={handlePlacementsChange}
+          reviewStates={reviewStates}
+          loadingAnswerId={loadingAnswerId}
+          onSubmitAnswer={handleSubmitAnswer}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
         />

@@ -120,18 +120,22 @@
       "rubricFit": {
         "computes-derivative": {
           "pass": true,
+          "line": [3],
           "feedback": "The derivative R'(p) is computed correctly."
         },
         "solves-critical-price": {
           "pass": true,
+          "line": [5],
           "feedback": "The unconstrained optimum p = 30 is found correctly."
         },
         "checks-constraint": {
           "pass": false,
+          "line": [2],
           "feedback": "The critical price is never checked against the 25-dollar cap."
         },
         "concludes-endpoint-max": {
           "pass": false,
+          "line": [1],
           "feedback": "The recommended price of 30 dollars is one the company is not allowed to charge; the maximum on the allowed range is at p = 25."
         }
       }
@@ -143,18 +147,22 @@
       "rubricFit": {
         "computes-derivative": {
           "pass": true,
+          "line": [1],
           "feedback": "The derivative R'(p) is computed correctly."
         },
         "solves-critical-price": {
           "pass": false,
+          "line": [1],
           "feedback": "1200 − 40p = 0 is solved carelessly as p = 40 instead of the correct p = 30."
         },
         "checks-constraint": {
           "pass": false,
+          "line": [4],
           "feedback": "The result is never checked against the contract cap."
         },
         "concludes-endpoint-max": {
           "pass": false,
+          "line": [2],
           "feedback": "Because the critical price itself is wrong, the concluded price of 40 dollars is incorrect."
         }
       }

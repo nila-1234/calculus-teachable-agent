@@ -123,22 +123,27 @@
       "rubricFit": {
         "derivative": {
           "pass": true,
+          "line": [1],
           "feedback": "The derivative A′(x) = 100 − 4x is computed correctly."
         },
         "critical-value": {
           "pass": true,
+          "line": [1],
           "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
         "dimensions-area": {
           "pass": true,
+          "line": [3],
           "feedback": "From x = 25, the answer correctly finds y = 50 and the area A = 1250 m²."
         },
         "maximum-justification": {
           "pass": true,
+          "line": [5],
           "feedback": "The answer explains the critical point is a maximum because A(x) is a downward parabola."
         },
         "requirement-check": {
           "pass": true,
+          "line": [2],
           "feedback": "The area 1250 m² is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }
@@ -150,22 +155,27 @@
       "rubricFit": {
         "derivative": {
           "pass": true,
+          "line": [3],
           "feedback": "The derivative A′(x) = 100 − 4x is correct."
         },
         "critical-value": {
           "pass": true,
+          "line": [3],
           "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
         "dimensions-area": {
           "pass": false,
+          "line": [3],
           "feedback": "The work stops at x = 25 and never finds y or the area A."
         },
         "maximum-justification": {
           "pass": false,
+          "line": [3],
           "feedback": "There is no explanation that the critical point is a maximum."
         },
         "requirement-check": {
           "pass": false,
+          "line": [2],
           "feedback": "The area is never computed or compared against the 1,500 m² requirement."
         }
       }
@@ -177,22 +187,27 @@
       "rubricFit": {
         "derivative": {
           "pass": false,
+          "line": [2],
           "feedback": "The derivative is wrong: the derivative of −2x² is −4x, not −2x."
         },
         "critical-value": {
           "pass": false,
+          "line": [7],
           "feedback": "Because the derivative is wrong, the critical value x = 50 is incorrect (it should be x = 25)."
         },
         "dimensions-area": {
           "pass": true,
+          "line": [1],
           "feedback": "From the (incorrect) x = 50, y = 0 and the area A = 0 are computed correctly from that value."
         },
         "maximum-justification": {
           "pass": true,
+          "line": [2],
           "feedback": "The answer correctly justifies the maximum using the downward-parabola shape."
         },
         "requirement-check": {
           "pass": true,
+          "line": [4],
           "feedback": "The area is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }

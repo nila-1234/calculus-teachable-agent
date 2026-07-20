@@ -114,18 +114,22 @@
       "rubricFit": {
         "derivative-correct": {
           "pass": true,
+          "line": [1],
           "feedback": "The derivative is computed correctly."
         },
         "solve-fprime-zero": {
           "pass": true,
+          "line": [2],
           "feedback": "The equation f'(x)=0 is solved correctly."
         },
         "all-critical-points-identified": {
           "pass": false,
+          "line": [5],
           "feedback": "Only one critical point is given. The second critical point is missing."
         },
         "connects-critical-points-to-context": {
           "pass": false,
+          "line": [4],
           "feedback": "No interpretation is provided explaining what the critical point means for company profit."
         }
       }
@@ -137,18 +141,22 @@
       "rubricFit": {
         "derivative-correct": {
           "pass": true,
+          "line": [1],
           "feedback": "The derivative is computed correctly."
         },
         "solve-fprime-zero": {
           "pass": false,
+          "line": [5],
           "feedback": "The factorization is incorrect, so f'(x)=0 is not solved correctly."
         },
         "all-critical-points-identified": {
           "pass": false,
+          "line": [2],
           "feedback": "The critical values x=10 and x=20 are incorrect."
         },
         "connects-critical-points-to-context": {
           "pass": false,
+          "line": [5],
           "feedback": "No interpretation connects the critical points to changes in company profit."
         }
       }

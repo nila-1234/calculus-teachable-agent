@@ -120,18 +120,22 @@
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,
+          "line": [1],
           "feedback": "The answer correctly checks whether \\(R(4)\\) exists."
         },
         "identifies-r4-undefined": {
           "pass": true,
+          "line": [1],
           "feedback": "The answer correctly identifies that \\(R(4)\\) is undefined."
         },
         "applies-critical-point-definition": {
           "pass": false,
+          "line": [1],
           "feedback": "The answer does not correctly apply the full definition of a critical point. Since \\(R(4)\\) does not exist, \\(t=4\\) cannot be a critical point."
         },
         "concludes-not-critical": {
           "pass": false,
+          "line": [3],
           "feedback": "The answer incorrectly concludes that \\(t=4\\) is a critical point."
         }
       }
@@ -143,18 +147,22 @@
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,
+          "line": [1],
           "feedback": "The answer correctly check whether \\(R(4)\\) exists, which is necessary for determining whether \\(t=4\\) is a critical point."
         },
         "identifies-r4-undefined": {
           "pass": false,
+          "line": [1],
           "feedback": "The answer does not identify that \\(R(4)\\) is undefined, which is a key reason why \\(t=4\\) cannot be a critical point."
         },
         "applies-critical-point-definition": {
           "pass": false,
+          "line": [1],
           "feedback": "The answer does not correctly apply the full definition of a critical point. The function value must exist at \\(t=4\\) for it to be a critical point."
         },
         "concludes-not-critical": {
           "pass": false,
+          "line": [2],
           "feedback": "It incorrectly concludes that \\(t=4\\) is a critical point."
         }
       }

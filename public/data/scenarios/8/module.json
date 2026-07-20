@@ -120,18 +120,22 @@
       "rubricFit": {
         "finds-antiderivative": {
           "pass": true,
+          "line": [1],
           "feedback": "The antiderivative of P(t) is found correctly."
         },
         "evaluates-integral": {
           "pass": true,
+          "line": [1],
           "feedback": "The integral over [0, 12] is evaluated correctly, obtaining 1872."
         },
         "divides-by-interval-length": {
           "pass": false,
+          "line": [1],
           "feedback": "The result is never divided by the interval length 12; 1872 is the accumulated total in watt-hours, not the average."
         },
         "interprets-result": {
           "pass": false,
+          "line": [1],
           "feedback": "The stated average (1872 watts) is wrong; the average is 1872 / 12 = 156 watts."
         }
       }
@@ -143,18 +147,22 @@
       "rubricFit": {
         "finds-antiderivative": {
           "pass": false,
+          "line": [1],
           "feedback": "The constant term 300 is dropped when integrating, so the antiderivative is incomplete."
         },
         "evaluates-integral": {
           "pass": false,
+          "line": [2],
           "feedback": "Because the antiderivative is incomplete, the evaluated integral (−1728) is incorrect."
         },
         "divides-by-interval-length": {
           "pass": true,
+          "line": [3],
           "feedback": "The result is correctly divided by the interval length, 12, showing the average step is understood."
         },
         "interprets-result": {
           "pass": false,
+          "line": [1],
           "feedback": "A negative average power is impossible, and the stated result (−144 watts) is wrong."
         }
       }

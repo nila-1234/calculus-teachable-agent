@@ -120,18 +120,22 @@
       "rubricFit": {
         "sets-up-signed-integral": {
           "pass": true,
+          "line": [1],
           "feedback": "The net change is correctly set up as the integral of the rate over [0, 8], split into the [0, 6] and [6, 8] phases."
         },
         "finds-antiderivative": {
           "pass": true,
+          "line": [2],
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-keeping-sign": {
           "pass": false,
+          "line": [2],
           "feedback": "The outflow is added rather than subtracted, so the sign is not kept."
         },
         "interprets-result": {
           "pass": false,
+          "line": [1],
           "feedback": "Keeping the sign gives a net change of +64, not 152, so the stated total is wrong."
         }
       }
@@ -143,18 +147,22 @@
       "rubricFit": {
         "sets-up-signed-integral": {
           "pass": false,
+          "line": [1],
           "feedback": "Only the inflow phase [0, 6] is integrated; the interval should be the full [0, 8]."
         },
         "finds-antiderivative": {
           "pass": true,
+          "line": [2],
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-keeping-sign": {
           "pass": false,
+          "line": [1],
           "feedback": "The outflow after month 6 is left out entirely, so the sign of the later phase is never applied."
         },
         "interprets-result": {
           "pass": false,
+          "line": [3],
           "feedback": "This is not the net change over the full 8 months, which is +64, not 108."
         }
       }

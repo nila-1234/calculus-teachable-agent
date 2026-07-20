@@ -120,18 +120,22 @@
       "rubricFit": {
         "sets-up-integral": {
           "pass": true,
+          "line": [2],
           "feedback": "The integral is correctly set up over [0, 10]."
         },
         "finds-antiderivative": {
           "pass": true,
+          "line": [2],
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-bounds-ftc": {
           "pass": false,
+          "line": [1],
           "feedback": "The antiderivative is never evaluated at the bounds, so no total is produced."
         },
         "interprets-result": {
           "pass": false,
+          "line": [2],
           "feedback": "No numerical total or interpretation is given."
         }
       }
@@ -143,18 +147,22 @@
       "rubricFit": {
         "sets-up-integral": {
           "pass": true,
+          "line": [1],
           "feedback": "The integral is correctly set up over [0, 10]."
         },
         "finds-antiderivative": {
           "pass": false,
+          "line": [1],
           "feedback": "The constant term 30 is dropped when integrating, so a piece of the rate is left out."
         },
         "evaluates-bounds-ftc": {
           "pass": false,
+          "line": [3],
           "feedback": "Bounds are evaluated, but on an incorrect antiderivative, giving 500 instead of 800."
         },
         "interprets-result": {
           "pass": false,
+          "line": [1],
           "feedback": "The stated total (500 thousand) is wrong because the antiderivative was incomplete."
         }
       }
