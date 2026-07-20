@@ -5,6 +5,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
+  ChatBubbleIcon,
   Cross2Icon,
   DragHandleDots2Icon,
 } from "@radix-ui/react-icons";
@@ -56,6 +57,10 @@ type LineRubricPanelProps = {
   reviewStates: LineReviewState;
   loadingAnswerId?: string | null;
   onSubmitAnswer: (answerId: string) => void;
+  // Keyed by answerId -> criterionId -> student nudge comment
+  comments?: Record<string, Record<string, string>>;
+  // Keyed by answerId -> criterionId -> whether the nudge comment is loading
+  commentsPending?: Record<string, Record<string, boolean>>;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
 };
@@ -76,6 +81,8 @@ export default function LineRubricPanel({
   reviewStates,
   loadingAnswerId,
   onSubmitAnswer,
+  comments,
+  commentsPending,
   currentIndex,
   onCurrentIndexChange,
 }: LineRubricPanelProps) {
@@ -89,6 +96,8 @@ export default function LineRubricPanel({
   const currentReview = reviewStates[currentAnswer.id];
   const isSubmitted = currentReview?.submitted ?? false;
   const isLoading = loadingAnswerId === currentAnswer.id;
+  const currentComments = comments?.[currentAnswer.id] ?? {};
+  const currentCommentsPending = commentsPending?.[currentAnswer.id] ?? {};
 
   const allPlaced =
     rubric.length > 0 && rubric.every((criterion) => currentPlacements[criterion.id]?.status);
@@ -307,6 +316,25 @@ export default function LineRubricPanel({
                                     `Expected: ${criterionFeedback?.expectedStatus}. `}
                                   {criterionFeedback?.feedback}
                                 </p>
+                              ) : null}
+
+                              {isSubmitted && !criterionFeedback?.correct ? (
+                                <div className="ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                                  <ChatBubbleIcon className="mt-0.5 shrink-0 text-sky-600" />
+                                  {currentCommentsPending[criterion.id] ? (
+                                    <span className="italic text-sky-700">
+                                      {currentAnswer.label} is thinking...
+                                    </span>
+                                  ) : currentComments[criterion.id] ? (
+                                    <div>
+                                      <span className="font-semibold">{currentAnswer.label}: </span>
+                                      <MathDisplay
+                                        text={currentComments[criterion.id]}
+                                        className="inline text-xs text-sky-900"
+                                      />
+                                    </div>
+                                  ) : null}
+                                </div>
                               ) : null}
                             </div>
                           );

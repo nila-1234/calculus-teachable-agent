@@ -32,6 +32,8 @@ function GradeLinesPageContent() {
   const [reviewStates, setReviewStates] = useState<LineReviewState>({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [comments, setComments] = useState<Record<string, Record<string, string>>>({});
+  const [commentsPending, setCommentsPending] = useState<Record<string, Record<string, boolean>>>({});
 
   useEffect(() => {
     setQuestion(sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) || "");
@@ -54,6 +56,68 @@ function GradeLinesPageContent() {
     next: Record<string, LinePlacement>
   ) => {
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
+  };
+
+  const splitIntoLines = (text: string) =>
+    text
+      .split("\n\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+  const fetchNudgeComment = async (
+    answerId: string,
+    criterionId: string,
+    criterionLabel: string,
+    lineText: string,
+    feedbackItem: {
+      status: "pass" | "fail" | null;
+      expectedStatus: "pass" | "fail" | null;
+      statusCorrect: boolean;
+      placedLine: number | null;
+      expectedLines: number[];
+      lineCorrect: boolean;
+    }
+  ) => {
+    const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
+    if (!answer) return;
+
+    setCommentsPending((prev) => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], [criterionId]: true },
+    }));
+
+    try {
+      const res = await fetch("/api/grade-lines-comment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answerTitle: answer.label,
+          answerText: answer.text,
+          question,
+          criterionLabel,
+          lineText,
+          userStatus: feedbackItem.status,
+          expectedStatus: feedbackItem.expectedStatus,
+          statusCorrect: feedbackItem.statusCorrect,
+          placedLine: feedbackItem.placedLine,
+          expectedLines: feedbackItem.expectedLines,
+          lineCorrect: feedbackItem.lineCorrect,
+        }),
+      });
+      const data = await res.json();
+
+      setComments((prev) => ({
+        ...prev,
+        [answerId]: { ...prev[answerId], [criterionId]: data.reply ?? "" },
+      }));
+    } catch {
+      // Ignore comment errors; the pass/fail result above is unaffected.
+    } finally {
+      setCommentsPending((prev) => ({
+        ...prev,
+        [answerId]: { ...prev[answerId], [criterionId]: false },
+      }));
+    }
   };
 
   const handleSubmitAnswer = async (answerId: string) => {
@@ -88,17 +152,29 @@ function GradeLinesPageContent() {
 
       const data = await res.json();
 
+      const feedbackList: LineReviewState[string]["feedback"][string][] = Array.isArray(
+        data.feedback
+      )
+        ? data.feedback
+        : [];
+
       const feedbackByCriterion: LineReviewState[string]["feedback"] = Object.fromEntries(
-        (Array.isArray(data.feedback) ? data.feedback : []).map((item: { criterionId: string }) => [
-          item.criterionId,
-          item,
-        ])
+        feedbackList.map((item) => [item.criterionId, item])
       );
 
       setReviewStates((prev) => ({
         ...prev,
         [answerId]: { submitted: true, feedback: feedbackByCriterion },
       }));
+
+      const lines = splitIntoLines(answer.text);
+      feedbackList
+        .filter((item) => !item.correct)
+        .forEach((item) => {
+          const lineText =
+            item.placedLine != null ? lines[item.placedLine - 1] ?? "" : "";
+          fetchNudgeComment(answerId, item.criterionId, item.criterion, lineText, item);
+        });
     } catch {
       setReviewStates((prev) => ({
         ...prev,
@@ -133,6 +209,8 @@ function GradeLinesPageContent() {
           reviewStates={reviewStates}
           loadingAnswerId={loadingAnswerId}
           onSubmitAnswer={handleSubmitAnswer}
+          comments={comments}
+          commentsPending={commentsPending}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
         />
