@@ -120,22 +120,22 @@
       "rubricFit": {
         "sets-up-signed-integral": {
           "pass": true,
-          "line": [1],
+          "line": [2],
           "feedback": "The net change is correctly set up as the integral of the rate over [0, 8], split into the [0, 6] and [6, 8] phases."
         },
         "finds-antiderivative": {
           "pass": true,
-          "line": [2],
+          "line": [1],
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-keeping-sign": {
           "pass": false,
-          "line": [2],
+          "line": [3],
           "feedback": "The outflow is added rather than subtracted, so the sign is not kept."
         },
         "interprets-result": {
           "pass": false,
-          "line": [1],
+          "line": [4],
           "feedback": "Keeping the sign gives a net change of +64, not 152, so the stated total is wrong."
         }
       }

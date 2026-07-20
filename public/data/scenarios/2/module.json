@@ -114,12 +114,12 @@
       "rubricFit": {
         "identifies-integration": {
           "pass": true,
-          "line": [4],
+          "line": [1],
           "feedback": "The answer correctly identifies integration as the needed operation for accumulated water."
         },
         "sets-integral-bounds": {
           "pass": true,
-          "line": [1],
+          "line": [2],
           "feedback": "The answer sets up the definite integral with correct bounds from 0 to 4."
         },
         "computes-antiderivative": {
@@ -136,12 +136,12 @@
       "rubricFit": {
         "identifies-integration": {
           "pass": false,
-          "line": [3],
+          "line": [1],
           "feedback": "This answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water."
         },
         "sets-integral-bounds": {
           "pass": false,
-          "line": [4],
+          "line": [2],
           "feedback": "The answer does not set up a definite integral, which is needed to calculate total water added over the time interval."
         },
         "computes-antiderivative": {

@@ -120,7 +120,7 @@
       "rubricFit": {
         "function-value-at-6": {
           "pass": true,
-          "line": [3],
+          "line": [2],
           "feedback": "The answer correctly evaluates the function value at \\(x=6\\)."
         },
         "derivative-undefined-at-6": {
@@ -135,7 +135,7 @@
         },
         "context-interpretation": {
           "pass": false,
-          "line": [1],
+          "line": [4],
           "feedback": "The answer only partially meets this rubric as it identifies the lowest point, but does not clearly connect it to the delivery company’s station decision"
         }
       }
@@ -152,17 +152,17 @@
         },
         "derivative-undefined-at-6": {
           "pass": true,
-          "line": [4],
+          "line": [3],
           "feedback": "The answer correctly identifies that \\(C'(6)\\) is undefined."
         },
         "critical-point-definition": {
           "pass": false,
-          "line": [5],
+          "line": [4],
           "feedback": "The answer does not correctly apply the definition of a critical point. It incorrectly says an undefined derivative means there is no critical point."
         },
         "context-interpretation": {
           "pass": false,
-          "line": [3],
+          "line": [5],
           "feedback": "The answer incorrectly concludes that \\((6,18)\\) cannot be a critical point and that the company should not place the station there."
         }
       }

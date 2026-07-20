@@ -130,12 +130,12 @@
         },
         "divides-by-interval-length": {
           "pass": false,
-          "line": [1],
+          "line": [2],
           "feedback": "The result is never divided by the interval length 12; 1872 is the accumulated total in watt-hours, not the average."
         },
         "interprets-result": {
           "pass": false,
-          "line": [1],
+          "line": [2],
           "feedback": "The stated average (1872 watts) is wrong; the average is 1872 / 12 = 156 watts."
         }
       }
@@ -157,12 +157,12 @@
         },
         "divides-by-interval-length": {
           "pass": true,
-          "line": [3],
+          "line": [2],
           "feedback": "The result is correctly divided by the interval length, 12, showing the average step is understood."
         },
         "interprets-result": {
           "pass": false,
-          "line": [1],
+          "line": [3],
           "feedback": "A negative average power is impossible, and the stated result (−144 watts) is wrong."
         }
       }
