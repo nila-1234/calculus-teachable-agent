@@ -45,9 +45,17 @@ function HomePageContent() {
       <AppHeader />
 
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-        <h1 className="text-3xl font-bold text-stone-800">
-          Welcome
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="text-3xl font-bold text-stone-800">
+            Welcome
+          </h1>
+          <RippleButton
+            onClick={() => router.push("/test")}
+            className="shrink-0 rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm font-bold text-stone-800 shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
+          >
+            Pre/Post Test
+          </RippleButton>
+        </div>
         <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
           It&apos;s your first week as a calculus TA. As part of your TA duties,
           you help your professor prepare calculus questions, clarify what
