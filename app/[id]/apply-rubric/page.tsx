@@ -89,7 +89,7 @@ function ApplyRubricPageContent() {
 
   const handleComplete = () => {
     sessionStorage.setItem(`scenario:${scenarioId}:rubricCompleted`, "true");
-    router.push("/");
+    router.push("/scenarios");
   };
 
   const handleExplanationChange = (answerId: string, criterionId: string, value: string) => {
