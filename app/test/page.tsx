@@ -93,7 +93,7 @@ function TestHomePageContent() {
           })}
         </div>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex justify-center">
           <Button
             variant={completedTests.has("pretest") ? "primary" : "secondary"}
             onClick={() =>

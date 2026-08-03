@@ -64,7 +64,7 @@ function WelcomePageContent() {
           })}
         </ol>
 
-        <div className="mt-8 flex justify-end">
+        <div className="mt-8 flex justify-center">
           <Button onClick={goToTests}>Next</Button>
         </div>
       </div>
