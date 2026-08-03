@@ -23,7 +23,7 @@ const PRE_TEST: TestDefinition = {
           id: "1",
           kind: "free-response",
           prompt:
-            "A gardener wants to enclose a rectangular garden along a straight river. No fencing is needed on the river side, so only the other three sides must be fenced. The gardener has 60 meters of fencing. Find the dimensions that make the enclosed area as large as possible, and state that maximum area. Show your work.",
+            "A gardener wants to enclose a rectangular garden along a straight river. The side along the river does not require fencing, so the gardener will fence only the two sides perpendicular to the river and the one side parallel to it. The gardener has 60 meters of fencing.\n\nUse calculus to determine the dimensions of the garden that maximize its enclosed area and state the maximum area. Show your work.",
           placeholder: "Show your work here…",
           reference:
             "Let x be each side perpendicular to the river and y the side parallel to it, so 2x + y = 60 and A(x) = x(60 − 2x) = 60x − 2x². A′(x) = 60 − 4x = 0 gives x = 15; A is a downward parabola so this is the maximum. y = 30, maximum area 450 m². Rubric (5 pts, consequential grading): Model, Derivative, Critical value, Extremum justification, Resulting quantities.",
@@ -34,57 +34,101 @@ const PRE_TEST: TestDefinition = {
       id: "q2",
       title: "Question 2",
       scenario:
-        "A food truck sells a set lunch box and is deciding what price to charge. Market research shows that at a price of p dollars, the truck sells \\(q = 200 - 10p\\) boxes per day. The truck wants the price that earns the most daily revenue.",
+        "A food truck company sells lunch boxes and is deciding what price to charge. Market research predicts that the number of lunch boxes sold depends on the price.\n\nThe table shows the company’s daily revenue at two example prices:",
+      table: {
+        columns: [
+          "Price per lunch box",
+          "Lunch boxes sold per day",
+          "Daily revenue",
+        ],
+        rows: [
+          ["$2", "180", "$360"],
+          ["$4", "160", "$640"],
+          ["\\(p\\) dollars", "\\(200 - 10p\\)", "?"],
+        ],
+      },
+      tableNote:
+        "The company wants to determine the price that will produce the greatest daily revenue.",
       items: [
         {
           id: "2.1",
           kind: "multiple-choice",
           prompt:
-            "Which function would correctly model the truck's daily revenue? Explain your choice.",
+            "Based on the relationships shown in the table, which function models the company’s daily revenue?",
           choices: [
-            { id: "A", text: "\\(R(p) = p(200 - 10p)\\)" },
+            { id: "A", text: "\\(R(p) = p + (200 - 10p)\\)" },
             { id: "B", text: "\\(R(p) = 200 - 10p\\)" },
-            { id: "C", text: "\\(R(p) = p + (200 - 10p)\\)" },
-            { id: "D", text: "\\(R(p) = 200p\\)" },
+            { id: "C", text: "\\(R(p) = p(200 - 10p)\\)" },
           ],
-          explanationPrompt: "Explain your choice",
-          placeholder: "Why is this the right model?",
+          explanationPrompt:
+            "Explain how the numerical examples in the table support your choice.",
+          placeholder: "Use the values in the table to explain your choice…",
           reference:
-            "A. Revenue is price times quantity sold, so substituting q = 200 − 10p into R = p·q gives R(p) = p(200 − 10p). Rubric (3 pts): Correct choice, Construction reasoning, Rejection reasoning.",
+            "C. At a price of $2, 2 × 180 = 360; at a price of $4, 4 × 160 = 640. The examples show that daily revenue is found by multiplying price by the number of lunch boxes sold. Therefore, R(p) = p(200 − 10p).",
         },
         {
           id: "2.2",
           kind: "free-response",
           prompt:
-            "What is the truck trying to understand from this situation? What mathematical information would help it make this decision? Explain your reasoning.",
-          placeholder: "Explain your reasoning…",
+            "The company’s daily revenue is modeled by \\(R(p) = p(200 - 10p)\\), where \\(p\\) is the price of one lunch box.\n\nWhat calculus concept could be used to determine the price that maximizes the company’s daily revenue? Identify the important mathematical concept the company should find and explain why it is relevant. You do not need to calculate the price.",
+          placeholder: "Identify the calculus concept and explain why it is relevant…",
           reference:
-            "The truck wants the price at which daily revenue is greatest. The useful information is the critical point of R(p) — where R′(p) = 0 — with a justification that it is a maximum, and the revenue there. Rubric (3 pts): Objective, Mathematical information, Extremum awareness.",
+            "The company should use the derivative of the revenue function to find a critical point. A critical point occurs where the derivative equals zero or is undefined. It is relevant because it is a point where revenue could reach a maximum or minimum, but the point must be checked to confirm that it is a maximum. Do not require the student to calculate p.",
         },
         {
           id: "2.3",
-          kind: "free-response",
+          kind: "matching",
           prompt:
-            "Imagine you are a grader. Create a rubric for this problem; that is, what does a student's solution need to include to earn full marks?",
-          context:
-            "After selecting the model, the full problem becomes:\n\nA food truck models its daily revenue at different prices using \\(R(p) = 200p - 10p^2\\), where p is the price in dollars (for \\(0 \\le p \\le 20\\)) and \\(R(p)\\) is the daily revenue in dollars. The truck wants the price that maximizes its daily revenue. What price should it choose, and why?\n\nBelow is an AI student's answer:\n\nThe revenue function is \\(R(p) = 200p - 10p^2\\). A critical point is where the function equals zero, so set \\(R(p) = 0\\):\n\\(200p - 10p^2 = 0 \\;\\Rightarrow\\; 10p(20 - p) = 0 \\;\\Rightarrow\\; p = 0\\) or \\(p = 20\\)\nTake \\(p = 20\\) as the critical value. \\(R(p)\\) is a downward parabola, so this critical point is the maximum. Substituting \\(p = 20\\) back gives \\(q = 200 - 10(20) = 0\\) boxes, so the revenue is \\(R = 20 \\times 0 = 0\\) dollars. The truck should set the price at 20 dollars.",
-          contextLabel: "The full problem and an AI student's answer",
-          placeholder: "List the criteria a full-marks solution needs to include…",
+            "A correct solution to the food truck problem is shown below. For each part of the solution, use the dropdown menu to identify its general mathematical purpose.\n\nEach option may be used once or not at all.",
+          matchRows: [
+            {
+              id: "objective",
+              text: "\\(R(p) = p(200 - 10p)\\)\n\\(R(p) = 200p - 10p^2\\)",
+            },
+            {
+              id: "derivative",
+              text: "\\(R'(p) = 200 - 20p\\)",
+            },
+            {
+              id: "critical-point",
+              text: "\\(200 - 20p = 0\\)\n\\(\\rightarrow p = 10\\)",
+            },
+            {
+              id: "maximum",
+              text: "\\(R''(p) = -20\\)\nSince \\(R''(p)\\) is negative, the shape of the graph is a downward-opening parabola. So \\(p = 10\\) produces a maximum.",
+            },
+          ],
+          choices: [
+            { id: "1", text: "Find the critical point." },
+            { id: "2", text: "Confirm that the critical point is a minimum." },
+            { id: "3", text: "Formulate the objective function." },
+            { id: "4", text: "Confirm that the critical point is a maximum." },
+            { id: "5", text: "Find the derivative." },
+          ],
           reference:
-            "Model rubric: Derivative, Critical value, Extremum justification, Resulting quantities, Recommendation (all essential). Grading (5 pts): 1 pt per solution step covered with a judgeable criterion.",
+            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; R″(p) = −20 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
-          kind: "free-response",
+          kind: "multiple-choice",
           prompt:
-            "Use the rubric you created in Question 2.3 to evaluate the AI student's answer above. Explain how the AI student's answer meets each part of your rubric or not.",
-          context:
-            "The AI student's answer (from Question 2.3):\n\nThe revenue function is \\(R(p) = 200p - 10p^2\\). A critical point is where the function equals zero, so set \\(R(p) = 0\\):\n\\(200p - 10p^2 = 0 \\;\\Rightarrow\\; 10p(20 - p) = 0 \\;\\Rightarrow\\; p = 0\\) or \\(p = 20\\)\nTake \\(p = 20\\) as the critical value. \\(R(p)\\) is a downward parabola, so this critical point is the maximum. Substituting \\(p = 20\\) back gives \\(q = 200 - 10(20) = 0\\) boxes, so the revenue is \\(R = 20 \\times 0 = 0\\) dollars. The truck should set the price at 20 dollars.",
-          contextLabel: "AI student's answer",
-          placeholder:
-            "Go through your rubric criterion by criterion and give a verdict with a reason…",
+            "The model uses the restriction \\(0 \\le p \\le 20\\).\n\nWhy is this restriction meaningful in the food truck situation?",
+          choices: [
+            {
+              id: "A",
+              text: "A price cannot be negative, and a price above $20 would make the model predict a negative number of lunch boxes sold.",
+            },
+            {
+              id: "B",
+              text: "The company’s revenue must always be between $0 and $20.",
+            },
+            {
+              id: "C",
+              text: "The derivative of the revenue function can only be calculated between $0 and $20.",
+            },
+          ],
           reference:
-            "Correct verdicts: Derivative — not met; Critical value — not met (R(p) = 0 was solved, not R′(p) = 0); Extremum justification — met; Resulting quantities — met; Recommendation — met (consequential grading). Correct solution: R′(p) = 200 − 20p = 0 gives p = 10, R(10) = 1000 dollars. Grading (5 pts): 1 pt per correct verdict with a valid reason; −1 per wrong or missing verdict.",
+            "A. The price cannot be less than $0. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
         },
       ],
     },

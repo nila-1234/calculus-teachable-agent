@@ -1,10 +1,24 @@
-export type TestItemKind = "free-response" | "multiple-choice" | "link";
+export type TestItemKind =
+  | "free-response"
+  | "multiple-choice"
+  | "matching"
+  | "link";
 
 export type TestChoice = {
   id: string;
   text: string;
   /** When selected, show a free-text field (e.g. "Yes, other: ___"). */
   allowsOtherText?: boolean;
+};
+
+export type TestMatchRow = {
+  id: string;
+  text: string;
+};
+
+export type TestTable = {
+  columns: string[];
+  rows: string[][];
 };
 
 export type TestItem = {
@@ -15,6 +29,8 @@ export type TestItem = {
   context?: string;
   contextLabel?: string;
   choices?: TestChoice[];
+  /** Solution parts that students match to choices using dropdowns. */
+  matchRows?: TestMatchRow[];
   /** For multiple-choice items that also ask the student to explain their choice. */
   explanationPrompt?: string;
   placeholder?: string;
@@ -29,6 +45,8 @@ export type TestSection = {
   title: string;
   /** Scenario text shown above every item of the section. */
   scenario?: string;
+  table?: TestTable;
+  tableNote?: string;
   items: TestItem[];
 };
 
@@ -44,6 +62,7 @@ export type TestDefinition = {
 
 export type TestItemAnswer = {
   choiceId?: string;
+  matches?: Record<string, string>;
   text?: string;
   otherText?: string;
   explanation?: string;

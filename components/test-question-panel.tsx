@@ -31,6 +31,44 @@ export default function TestQuestionPanel({
             text={section.scenario}
             className="text-sm leading-6 text-stone-700"
           />
+          {section.table && (
+            <div className="mt-4 overflow-x-auto rounded-xl border-2 border-stone-200">
+              <table className="w-full border-collapse text-left text-sm text-stone-700">
+                <thead className="bg-stone-50">
+                  <tr>
+                    {section.table.columns.map((column) => (
+                      <th
+                        key={column}
+                        className="border-b border-r border-stone-200 px-3 py-2 font-semibold last:border-r-0"
+                      >
+                        {column}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {section.table.rows.map((row, rowIndex) => (
+                    <tr key={rowIndex} className="border-b border-stone-200 last:border-b-0">
+                      {row.map((cell, cellIndex) => (
+                        <td
+                          key={cellIndex}
+                          className="border-r border-stone-200 px-3 py-2 last:border-r-0"
+                        >
+                          <MathDisplay text={cell} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {section.tableNote && (
+            <MathDisplay
+              text={section.tableNote}
+              className="mt-4 text-sm leading-6 text-stone-700"
+            />
+          )}
         </div>
       )}
 
@@ -107,6 +145,55 @@ export default function TestQuestionPanel({
                 rows={4}
                 className={TEXTAREA_CLASS}
               />
+            </div>
+          )}
+
+          {item.kind === "matching" && item.matchRows && item.choices && (
+            <div className="space-y-3">
+              {item.matchRows.map((row) => {
+                const selectedForOtherRows = new Set(
+                  Object.entries(answer.matches || {})
+                    .filter(([rowId]) => rowId !== row.id)
+                    .map(([, choiceId]) => choiceId)
+                );
+
+                return (
+                  <div
+                    key={row.id}
+                    className="grid gap-3 rounded-xl border-2 border-stone-100 bg-stone-50 p-4 md:grid-cols-[minmax(0,1fr)_minmax(14rem,1fr)] md:items-center"
+                  >
+                    <MathDisplay
+                      text={row.text}
+                      className="text-sm leading-6 text-stone-700"
+                    />
+                    <select
+                      aria-label={`Purpose of ${row.text}`}
+                      value={answer.matches?.[row.id] || ""}
+                      onChange={(e) =>
+                        onAnswerChange({
+                          ...answer,
+                          matches: {
+                            ...answer.matches,
+                            [row.id]: e.target.value,
+                          },
+                        })
+                      }
+                      className="h-11 w-full rounded-xl border-2 border-stone-200 bg-white px-3 text-sm text-stone-800 transition-colors focus:border-lime-600 focus:outline-none focus:ring-4 focus:ring-lime-50"
+                    >
+                      <option value="">Select the purpose…</option>
+                      {item.choices?.map((choice) => (
+                        <option
+                          key={choice.id}
+                          value={choice.id}
+                          disabled={selectedForOtherRows.has(choice.id)}
+                        >
+                          {choice.text}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })}
             </div>
           )}
 

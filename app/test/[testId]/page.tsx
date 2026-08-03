@@ -75,6 +75,17 @@ export default function TestPage() {
       return true;
     }
 
+    if (item.kind === "matching") {
+      if (!item.matchRows?.length) return false;
+      const selectedChoices = item.matchRows.map(
+        (row) => answer.matches?.[row.id]
+      );
+      return (
+        selectedChoices.every(Boolean) &&
+        new Set(selectedChoices).size === selectedChoices.length
+      );
+    }
+
     return Boolean(answer.text?.trim());
   };
 
