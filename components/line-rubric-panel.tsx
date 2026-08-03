@@ -63,6 +63,8 @@ type LineRubricPanelProps = {
   commentsPending?: Record<string, Record<string, boolean>>;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
+  // Called from the last answer once every answer has been submitted.
+  onComplete?: () => void;
 };
 
 function splitIntoLines(text: string): string[] {
@@ -85,6 +87,7 @@ export default function LineRubricPanel({
   commentsPending,
   currentIndex,
   onCurrentIndexChange,
+  onComplete,
 }: LineRubricPanelProps) {
   const [dragCriterionId, setDragCriterionId] = useState<string | null>(null);
   const [dragOverLine, setDragOverLine] = useState<number | null>(null);
@@ -104,6 +107,7 @@ export default function LineRubricPanel({
 
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < answers.length - 1;
+  const allSubmitted = answers.every((answer) => reviewStates[answer.id]?.submitted);
 
   const unassigned = rubric.filter((criterion) => !currentPlacements[criterion.id]);
   const placementsByLine = (lineIndex: number) =>
@@ -416,14 +420,30 @@ export default function LineRubricPanel({
           {isLoading ? "Submitting..." : isSubmitted ? "Resubmit" : "Submit"}
         </Button>
 
-        <Button
-          variant="secondary"
-          disabled={!hasNext}
-          onClick={() => onCurrentIndexChange(currentIndex + 1)}
-        >
-          Next
-          <ArrowRightIcon />
-        </Button>
+        {!hasNext && onComplete ? (
+          <Button
+            variant="secondary"
+            disabled={!allSubmitted}
+            onClick={onComplete}
+            title={
+              allSubmitted
+                ? undefined
+                : "Submit every answer before finishing this scenario"
+            }
+          >
+            Continue to scenarios
+            <ArrowRightIcon />
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            disabled={!hasNext}
+            onClick={() => onCurrentIndexChange(currentIndex + 1)}
+          >
+            Next
+            <ArrowRightIcon />
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
   LinePlacement,
   LinePlacementsState,
@@ -17,6 +17,8 @@ import { logEvent } from "@/lib/logger";
 
 function GradeLinesPageContent() {
   const params = useParams();
+  const router = useRouter();
+  const query = useSearchParams().toString();
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
 
@@ -120,6 +122,12 @@ function GradeLinesPageContent() {
     }
   };
 
+  const handleComplete = () => {
+    sessionStorage.setItem(`scenario:${scenarioId}:rubricCompleted`, "true");
+    logEvent("grade_lines_completed", scenarioId, {});
+    router.push(query ? `/scenarios?${query}` : "/scenarios");
+  };
+
   const handleSubmitAnswer = async (answerId: string) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     const answerPlacements = placements[answerId];
@@ -213,6 +221,7 @@ function GradeLinesPageContent() {
           commentsPending={commentsPending}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
+          onComplete={handleComplete}
         />
       </div>
     </main>
