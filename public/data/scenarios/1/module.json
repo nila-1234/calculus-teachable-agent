@@ -67,9 +67,9 @@
     },
     {
       "id": "solve-fprime-zero",
-      "label": "Equation \\(f'(x)=0\\) is solved correctly",
+      "label": "Derivative of the function is computed to zero",
       "correct": true,
-      "feedback": "This is an essential criterion because solving \\(f'(x)=0\\) correctly is necessary to identify all critical numbers."
+      "feedback": "This is an essential criterion because equating \\(f'(x)=0\\) is necessary to identify all critical numbers."
     },
     {
       "id": "all-critical-points-identified",
@@ -124,7 +124,7 @@
         "solve-fprime-zero": {
           "pass": true,
           "step": 2,
-          "feedback": "The equation f'(x)=0 is solved correctly."
+          "feedback": "The derivative is simplified to zero."
         },
         "all-critical-points-identified": {
           "pass": false,
