@@ -65,6 +65,7 @@ function GradeLinesPageContent() {
     criterionId: string,
     criterionLabel: string,
     stepText: string,
+    expectedStepText: string,
     feedbackItem: {
       status: "pass" | "fail" | null;
       expectedStatus: "pass" | "fail" | null;
@@ -72,6 +73,7 @@ function GradeLinesPageContent() {
       placedStep: number | null;
       expectedStep: number;
       stepCorrect: boolean;
+      feedback: string;
     }
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
@@ -92,6 +94,8 @@ function GradeLinesPageContent() {
           question,
           criterionLabel,
           stepText,
+          expectedStepText,
+          feedback: feedbackItem.feedback,
           userStatus: feedbackItem.status,
           expectedStatus: feedbackItem.expectedStatus,
           statusCorrect: feedbackItem.statusCorrect,
@@ -174,7 +178,15 @@ function GradeLinesPageContent() {
         .forEach((item) => {
           const stepText =
             item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "";
-          fetchNudgeComment(answerId, item.criterionId, item.criterion, stepText, item);
+          const expectedStepText = answer.steps[item.expectedStep - 1] ?? "";
+          fetchNudgeComment(
+            answerId,
+            item.criterionId,
+            item.criterion,
+            stepText,
+            expectedStepText,
+            item
+          );
         });
     } catch {
       setReviewStates((prev) => ({

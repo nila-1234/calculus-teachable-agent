@@ -276,7 +276,7 @@ export default function LineRubricPanel({
                                     onClick={() => setStatus(criterion.id, "pass")}
                                     className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "pass"
-                                        ? "border-green-600 bg-green-50 text-green-700"
+                                        ? "border-stone-600 bg-stone-200 text-stone-800"
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
@@ -288,7 +288,7 @@ export default function LineRubricPanel({
                                     onClick={() => setStatus(criterion.id, "fail")}
                                     className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "fail"
-                                        ? "border-red-600 bg-red-50 text-red-700"
+                                        ? "border-stone-600 bg-stone-200 text-stone-800"
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
@@ -307,12 +307,15 @@ export default function LineRubricPanel({
                               </div>
 
                               {isSubmitted && !criterionFeedback?.correct ? (
-                                <p className="pl-5 text-[11px] text-red-700">
+                                <p className="pl-5 text-[11px] font-medium text-red-700">
+                                  Expected:
                                   {!criterionFeedback?.stepCorrect &&
-                                    `Expected on step ${criterionFeedback?.expectedStep}. `}
+                                    ` step ${criterionFeedback?.expectedStep}`}
+                                  {!criterionFeedback?.stepCorrect &&
+                                    !criterionFeedback?.statusCorrect &&
+                                    ","}
                                   {!criterionFeedback?.statusCorrect &&
-                                    `Expected: ${criterionFeedback?.expectedStatus}. `}
-                                  {criterionFeedback?.feedback}
+                                    ` ${criterionFeedback?.expectedStatus}`}
                                 </p>
                               ) : null}
 
