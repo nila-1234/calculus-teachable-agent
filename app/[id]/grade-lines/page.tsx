@@ -209,7 +209,7 @@ function GradeLinesPageContent() {
           title="Step 3 · Evaluate AI student answers"
           paragraphs={[
             "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
-            "Drag each rubric item onto the exact step of the answer it applies to, then mark that step pass or fail.",
+            "You are the grader here. Drag each rubric item onto the exact step of the answer it applies to, then judge the AI student against that criterion: mark it pass if their step meets the criterion, fail if it does not.",
           ]}
         />
 

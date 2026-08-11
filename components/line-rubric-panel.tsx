@@ -203,8 +203,10 @@ export default function LineRubricPanel({
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
-            Drag a rubric item from the bank onto the step it applies to, then mark it pass or
-            fail.
+            You are grading this AI student&apos;s work. Drag a rubric item from the bank onto the
+            step it applies to, then decide whether the student met that criterion:{" "}
+            <span className="font-semibold text-stone-600">Pass</span> if their step satisfies it,{" "}
+            <span className="font-semibold text-stone-600">Fail</span> if it does not.
           </p>
 
           <div className="flex flex-col gap-2">
