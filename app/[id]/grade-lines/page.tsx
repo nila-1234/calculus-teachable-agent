@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
   StepPlacement,
@@ -60,6 +60,38 @@ function GradeLinesPageContent() {
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
   };
 
+  // Bumped whenever a criterion is reset, so a nudge request that was already in flight can be
+  // discarded instead of re-attaching a comment to an ungraded item.
+  const commentRequestIds = useRef<Record<string, number>>({});
+
+  const handleCriterionReset = (answerId: string, criterionId: string) => {
+    const key = `${answerId}:${criterionId}`;
+    commentRequestIds.current[key] = (commentRequestIds.current[key] ?? 0) + 1;
+
+    setReviewStates((prev) => {
+      const answerReview = prev[answerId];
+      if (!answerReview || !(criterionId in answerReview.feedback)) return prev;
+
+      const feedback = { ...answerReview.feedback };
+      delete feedback[criterionId];
+      return { ...prev, [answerId]: { ...answerReview, feedback } };
+    });
+
+    setComments((prev) => {
+      if (!(criterionId in (prev[answerId] ?? {}))) return prev;
+      const answerComments = { ...prev[answerId] };
+      delete answerComments[criterionId];
+      return { ...prev, [answerId]: answerComments };
+    });
+
+    setCommentsPending((prev) => {
+      if (!(criterionId in (prev[answerId] ?? {}))) return prev;
+      const answerPending = { ...prev[answerId] };
+      delete answerPending[criterionId];
+      return { ...prev, [answerId]: answerPending };
+    });
+  };
+
   const fetchNudgeComment = async (
     answerId: string,
     criterionId: string,
@@ -78,6 +110,10 @@ function GradeLinesPageContent() {
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     if (!answer) return;
+
+    const requestKey = `${answerId}:${criterionId}`;
+    const requestId = commentRequestIds.current[requestKey] ?? 0;
+    const isStale = () => (commentRequestIds.current[requestKey] ?? 0) !== requestId;
 
     setCommentsPending((prev) => ({
       ...prev,
@@ -106,6 +142,8 @@ function GradeLinesPageContent() {
       });
       const data = await res.json();
 
+      if (isStale()) return;
+
       setComments((prev) => ({
         ...prev,
         [answerId]: { ...prev[answerId], [criterionId]: data.reply ?? "" },
@@ -113,10 +151,12 @@ function GradeLinesPageContent() {
     } catch {
       // Ignore comment errors; the pass/fail result above is unaffected.
     } finally {
-      setCommentsPending((prev) => ({
-        ...prev,
-        [answerId]: { ...prev[answerId], [criterionId]: false },
-      }));
+      if (!isStale()) {
+        setCommentsPending((prev) => ({
+          ...prev,
+          [answerId]: { ...prev[answerId], [criterionId]: false },
+        }));
+      }
     }
   };
 
@@ -224,6 +264,7 @@ function GradeLinesPageContent() {
           onSubmitAnswer={handleSubmitAnswer}
           comments={comments}
           commentsPending={commentsPending}
+          onCriterionReset={handleCriterionReset}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
           onComplete={handleComplete}

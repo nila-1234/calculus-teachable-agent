@@ -61,6 +61,9 @@ type LineRubricPanelProps = {
   comments?: Record<string, Record<string, string>>;
   // Keyed by answerId -> criterionId -> whether the nudge comment is loading
   commentsPending?: Record<string, Record<string, boolean>>;
+  // Called when a criterion is re-graded (moved to another step, or its status changed after
+  // submitting) so the stored result and student comment for it can be dropped.
+  onCriterionReset?: (answerId: string, criterionId: string) => void;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every answer has been submitted.
@@ -78,6 +81,7 @@ export default function LineRubricPanel({
   onSubmitAnswer,
   comments,
   commentsPending,
+  onCriterionReset,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -111,14 +115,20 @@ export default function LineRubricPanel({
   };
 
   const assignToStep = (criterionId: string, stepIndex: number) => {
+    const existing = currentPlacements[criterionId];
+    // Moving a criterion to a different step invalidates any grade it already carries.
+    const moved = existing != null && existing.stepIndex !== stepIndex;
+
     updatePlacements({
       ...currentPlacements,
       [criterionId]: {
         criterionId,
         stepIndex,
-        status: currentPlacements[criterionId]?.status ?? null,
+        status: moved ? null : existing?.status ?? null,
       },
     });
+
+    if (moved) onCriterionReset?.(currentAnswer.id, criterionId);
   };
 
   const unassign = (criterionId: string) => {
@@ -130,13 +140,21 @@ export default function LineRubricPanel({
   const setStatus = (criterionId: string, status: "pass" | "fail") => {
     const existing = currentPlacements[criterionId];
     if (!existing) return;
+
+    const nextStatus = existing.status === status ? null : status;
+
     updatePlacements({
       ...currentPlacements,
       [criterionId]: {
         ...existing,
-        status: existing.status === status ? null : status,
+        status: nextStatus,
       },
     });
+
+    // Re-marking after submitting means the stored result no longer reflects this choice.
+    if (isSubmitted && nextStatus !== currentReview?.feedback?.[criterionId]?.status) {
+      onCriterionReset?.(currentAnswer.id, criterionId);
+    }
   };
 
   const handleDragStart = (criterionId: string) => (e: React.DragEvent) => {
@@ -251,16 +269,16 @@ export default function LineRubricPanel({
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
                               className={`flex flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                                isSubmitted
-                                  ? criterionFeedback?.correct
+                                isSubmitted && criterionFeedback
+                                  ? criterionFeedback.correct
                                     ? "border-green-200 bg-green-50"
                                     : "border-red-200 bg-red-50"
                                   : "border-stone-200 bg-stone-50"
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                {isSubmitted ? (
-                                  criterionFeedback?.correct ? (
+                                {isSubmitted && criterionFeedback ? (
+                                  criterionFeedback.correct ? (
                                     <CheckIcon className="shrink-0 text-green-700" />
                                   ) : (
                                     <Cross2Icon className="shrink-0 text-red-700" />
@@ -308,21 +326,22 @@ export default function LineRubricPanel({
                                 </button>
                               </div>
 
-                              {isSubmitted && !criterionFeedback?.correct ? (
+                              {isSubmitted && criterionFeedback && !criterionFeedback.correct ? (
                                 <p className="pl-5 text-[11px] font-medium text-red-700">
                                   Expected:
-                                  {!criterionFeedback?.stepCorrect &&
-                                    ` step ${criterionFeedback?.expectedStep}`}
-                                  {!criterionFeedback?.stepCorrect &&
-                                    !criterionFeedback?.statusCorrect &&
+                                  {!criterionFeedback.stepCorrect &&
+                                    ` step ${criterionFeedback.expectedStep}`}
+                                  {!criterionFeedback.stepCorrect &&
+                                    !criterionFeedback.statusCorrect &&
                                     ","}
-                                  {!criterionFeedback?.statusCorrect &&
-                                    ` ${criterionFeedback?.expectedStatus}`}
+                                  {!criterionFeedback.statusCorrect &&
+                                    ` ${criterionFeedback.expectedStatus}`}
                                 </p>
                               ) : null}
 
                               {isSubmitted &&
-                              !criterionFeedback?.correct &&
+                              criterionFeedback &&
+                              !criterionFeedback.correct &&
                               (currentCommentsPending[criterion.id] ||
                                 currentComments[criterion.id]) ? (
                                 <div className="ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
