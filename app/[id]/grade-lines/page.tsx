@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
-  LinePlacement,
-  LinePlacementsState,
-  LineReviewState,
+  StepPlacement,
+  StepPlacementsState,
+  StepReviewState,
   RubricCriterion,
 } from "@/components/line-rubric-panel";
 import { getScenario } from "@/lib/scenarios/registry";
@@ -30,8 +30,8 @@ function GradeLinesPageContent() {
 
   const [question, setQuestion] = useState("");
   const [rubric, setRubric] = useState<RubricCriterion[]>([]);
-  const [placements, setPlacements] = useState<LinePlacementsState>({});
-  const [reviewStates, setReviewStates] = useState<LineReviewState>({});
+  const [placements, setPlacements] = useState<StepPlacementsState>({});
+  const [reviewStates, setReviewStates] = useState<StepReviewState>({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [comments, setComments] = useState<Record<string, Record<string, string>>>({});
@@ -55,29 +55,23 @@ function GradeLinesPageContent() {
 
   const handlePlacementsChange = (
     answerId: string,
-    next: Record<string, LinePlacement>
+    next: Record<string, StepPlacement>
   ) => {
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
   };
-
-  const splitIntoLines = (text: string) =>
-    text
-      .split("\n\n")
-      .map((line) => line.trim())
-      .filter(Boolean);
 
   const fetchNudgeComment = async (
     answerId: string,
     criterionId: string,
     criterionLabel: string,
-    lineText: string,
+    stepText: string,
     feedbackItem: {
       status: "pass" | "fail" | null;
       expectedStatus: "pass" | "fail" | null;
       statusCorrect: boolean;
-      placedLine: number | null;
-      expectedLines: number[];
-      lineCorrect: boolean;
+      placedStep: number | null;
+      expectedStep: number;
+      stepCorrect: boolean;
     }
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
@@ -94,16 +88,16 @@ function GradeLinesPageContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           answerTitle: answer.label,
-          answerText: answer.text,
+          answerText: answer.steps.join("\n\n"),
           question,
           criterionLabel,
-          lineText,
+          stepText,
           userStatus: feedbackItem.status,
           expectedStatus: feedbackItem.expectedStatus,
           statusCorrect: feedbackItem.statusCorrect,
-          placedLine: feedbackItem.placedLine,
-          expectedLines: feedbackItem.expectedLines,
-          lineCorrect: feedbackItem.lineCorrect,
+          placedStep: feedbackItem.placedStep,
+          expectedStep: feedbackItem.expectedStep,
+          stepCorrect: feedbackItem.stepCorrect,
         }),
       });
       const data = await res.json();
@@ -160,13 +154,13 @@ function GradeLinesPageContent() {
 
       const data = await res.json();
 
-      const feedbackList: LineReviewState[string]["feedback"][string][] = Array.isArray(
+      const feedbackList: StepReviewState[string]["feedback"][string][] = Array.isArray(
         data.feedback
       )
         ? data.feedback
         : [];
 
-      const feedbackByCriterion: LineReviewState[string]["feedback"] = Object.fromEntries(
+      const feedbackByCriterion: StepReviewState[string]["feedback"] = Object.fromEntries(
         feedbackList.map((item) => [item.criterionId, item])
       );
 
@@ -175,13 +169,12 @@ function GradeLinesPageContent() {
         [answerId]: { submitted: true, feedback: feedbackByCriterion },
       }));
 
-      const lines = splitIntoLines(answer.text);
       feedbackList
         .filter((item) => !item.correct)
         .forEach((item) => {
-          const lineText =
-            item.placedLine != null ? lines[item.placedLine - 1] ?? "" : "";
-          fetchNudgeComment(answerId, item.criterionId, item.criterion, lineText, item);
+          const stepText =
+            item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "";
+          fetchNudgeComment(answerId, item.criterionId, item.criterion, stepText, item);
         });
     } catch {
       setReviewStates((prev) => ({
@@ -204,7 +197,7 @@ function GradeLinesPageContent() {
           title="Step 3 · Evaluate AI student answers"
           paragraphs={[
             "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
-            "Drag each rubric item onto the exact line of the answer it applies to, then mark that line pass or fail.",
+            "Drag each rubric item onto the exact step of the answer it applies to, then mark that step pass or fail.",
           ]}
         />
 

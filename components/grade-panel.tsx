@@ -123,7 +123,7 @@ export default function GradePanel({
             )}
           </div>
           <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">
-            <MathDisplay text={currentAnswer.text} />
+            <MathDisplay text={currentAnswer.steps.join("\n\n")} />
           </div>
         </div>
 

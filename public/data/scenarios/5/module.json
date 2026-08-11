@@ -119,31 +119,38 @@
     {
       "id": "answer-a",
       "label": "AI Student 1",
-      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-4x\\)\n\n\\(100-4x=0 \\Rightarrow x=25\\)\n\n\\(A(x)\\) is a downward parabola, so this critical point is the maximum.\n\n\\(y=100-2(25)=50\\)\n\n\\(A=25\\times 50=1250\\)\n\nThis maximum area of 1250 m² is below the required 1,500 m², so 100 m of fencing is not enough; the best the company can do is 25 m by 50 m.",
+      "steps": [
+        "\\(A(x)=100x-2x^{2}\\)",
+        "\\(A'(x)=100-4x\\)",
+        "\\(100-4x=0 \\Rightarrow x=25\\)",
+        "\\(A(x)\\) is a downward parabola, so this critical point is the maximum.",
+        "\\(y=100-2(25)=50\\)\n\n\\(A=25\\times 50=1250\\)",
+        "This maximum area of 1250 m² is below the required 1,500 m², so 100 m of fencing is not enough; the best the company can do is 25 m by 50 m."
+      ],
       "rubricFit": {
         "derivative": {
           "pass": true,
-          "line": [2],
+          "step": 2,
           "feedback": "The derivative A′(x) = 100 − 4x is computed correctly."
         },
         "critical-value": {
           "pass": true,
-          "line": [3],
+          "step": 3,
           "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
         "dimensions-area": {
           "pass": true,
-          "line": [5, 6],
+          "step": 5,
           "feedback": "From x = 25, the answer correctly finds y = 50 and the area A = 1250 m²."
         },
         "maximum-justification": {
           "pass": true,
-          "line": [4],
+          "step": 4,
           "feedback": "The answer explains the critical point is a maximum because A(x) is a downward parabola."
         },
         "requirement-check": {
           "pass": true,
-          "line": [7],
+          "step": 6,
           "feedback": "The area 1250 m² is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }
@@ -151,31 +158,36 @@
     {
       "id": "answer-b",
       "label": "AI Student 2",
-      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-4x\\)\n\n\\(A'(x)=0 \\Rightarrow x=25\\)\n\nSo the depth is 25 m.",
+      "steps": [
+        "\\(A(x)=100x-2x^{2}\\)",
+        "\\(A'(x)=100-4x\\)",
+        "\\(A'(x)=0 \\Rightarrow x=25\\)",
+        "So the depth is 25 m."
+      ],
       "rubricFit": {
         "derivative": {
           "pass": true,
-          "line": [2],
+          "step": 2,
           "feedback": "The derivative A′(x) = 100 − 4x is correct."
         },
         "critical-value": {
           "pass": true,
-          "line": [3],
+          "step": 3,
           "feedback": "A′(x) = 0 is solved correctly to give x = 25."
         },
         "dimensions-area": {
           "pass": false,
-          "line": [4],
+          "step": 4,
           "feedback": "The work stops at x = 25 and never finds y or the area A."
         },
         "maximum-justification": {
           "pass": false,
-          "line": [4],
+          "step": 4,
           "feedback": "There is no explanation that the critical point is a maximum."
         },
         "requirement-check": {
           "pass": false,
-          "line": [4],
+          "step": 4,
           "feedback": "The area is never computed or compared against the 1,500 m² requirement."
         }
       }
@@ -183,31 +195,38 @@
     {
       "id": "answer-c",
       "label": "AI Student 3",
-      "text": "\\(A(x)=100x-2x^{2}\\)\n\n\\(A'(x)=100-2x\\)\n\n\\(100-2x=0 \\Rightarrow x=50\\)\n\n\\(A(x)\\) is a downward parabola, so this critical point is the maximum.\n\n\\(y=100-2(50)=0\\)\n\n\\(A=50\\times 0=0\\)\n\nThis area of 0 m² is below the required 1,500 m², so 100 m of fencing is not enough.",
+      "steps": [
+        "\\(A(x)=100x-2x^{2}\\)",
+        "\\(A'(x)=100-2x\\)",
+        "\\(100-2x=0 \\Rightarrow x=50\\)",
+        "\\(A(x)\\) is a downward parabola, so this critical point is the maximum.",
+        "\\(y=100-2(50)=0\\)\n\n\\(A=50\\times 0=0\\)",
+        "This area of 0 m² is below the required 1,500 m², so 100 m of fencing is not enough."
+      ],
       "rubricFit": {
         "derivative": {
           "pass": false,
-          "line": [2],
+          "step": 2,
           "feedback": "The derivative is wrong: the derivative of −2x² is −4x, not −2x."
         },
         "critical-value": {
           "pass": false,
-          "line": [3],
+          "step": 3,
           "feedback": "Because the derivative is wrong, the critical value x = 50 is incorrect (it should be x = 25)."
         },
         "dimensions-area": {
           "pass": true,
-          "line": [5, 6],
+          "step": 5,
           "feedback": "From the (incorrect) x = 50, y = 0 and the area A = 0 are computed correctly from that value."
         },
         "maximum-justification": {
           "pass": true,
-          "line": [4],
+          "step": 4,
           "feedback": "The answer correctly justifies the maximum using the downward-parabola shape."
         },
         "requirement-check": {
           "pass": true,
-          "line": [7],
+          "step": 6,
           "feedback": "The area is compared against the 1,500 m² requirement, concluding the fencing is not enough."
         }
       }

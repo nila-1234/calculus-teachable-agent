@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -18,21 +18,21 @@ export type RubricCriterion = {
   label: string;
 };
 
-export type LinePlacement = {
+export type StepPlacement = {
   criterionId: string;
-  lineIndex: number;
+  stepIndex: number;
   status: "pass" | "fail" | null;
 };
 
 // Keyed by answerId -> criterionId -> placement
-export type LinePlacementsState = Record<string, Record<string, LinePlacement>>;
+export type StepPlacementsState = Record<string, Record<string, StepPlacement>>;
 
-export type LineCriterionFeedback = {
+export type StepCriterionFeedback = {
   criterionId: string;
   criterion: string;
-  placedLine: number | null;
-  expectedLines: number[];
-  lineCorrect: boolean;
+  placedStep: number | null;
+  expectedStep: number;
+  stepCorrect: boolean;
   status: "pass" | "fail" | null;
   expectedStatus: "pass" | "fail" | null;
   statusCorrect: boolean;
@@ -40,21 +40,21 @@ export type LineCriterionFeedback = {
   feedback: string;
 };
 
-export type LineAnswerReviewState = {
+export type StepAnswerReviewState = {
   submitted: boolean;
-  feedback: Record<string, LineCriterionFeedback>;
+  feedback: Record<string, StepCriterionFeedback>;
 };
 
 // Keyed by answerId
-export type LineReviewState = Record<string, LineAnswerReviewState>;
+export type StepReviewState = Record<string, StepAnswerReviewState>;
 
 type LineRubricPanelProps = {
   question?: string;
   rubric: RubricCriterion[];
   answers: readonly FinalAiAnswer[];
-  placements: LinePlacementsState;
-  onPlacementsChange: (answerId: string, placements: Record<string, LinePlacement>) => void;
-  reviewStates: LineReviewState;
+  placements: StepPlacementsState;
+  onPlacementsChange: (answerId: string, placements: Record<string, StepPlacement>) => void;
+  reviewStates: StepReviewState;
   loadingAnswerId?: string | null;
   onSubmitAnswer: (answerId: string) => void;
   // Keyed by answerId -> criterionId -> student nudge comment
@@ -66,13 +66,6 @@ type LineRubricPanelProps = {
   // Called from the last answer once every answer has been submitted.
   onComplete?: () => void;
 };
-
-function splitIntoLines(text: string): string[] {
-  return text
-    .split("\n\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
 
 export default function LineRubricPanel({
   question,
@@ -90,11 +83,11 @@ export default function LineRubricPanel({
   onComplete,
 }: LineRubricPanelProps) {
   const [dragCriterionId, setDragCriterionId] = useState<string | null>(null);
-  const [dragOverLine, setDragOverLine] = useState<number | null>(null);
+  const [dragOverStep, setDragOverStep] = useState<number | null>(null);
   const [dragOverBank, setDragOverBank] = useState(false);
 
   const currentAnswer = answers[currentIndex];
-  const lines = useMemo(() => splitIntoLines(currentAnswer.text), [currentAnswer.text]);
+  const steps = currentAnswer.steps;
   const currentPlacements = placements[currentAnswer.id] ?? {};
   const currentReview = reviewStates[currentAnswer.id];
   const isSubmitted = currentReview?.submitted ?? false;
@@ -110,19 +103,19 @@ export default function LineRubricPanel({
   const allSubmitted = answers.every((answer) => reviewStates[answer.id]?.submitted);
 
   const unassigned = rubric.filter((criterion) => !currentPlacements[criterion.id]);
-  const placementsByLine = (lineIndex: number) =>
-    rubric.filter((criterion) => currentPlacements[criterion.id]?.lineIndex === lineIndex);
+  const placementsByStep = (stepIndex: number) =>
+    rubric.filter((criterion) => currentPlacements[criterion.id]?.stepIndex === stepIndex);
 
-  const updatePlacements = (next: Record<string, LinePlacement>) => {
+  const updatePlacements = (next: Record<string, StepPlacement>) => {
     onPlacementsChange(currentAnswer.id, next);
   };
 
-  const assignToLine = (criterionId: string, lineIndex: number) => {
+  const assignToStep = (criterionId: string, stepIndex: number) => {
     updatePlacements({
       ...currentPlacements,
       [criterionId]: {
         criterionId,
-        lineIndex,
+        stepIndex,
         status: currentPlacements[criterionId]?.status ?? null,
       },
     });
@@ -154,15 +147,15 @@ export default function LineRubricPanel({
 
   const handleDragEnd = () => {
     setDragCriterionId(null);
-    setDragOverLine(null);
+    setDragOverStep(null);
     setDragOverBank(false);
   };
 
-  const handleLineDrop = (lineIndex: number) => (e: React.DragEvent) => {
+  const handleStepDrop = (stepIndex: number) => (e: React.DragEvent) => {
     e.preventDefault();
     const criterionId = e.dataTransfer.getData("text/plain") || dragCriterionId;
-    if (criterionId) assignToLine(criterionId, lineIndex);
-    setDragOverLine(null);
+    if (criterionId) assignToStep(criterionId, stepIndex);
+    setDragOverStep(null);
     setDragCriterionId(null);
   };
 
@@ -177,7 +170,7 @@ export default function LineRubricPanel({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-bold text-stone-800">Line-by-line rubric mapping</h2>
+        <h2 className="text-base font-bold text-stone-800">Step-by-step rubric mapping</h2>
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
           Answer {currentIndex + 1} of {answers.length}
         </span>
@@ -210,23 +203,24 @@ export default function LineRubricPanel({
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
-            Drag a rubric item from the bank onto the line it applies to, then mark it pass or fail.
+            Drag a rubric item from the bank onto the step it applies to, then mark it pass or
+            fail.
           </p>
 
           <div className="flex flex-col gap-2">
-            {lines.map((line, lineIndex) => {
-              const linePlacements = placementsByLine(lineIndex);
-              const isDragOver = dragOverLine === lineIndex;
+            {steps.map((step, stepIndex) => {
+              const stepPlacements = placementsByStep(stepIndex);
+              const isDragOver = dragOverStep === stepIndex;
 
               return (
                 <div
-                  key={lineIndex}
+                  key={stepIndex}
                   onDragOver={(e) => {
                     e.preventDefault();
-                    if (!isLoading) setDragOverLine(lineIndex);
+                    if (!isLoading) setDragOverStep(stepIndex);
                   }}
-                  onDragLeave={() => setDragOverLine((prev) => (prev === lineIndex ? null : prev))}
-                  onDrop={handleLineDrop(lineIndex)}
+                  onDragLeave={() => setDragOverStep((prev) => (prev === stepIndex ? null : prev))}
+                  onDrop={handleStepDrop(stepIndex)}
                   className={`flex gap-3 rounded-xl border-2 border-dashed p-3 transition-colors ${
                     isDragOver
                       ? "border-lime-500 bg-lime-50"
@@ -234,119 +228,113 @@ export default function LineRubricPanel({
                   }`}
                 >
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-500">
-                    {lineIndex + 1}
+                    {stepIndex + 1}
                   </div>
 
                   <div className="flex-1">
                     <div className="text-sm leading-7 text-stone-700">
-                      <MathDisplay text={line} />
+                      <MathDisplay text={step} />
                     </div>
 
-                    {linePlacements.length > 0 ? (
+                    {stepPlacements.length > 0 ? (
                       <div className="mt-1 flex flex-col gap-2">
-                        {linePlacements.map((criterion) => {
+                        {stepPlacements.map((criterion) => {
                           const placement = currentPlacements[criterion.id];
                           const criterionFeedback = currentReview?.feedback?.[criterion.id];
 
-                          const showComment =
-                            isSubmitted &&
-                            !criterionFeedback?.correct &&
-                            (currentCommentsPending[criterion.id] || currentComments[criterion.id]);
-
                           return (
-                            <div key={criterion.id} className="flex flex-wrap items-start gap-3">
-                              <div
-                                draggable={!isLoading}
-                                onDragStart={handleDragStart(criterion.id)}
-                                onDragEnd={handleDragEnd}
-                                className={`flex min-w-[240px] flex-1 basis-[240px] flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
-                                  isSubmitted
-                                    ? criterionFeedback?.correct
-                                      ? "border-green-200 bg-green-50"
-                                      : "border-red-200 bg-red-50"
-                                    : "border-stone-200 bg-stone-50"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2">
-                                  {isSubmitted ? (
-                                    criterionFeedback?.correct ? (
-                                      <CheckIcon className="shrink-0 text-green-700" />
-                                    ) : (
-                                      <Cross2Icon className="shrink-0 text-red-700" />
-                                    )
+                            <div
+                              key={criterion.id}
+                              draggable={!isLoading}
+                              onDragStart={handleDragStart(criterion.id)}
+                              onDragEnd={handleDragEnd}
+                              className={`flex flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
+                                isSubmitted
+                                  ? criterionFeedback?.correct
+                                    ? "border-green-200 bg-green-50"
+                                    : "border-red-200 bg-red-50"
+                                  : "border-stone-200 bg-stone-50"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                {isSubmitted ? (
+                                  criterionFeedback?.correct ? (
+                                    <CheckIcon className="shrink-0 text-green-700" />
                                   ) : (
-                                    <DragHandleDots2Icon className="shrink-0 text-stone-400" />
-                                  )}
-                                  <span className="flex-1 font-medium text-stone-700">
-                                    <MathDisplay text={criterion.label} />
-                                  </span>
-                                  <div className="inline-flex shrink-0 gap-1">
-                                    <button
-                                      type="button"
-                                      disabled={isLoading}
-                                      onClick={() => setStatus(criterion.id, "pass")}
-                                      className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
-                                        placement?.status === "pass"
-                                          ? "border-green-600 bg-green-50 text-green-700"
-                                          : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                                      }`}
-                                    >
-                                      Pass
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={isLoading}
-                                      onClick={() => setStatus(criterion.id, "fail")}
-                                      className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
-                                        placement?.status === "fail"
-                                          ? "border-red-600 bg-red-50 text-red-700"
-                                          : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
-                                      }`}
-                                    >
-                                      Fail
-                                    </button>
-                                  </div>
+                                    <Cross2Icon className="shrink-0 text-red-700" />
+                                  )
+                                ) : (
+                                  <DragHandleDots2Icon className="shrink-0 text-stone-400" />
+                                )}
+                                <span className="flex-1 font-medium text-stone-700">
+                                  <MathDisplay text={criterion.label} />
+                                </span>
+                                <div className="inline-flex shrink-0 gap-1">
                                   <button
                                     type="button"
                                     disabled={isLoading}
-                                    onClick={() => unassign(criterion.id)}
-                                    className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed"
-                                    aria-label="Remove rubric item from this line"
+                                    onClick={() => setStatus(criterion.id, "pass")}
+                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                      placement?.status === "pass"
+                                        ? "border-green-600 bg-green-50 text-green-700"
+                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                    }`}
                                   >
-                                    <Cross2Icon />
+                                    Pass
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isLoading}
+                                    onClick={() => setStatus(criterion.id, "fail")}
+                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                      placement?.status === "fail"
+                                        ? "border-red-600 bg-red-50 text-red-700"
+                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                    }`}
+                                  >
+                                    Fail
                                   </button>
                                 </div>
-
-                                {isSubmitted && !criterionFeedback?.correct ? (
-                                  <p className="pl-5 text-[11px] text-red-700">
-                                    {!criterionFeedback?.lineCorrect &&
-                                      `Expected on line${criterionFeedback && criterionFeedback.expectedLines.length > 1 ? "s" : ""} ${criterionFeedback?.expectedLines.join(", ")}. `}
-                                    {!criterionFeedback?.statusCorrect &&
-                                      `Expected: ${criterionFeedback?.expectedStatus}. `}
-                                    {criterionFeedback?.feedback}
-                                  </p>
-                                ) : null}
+                                <button
+                                  type="button"
+                                  disabled={isLoading}
+                                  onClick={() => unassign(criterion.id)}
+                                  className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed"
+                                  aria-label="Remove rubric item from this step"
+                                >
+                                  <Cross2Icon />
+                                </button>
                               </div>
 
-                              {showComment ? (
-                                <div className="relative mt-1 w-56 shrink-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-lime-800 shadow-md">
-                                  {/* <span className="absolute -left-[7px] top-4 h-3 w-3 -rotate-45 border-b border-l border-sky-200 bg-sky-50" /> */}
-                                  <div className="flex items-start gap-1.5">
-                                    <ChatBubbleIcon className="mt-0.5 shrink-0 text-lime-500" />
-                                    {currentCommentsPending[criterion.id] ? (
-                                      <span className="italic text-gray-700">
-                                        {currentAnswer.label} is thinking...
-                                      </span>
-                                    ) : (
-                                      <div>
-                                        <span className="font-semibold">{currentAnswer.label}: </span>
-                                        <MathDisplay
-                                          text={currentComments[criterion.id]}
-                                          className="inline text-xs text-lime-900"
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
+                              {isSubmitted && !criterionFeedback?.correct ? (
+                                <p className="pl-5 text-[11px] text-red-700">
+                                  {!criterionFeedback?.stepCorrect &&
+                                    `Expected on step ${criterionFeedback?.expectedStep}. `}
+                                  {!criterionFeedback?.statusCorrect &&
+                                    `Expected: ${criterionFeedback?.expectedStatus}. `}
+                                  {criterionFeedback?.feedback}
+                                </p>
+                              ) : null}
+
+                              {isSubmitted &&
+                              !criterionFeedback?.correct &&
+                              (currentCommentsPending[criterion.id] ||
+                                currentComments[criterion.id]) ? (
+                                <div className="ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+                                  <ChatBubbleIcon className="mt-0.5 shrink-0 text-sky-600" />
+                                  {currentCommentsPending[criterion.id] ? (
+                                    <span className="italic text-sky-700">
+                                      {currentAnswer.label} is thinking...
+                                    </span>
+                                  ) : (
+                                    <div>
+                                      <span className="font-semibold">{currentAnswer.label}: </span>
+                                      <MathDisplay
+                                        text={currentComments[criterion.id]}
+                                        className="inline text-xs text-sky-900"
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               ) : null}
                             </div>

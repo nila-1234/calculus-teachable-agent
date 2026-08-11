@@ -7,14 +7,14 @@ type RubricRow = {
 
 type RubricFitItem = {
   pass: boolean;
-  line: number[];
+  step: number;
   feedback: string;
 };
 
 type RubricFit = Record<string, RubricFitItem>;
 
 type Placement = {
-  lineIndex: number; // 0-indexed
+  stepIndex: number; // 0-indexed
   status: "pass" | "fail" | null;
 };
 
@@ -50,9 +50,9 @@ export async function POST(req: Request) {
         return {
           criterionId: row.criterionId,
           criterion: row.criterion,
-          placedLine: placement ? placement.lineIndex + 1 : null,
-          expectedLines: [],
-          lineCorrect: false,
+          placedStep: placement ? placement.stepIndex + 1 : null,
+          expectedStep: 0,
+          stepCorrect: false,
           status: placement?.status ?? null,
           expectedStatus: null,
           statusCorrect: false,
@@ -62,34 +62,34 @@ export async function POST(req: Request) {
       }
 
       const expectedStatus: "pass" | "fail" = expected.pass ? "pass" : "fail";
-      const expectedLines = expected.line ?? [];
+      const expectedStep = expected.step;
 
       if (!placement) {
         return {
           criterionId: row.criterionId,
           criterion: row.criterion,
-          placedLine: null,
-          expectedLines,
-          lineCorrect: false,
+          placedStep: null,
+          expectedStep,
+          stepCorrect: false,
           status: null,
           expectedStatus,
           statusCorrect: false,
           correct: false,
-          feedback: "This criterion was not placed on a line.",
+          feedback: "This criterion was not placed on a step.",
         };
       }
 
-      const placedLine = placement.lineIndex + 1;
-      const lineCorrect = expectedLines.includes(placedLine);
+      const placedStep = placement.stepIndex + 1;
+      const stepCorrect = placedStep === expectedStep;
       const statusCorrect = placement.status === expectedStatus;
-      const correct = lineCorrect && statusCorrect;
+      const correct = stepCorrect && statusCorrect;
 
       return {
         criterionId: row.criterionId,
         criterion: row.criterion,
-        placedLine,
-        expectedLines,
-        lineCorrect,
+        placedStep,
+        expectedStep,
+        stepCorrect,
         status: placement.status,
         expectedStatus,
         statusCorrect,

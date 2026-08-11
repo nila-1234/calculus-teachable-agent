@@ -7,13 +7,13 @@ type GradeLinesCommentRequestBody = {
   answerText?: string;
   question?: string;
   criterionLabel?: string;
-  lineText?: string;
+  stepText?: string;
   userStatus?: "pass" | "fail" | null;
   expectedStatus?: "pass" | "fail" | null;
   statusCorrect?: boolean;
-  placedLine?: number | null;
-  expectedLines?: number[];
-  lineCorrect?: boolean;
+  placedStep?: number | null;
+  expectedStep?: number;
+  stepCorrect?: boolean;
 };
 
 export async function POST(req: Request) {
@@ -24,13 +24,13 @@ export async function POST(req: Request) {
       answerText,
       question,
       criterionLabel,
-      lineText,
+      stepText,
       userStatus,
       expectedStatus,
       statusCorrect,
-      placedLine,
-      expectedLines = [],
-      lineCorrect,
+      placedStep,
+      expectedStep,
+      stepCorrect,
     } = body;
 
     const studentName = answerTitle || "the AI student";
@@ -41,15 +41,15 @@ export async function POST(req: Request) {
         `The TA marked this criterion as ${(userStatus ?? "ungraded").toUpperCase()}, but that grade is actually wrong.`
       );
     }
-    if (lineCorrect === false) {
+    if (stepCorrect === false) {
       mistakes.push(
-        `The TA attached this criterion to line ${placedLine ?? "?"} of your work, but it doesn't really belong there (it should be tied to line${expectedLines.length > 1 ? "s" : ""} ${expectedLines.join(", ") || "a different part of your work"}).`
+        `The TA attached this criterion to step ${placedStep ?? "?"} of your work, but it doesn't really belong there (it should be tied to step ${expectedStep ?? "a different part of your work"}).`
       );
     }
 
     const systemPrompt = `You are role-playing as an AI student named "${studentName}" in a calculus tutoring exercise.
 
-You previously submitted the following solution in response to a question. A teaching assistant (TA) is now grading your work line by line: they drag a rubric criterion onto the specific line of your solution it applies to, and mark that criterion Pass or Fail.
+You previously submitted the following solution in response to a question. A teaching assistant (TA) is now grading your work step by step: they drag a rubric criterion onto the specific step of your solution it applies to, and mark that criterion Pass or Fail.
 
 Question:
 ${question || "(question not provided)"}
@@ -57,13 +57,13 @@ ${question || "(question not provided)"}
 Your submitted solution:
 ${answerText || "(solution not provided)"}
 
-The TA just graded the criterion "${criterionLabel ?? "this criterion"}" by attaching it to line ${placedLine ?? "?"} of your work ("${lineText ?? ""}") and marking it ${(userStatus ?? "ungraded").toUpperCase()}.
+The TA just graded the criterion "${criterionLabel ?? "this criterion"}" by attaching it to step ${placedStep ?? "?"} of your work ("${stepText ?? ""}") and marking it ${(userStatus ?? "ungraded").toUpperCase()}.
 
 ${mistakes.join(" ")}
 
 Stay in character as the student:
 - You don't know the "correct" grading — you just feel something is off about how you were graded, so push back naturally and specifically.
-- Ask a genuine, brief, slightly confused question about the grading decision (why this line, why this grade), referencing the specific criterion and line.
+- Ask a genuine, brief, slightly confused question about the grading decision (why this step, why this grade), referencing the specific criterion and step.
 - Keep it to 1-2 sentences, conversational, and in a tone that nudges the TA to double check their grading without being certain they're wrong.
 - Never break character or mention that you are an AI/LLM, and never reveal or imply you know the "right answer" to the grading.`;
 

@@ -135,7 +135,7 @@ function ApplyRubricPageContent() {
           scenarioId,
           answerId,
           answerTitle: answer.label,
-          answerText: answer.text,
+          answerText: answer.steps.join("\n\n"),
           rubric: rubricWithReviews,
           results: review.results,
           rubricFit: answer.rubricFit,
