@@ -308,7 +308,7 @@ export default function LineRubricPanel({
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
-                                    Pass
+                                    AI Student Pass
                                   </button>
                                   <button
                                     type="button"
@@ -320,7 +320,7 @@ export default function LineRubricPanel({
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
-                                    Fail
+                                    AI Student Fail
                                   </button>
                                 </div>
                                 <button
