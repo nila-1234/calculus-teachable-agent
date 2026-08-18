@@ -3,11 +3,13 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
+  GradeComment,
   StepPlacement,
   StepPlacementsState,
   StepReviewState,
   RubricCriterion,
 } from "@/components/line-rubric-panel";
+import { CommentSpeaker, pickSpeakers } from "@/lib/grading-voice";
 import { getScenario } from "@/lib/scenarios/registry";
 import AppHeader from "@/components/app-header";
 import StepProgress from "@/components/step-progress";
@@ -34,8 +36,25 @@ function GradeLinesPageContent() {
   const [reviewStates, setReviewStates] = useState<StepReviewState>({});
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [comments, setComments] = useState<Record<string, Record<string, string>>>({});
-  const [commentsPending, setCommentsPending] = useState<Record<string, Record<string, boolean>>>({});
+  const [comments, setComments] = useState<Record<string, Record<string, GradeComment[]>>>({});
+
+  // Patches one speaker's bubble on a criterion, leaving any other speaker's bubble alone.
+  const patchComment = (
+    answerId: string,
+    criterionId: string,
+    speaker: CommentSpeaker,
+    patch: Partial<GradeComment>
+  ) => {
+    setComments((prev) => ({
+      ...prev,
+      [answerId]: {
+        ...prev[answerId],
+        [criterionId]: (prev[answerId]?.[criterionId] ?? []).map((comment) =>
+          comment.speaker === speaker ? { ...comment, ...patch } : comment
+        ),
+      },
+    }));
+  };
 
   useEffect(() => {
     setQuestion(sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) || "");
@@ -74,15 +93,11 @@ function GradeLinesPageContent() {
       expectedStep: number;
       stepCorrect: boolean;
       feedback: string;
-    }
+    },
+    assignment: { speaker: CommentSpeaker; coversStep: boolean; coversStatus: boolean }
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     if (!answer) return;
-
-    setCommentsPending((prev) => ({
-      ...prev,
-      [answerId]: { ...prev[answerId], [criterionId]: true },
-    }));
 
     try {
       const res = await fetch("/api/grade-lines-comment", {
@@ -102,21 +117,21 @@ function GradeLinesPageContent() {
           placedStep: feedbackItem.placedStep,
           expectedStep: feedbackItem.expectedStep,
           stepCorrect: feedbackItem.stepCorrect,
+          speaker: assignment.speaker,
+          coversStep: assignment.coversStep,
+          coversStatus: assignment.coversStatus,
         }),
       });
       const data = await res.json();
 
-      setComments((prev) => ({
-        ...prev,
-        [answerId]: { ...prev[answerId], [criterionId]: data.reply ?? "" },
-      }));
+      patchComment(answerId, criterionId, assignment.speaker, {
+        text: data.reply ?? "",
+        pending: false,
+      });
     } catch {
-      // Ignore comment errors; the pass/fail result above is unaffected.
-    } finally {
-      setCommentsPending((prev) => ({
-        ...prev,
-        [answerId]: { ...prev[answerId], [criterionId]: false },
-      }));
+      // Ignore comment errors; the pass/fail result above is unaffected, and an empty
+      // comment renders nothing rather than blocking the other speaker's bubble.
+      patchComment(answerId, criterionId, assignment.speaker, { text: "", pending: false });
     }
   };
 
@@ -173,21 +188,44 @@ function GradeLinesPageContent() {
         [answerId]: { submitted: true, feedback: feedbackByCriterion },
       }));
 
-      feedbackList
-        .filter((item) => !item.correct)
-        .forEach((item) => {
-          const stepText =
-            item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "";
-          const expectedStepText = answer.steps[item.expectedStep - 1] ?? "";
+      const incorrect = feedbackList.filter((item) => !item.correct);
+
+      // Seed every bubble as pending up front so both speakers on one criterion appear
+      // together and keep a stable order while their replies come back independently.
+      setComments((prev) => ({
+        ...prev,
+        [answerId]: {
+          ...prev[answerId],
+          ...Object.fromEntries(
+            incorrect.map((item) => [
+              item.criterionId,
+              pickSpeakers(item).map(({ speaker }) => ({
+                speaker,
+                text: "",
+                pending: true,
+              })),
+            ])
+          ),
+        },
+      }));
+
+      incorrect.forEach((item) => {
+        const stepText =
+          item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "";
+        const expectedStepText = answer.steps[item.expectedStep - 1] ?? "";
+
+        pickSpeakers(item).forEach((assignment) => {
           fetchNudgeComment(
             answerId,
             item.criterionId,
             item.criterion,
             stepText,
             expectedStepText,
-            item
+            item,
+            assignment
           );
         });
+      });
     } catch {
       setReviewStates((prev) => ({
         ...prev,
@@ -209,7 +247,7 @@ function GradeLinesPageContent() {
           title="Step 3 · Evaluate AI student answers"
           paragraphs={[
             "Before applying your rubric to real student answers, test it with sample solutions. You asked AI to role-play as students and generate several responses.",
-            "You are the grader here. Drag each rubric item onto the exact step of the answer it applies to, then judge the AI student against that criterion: mark it pass if their step meets the criterion, fail if it does not.",
+            "You are the grader here. Drag each rubric item onto the exact step of the answer it applies to, then judge the AI student against that criterion: mark it pass if their step meets the criterion, fail if it does not. Once you submit, the AI student or the professor will comment on any grading they disagree with.",
           ]}
         />
 
@@ -223,7 +261,6 @@ function GradeLinesPageContent() {
           loadingAnswerId={loadingAnswerId}
           onSubmitAnswer={handleSubmitAnswer}
           comments={comments}
-          commentsPending={commentsPending}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
           onComplete={handleComplete}

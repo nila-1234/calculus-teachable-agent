@@ -5,13 +5,35 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   CheckIcon,
-  ChatBubbleIcon,
   Cross2Icon,
   DragHandleDots2Icon,
 } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import Button from "@/components/button";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
+import type { CommentSpeaker } from "@/lib/grading-voice";
+
+export type GradeComment = {
+  speaker: CommentSpeaker;
+  text: string;
+  pending: boolean;
+};
+
+const SPEAKER_STYLES: Record<
+  CommentSpeaker,
+  { bubble: string; avatar: string; initial: string }
+> = {
+  student: {
+    bubble: "border-sky-200 bg-sky-50 text-sky-900",
+    avatar: "bg-sky-600 text-white",
+    initial: "S",
+  },
+  professor: {
+    bubble: "border-amber-200 bg-amber-50 text-amber-900",
+    avatar: "bg-amber-600 text-white",
+    initial: "P",
+  },
+};
 
 export type RubricCriterion = {
   id: string;
@@ -57,10 +79,8 @@ type LineRubricPanelProps = {
   reviewStates: StepReviewState;
   loadingAnswerId?: string | null;
   onSubmitAnswer: (answerId: string) => void;
-  // Keyed by answerId -> criterionId -> student nudge comment
-  comments?: Record<string, Record<string, string>>;
-  // Keyed by answerId -> criterionId -> whether the nudge comment is loading
-  commentsPending?: Record<string, Record<string, boolean>>;
+  // Keyed by answerId -> criterionId -> comments, in display order
+  comments?: Record<string, Record<string, GradeComment[]>>;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every answer has been submitted.
@@ -77,7 +97,6 @@ export default function LineRubricPanel({
   loadingAnswerId,
   onSubmitAnswer,
   comments,
-  commentsPending,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -93,7 +112,6 @@ export default function LineRubricPanel({
   const isSubmitted = currentReview?.submitted ?? false;
   const isLoading = loadingAnswerId === currentAnswer.id;
   const currentComments = comments?.[currentAnswer.id] ?? {};
-  const currentCommentsPending = commentsPending?.[currentAnswer.id] ?? {};
 
   const allPlaced =
     rubric.length > 0 && rubric.every((criterion) => currentPlacements[criterion.id]?.status);
@@ -212,7 +230,9 @@ export default function LineRubricPanel({
             You are grading this AI student&apos;s work. Drag a rubric item from the bank onto the
             step it applies to, then decide whether the student met that criterion:{" "}
             <span className="font-semibold text-stone-600">Pass</span> if their step satisfies it,{" "}
-            <span className="font-semibold text-stone-600">Fail</span> if it does not.
+            <span className="font-semibold text-stone-600">Fail</span> if it does not. After you
+            submit, the AI student or the professor will comment on any grading they disagree
+            with.
           </p>
 
           <div className="flex flex-col gap-2">
@@ -327,28 +347,45 @@ export default function LineRubricPanel({
                                 </p>
                               ) : null}
 
-                              {isSubmitted &&
-                              criterionFeedback &&
-                              !criterionFeedback.correct &&
-                              (currentCommentsPending[criterion.id] ||
-                                currentComments[criterion.id]) ? (
-                                <div className="ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
-                                  <ChatBubbleIcon className="mt-0.5 shrink-0 text-sky-600" />
-                                  {currentCommentsPending[criterion.id] ? (
-                                    <span className="italic text-sky-700">
-                                      {currentAnswer.label} is thinking...
-                                    </span>
-                                  ) : (
-                                    <div>
-                                      <span className="font-semibold">{currentAnswer.label}: </span>
-                                      <MathDisplay
-                                        text={currentComments[criterion.id]}
-                                        className="inline text-xs text-sky-900"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              ) : null}
+                              {isSubmitted && criterionFeedback && !criterionFeedback.correct
+                                ? (currentComments[criterion.id] ?? [])
+                                    .filter((comment) => comment.pending || comment.text)
+                                    .map((comment) => {
+                                      const style = SPEAKER_STYLES[comment.speaker];
+                                      const name =
+                                        comment.speaker === "professor"
+                                          ? "Professor"
+                                          : currentAnswer.label;
+
+                                      return (
+                                        <div
+                                          key={comment.speaker}
+                                          className={`ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border px-3 py-2 text-xs ${style.bubble}`}
+                                        >
+                                          <span
+                                            title={name}
+                                            aria-label={name}
+                                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${style.avatar}`}
+                                          >
+                                            {style.initial}
+                                          </span>
+                                          {comment.pending ? (
+                                            <span className="italic opacity-80">
+                                              {name} is thinking...
+                                            </span>
+                                          ) : (
+                                            <div>
+                                              <span className="font-semibold">{name}: </span>
+                                              <MathDisplay
+                                                text={comment.text}
+                                                className="inline text-xs"
+                                              />
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    })
+                                : null}
                             </div>
                           );
                         })}
