@@ -61,9 +61,6 @@ type LineRubricPanelProps = {
   comments?: Record<string, Record<string, string>>;
   // Keyed by answerId -> criterionId -> whether the nudge comment is loading
   commentsPending?: Record<string, Record<string, boolean>>;
-  // Called when a criterion is re-graded (moved to another step, or its status changed after
-  // submitting) so the stored result and student comment for it can be dropped.
-  onCriterionReset?: (answerId: string, criterionId: string) => void;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every answer has been submitted.
@@ -81,7 +78,6 @@ export default function LineRubricPanel({
   onSubmitAnswer,
   comments,
   commentsPending,
-  onCriterionReset,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -116,7 +112,8 @@ export default function LineRubricPanel({
 
   const assignToStep = (criterionId: string, stepIndex: number) => {
     const existing = currentPlacements[criterionId];
-    // Moving a criterion to a different step invalidates any grade it already carries.
+    // Moving a criterion to a different step invalidates its pass/fail, so it has to be marked
+    // again. The earlier feedback stays on screen to inform that decision.
     const moved = existing != null && existing.stepIndex !== stepIndex;
 
     updatePlacements({
@@ -127,8 +124,6 @@ export default function LineRubricPanel({
         status: moved ? null : existing?.status ?? null,
       },
     });
-
-    if (moved) onCriterionReset?.(currentAnswer.id, criterionId);
   };
 
   const unassign = (criterionId: string) => {
@@ -141,20 +136,13 @@ export default function LineRubricPanel({
     const existing = currentPlacements[criterionId];
     if (!existing) return;
 
-    const nextStatus = existing.status === status ? null : status;
-
     updatePlacements({
       ...currentPlacements,
       [criterionId]: {
         ...existing,
-        status: nextStatus,
+        status: existing.status === status ? null : status,
       },
     });
-
-    // Re-marking after submitting means the stored result no longer reflects this choice.
-    if (isSubmitted && nextStatus !== currentReview?.feedback?.[criterionId]?.status) {
-      onCriterionReset?.(currentAnswer.id, criterionId);
-    }
   };
 
   const handleDragStart = (criterionId: string) => (e: React.DragEvent) => {
