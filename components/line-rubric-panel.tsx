@@ -28,13 +28,13 @@ const SPEAKER_STYLES: Record<
   { bubble: string; avatar: string; initial: string }
 > = {
   student: {
-    bubble: "border-sky-200 bg-sky-50 text-sky-900",
+    bubble: "border border-stone-200 bg-white text-stone-700",
     avatar: "bg-sky-600 text-white",
     initial: "S",
   },
   professor: {
-    bubble: "border-amber-200 bg-amber-50 text-amber-900",
-    avatar: "bg-amber-600 text-white",
+    bubble: "border border-stone-200 bg-white text-stone-700",
+    avatar: "bg-stone-700 text-white",
     initial: "P",
   },
 };
@@ -304,12 +304,12 @@ export default function LineRubricPanel({
                               draggable={!isLoading}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
-                              className={`flex flex-col gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs ${
+                              className={`flex flex-col gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs ${
                                 isSubmitted && criterionFeedback
                                   ? criterionFeedback.correct
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-red-200 bg-red-50"
-                                  : "border-stone-200 bg-stone-50"
+                                    ? "bg-green-50"
+                                    : "bg-red-50"
+                                  : "bg-stone-50"
                               }`}
                             >
                               <div className="flex items-center gap-2">
@@ -332,7 +332,7 @@ export default function LineRubricPanel({
                                     onClick={() => setStatus(criterion.id, "pass")}
                                     className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "pass"
-                                        ? "border-stone-600 bg-stone-200 text-stone-800"
+                                        ? "border-slate-500 bg-slate-200 text-slate-800"
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
@@ -344,7 +344,7 @@ export default function LineRubricPanel({
                                     onClick={() => setStatus(criterion.id, "fail")}
                                     className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "fail"
-                                        ? "border-stone-600 bg-stone-200 text-stone-800"
+                                        ? "border-slate-500 bg-slate-200 text-slate-800"
                                         : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
@@ -388,7 +388,7 @@ export default function LineRubricPanel({
                                       return (
                                         <div
                                           key={comment.speaker}
-                                          className={`ml-5 flex items-start gap-2 rounded-xl rounded-tl-none border px-3 py-2 text-xs ${style.bubble}`}
+                                          className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${style.bubble}`}
                                         >
                                           <span
                                             title={name}
