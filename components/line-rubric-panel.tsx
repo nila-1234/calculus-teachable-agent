@@ -4,14 +4,18 @@ import { useState } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
+  ChatBubbleIcon,
   CheckIcon,
   Cross2Icon,
   DragHandleDots2Icon,
 } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import Button from "@/components/button";
+import DiscussionPanel, { DiscussionMessage } from "@/components/discussion-panel";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 import type { CommentSpeaker } from "@/lib/grading-voice";
+
+export type { DiscussionMessage } from "@/components/discussion-panel";
 
 export type GradeComment = {
   speaker: CommentSpeaker;
@@ -81,6 +85,14 @@ type LineRubricPanelProps = {
   onSubmitAnswer: (answerId: string) => void;
   // Keyed by answerId -> criterionId -> comments, in display order
   comments?: Record<string, Record<string, GradeComment[]>>;
+  // Discussion-mode follow-up turns, keyed by answerId -> criterionId. Only applies to the
+  // student speaker for now — the opening rebuttal itself lives in `comments`.
+  discussions?: Record<string, Record<string, DiscussionMessage[]>>;
+  discussionPending?: Record<string, Record<string, boolean>>;
+  onSendDiscussionMessage?: (answerId: string, criterionId: string, text: string) => void;
+  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the student
+  // "Reply" discussion drawer. Defaults to 2.
+  discussionMode?: number;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every answer has been submitted.
@@ -97,6 +109,10 @@ export default function LineRubricPanel({
   loadingAnswerId,
   onSubmitAnswer,
   comments,
+  discussions,
+  discussionPending,
+  onSendDiscussionMessage,
+  discussionMode = 2,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -104,6 +120,9 @@ export default function LineRubricPanel({
   const [dragCriterionId, setDragCriterionId] = useState<string | null>(null);
   const [dragOverStep, setDragOverStep] = useState<number | null>(null);
   const [dragOverBank, setDragOverBank] = useState(false);
+  const [activeDiscussionCriterionId, setActiveDiscussionCriterionId] = useState<
+    string | null
+  >(null);
 
   const currentAnswer = answers[currentIndex];
   const steps = currentAnswer.steps;
@@ -112,6 +131,15 @@ export default function LineRubricPanel({
   const isSubmitted = currentReview?.submitted ?? false;
   const isLoading = loadingAnswerId === currentAnswer.id;
   const currentComments = comments?.[currentAnswer.id] ?? {};
+  const currentDiscussions = discussions?.[currentAnswer.id] ?? {};
+  const currentDiscussionPending = discussionPending?.[currentAnswer.id] ?? {};
+
+  const activeDiscussionComment = activeDiscussionCriterionId
+    ? currentComments[activeDiscussionCriterionId]?.find((c) => c.speaker === "student")
+    : undefined;
+  const activeDiscussionCriterion = activeDiscussionCriterionId
+    ? rubric.find((c) => c.id === activeDiscussionCriterionId)
+    : undefined;
 
   const allPlaced =
     rubric.length > 0 && rubric.every((criterion) => currentPlacements[criterion.id]?.status);
@@ -374,12 +402,28 @@ export default function LineRubricPanel({
                                               {name} is thinking...
                                             </span>
                                           ) : (
-                                            <div>
+                                            <div className="flex-1">
                                               <span className="font-semibold">{name}: </span>
                                               <MathDisplay
                                                 text={comment.text}
                                                 className="inline text-xs"
                                               />
+                                              {discussionMode === 2 && comment.speaker === "student" ? (
+                                                <button
+                                                  type="button"
+                                                  onClick={() =>
+                                                    setActiveDiscussionCriterionId(criterion.id)
+                                                  }
+                                                  className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900"
+                                                >
+                                                  <ChatBubbleIcon width={12} height={12} />
+                                                  Reply
+                                                  {(currentDiscussions[criterion.id]?.length ??
+                                                    0) > 0
+                                                    ? ` (${currentDiscussions[criterion.id]?.length})`
+                                                    : ""}
+                                                </button>
+                                              ) : null}
                                             </div>
                                           )}
                                         </div>
@@ -482,6 +526,21 @@ export default function LineRubricPanel({
           </Button>
         )}
       </div>
+
+      {discussionMode === 2 && activeDiscussionCriterionId && activeDiscussionComment ? (
+        <DiscussionPanel
+          open
+          onClose={() => setActiveDiscussionCriterionId(null)}
+          studentLabel={currentAnswer.label}
+          criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}
+          openingComment={activeDiscussionComment.text}
+          messages={currentDiscussions[activeDiscussionCriterionId] ?? []}
+          pending={currentDiscussionPending[activeDiscussionCriterionId] ?? false}
+          onSend={(text) =>
+            onSendDiscussionMessage?.(currentAnswer.id, activeDiscussionCriterionId, text)
+          }
+        />
+      ) : null}
     </div>
   );
 }

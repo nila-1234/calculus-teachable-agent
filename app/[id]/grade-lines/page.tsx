@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
+  DiscussionMessage,
   GradeComment,
   StepPlacement,
   StepPlacementsState,
@@ -20,7 +21,11 @@ import { logEvent } from "@/lib/logger";
 function GradeLinesPageContent() {
   const params = useParams();
   const router = useRouter();
-  const query = useSearchParams().toString();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
+  // student "Reply" discussion drawer added in this pass. Defaults to 2.
+  const discussionMode = parseInt(searchParams.get("discussionMode") || "2", 10);
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
 
@@ -37,6 +42,12 @@ function GradeLinesPageContent() {
   const [loadingAnswerId, setLoadingAnswerId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [comments, setComments] = useState<Record<string, Record<string, GradeComment[]>>>({});
+  const [discussions, setDiscussions] = useState<
+    Record<string, Record<string, DiscussionMessage[]>>
+  >({});
+  const [discussionPending, setDiscussionPending] = useState<
+    Record<string, Record<string, boolean>>
+  >({});
 
   // Patches one speaker's bubble on a criterion, leaving any other speaker's bubble alone.
   const patchComment = (
@@ -132,6 +143,81 @@ function GradeLinesPageContent() {
       // Ignore comment errors; the pass/fail result above is unaffected, and an empty
       // comment renders nothing rather than blocking the other speaker's bubble.
       patchComment(answerId, criterionId, assignment.speaker, { text: "", pending: false });
+    }
+  };
+
+  const handleSendDiscussionMessage = async (
+    answerId: string,
+    criterionId: string,
+    text: string
+  ) => {
+    const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
+    const criterionFeedback = reviewStates[answerId]?.feedback?.[criterionId];
+    const studentComment = comments[answerId]?.[criterionId]?.find(
+      (c) => c.speaker === "student"
+    );
+    if (!answer || !criterionFeedback || !studentComment) return;
+
+    const priorMessages = discussions[answerId]?.[criterionId] ?? [];
+    const userMessage: DiscussionMessage = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      text,
+    };
+
+    setDiscussions((prev) => ({
+      ...prev,
+      [answerId]: {
+        ...prev[answerId],
+        [criterionId]: [...priorMessages, userMessage],
+      },
+    }));
+    setDiscussionPending((prev) => ({
+      ...prev,
+      [answerId]: { ...prev[answerId], [criterionId]: true },
+    }));
+
+    try {
+      const res = await fetch("/api/grade-lines-discussion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answerTitle: answer.label,
+          answerText: answer.steps.join("\n\n"),
+          question,
+          criterionLabel: criterionFeedback.criterion,
+          stepText:
+            criterionFeedback.placedStep != null
+              ? answer.steps[criterionFeedback.placedStep - 1] ?? ""
+              : "",
+          feedback: criterionFeedback.feedback,
+          userStatus: criterionFeedback.status,
+          expectedStatus: criterionFeedback.expectedStatus,
+          placedStep: criterionFeedback.placedStep,
+          openingComment: studentComment.text,
+          messages: priorMessages.map((m) => ({ role: m.role, text: m.text })),
+          userMessage: text,
+        }),
+      });
+      const data = await res.json();
+
+      setDiscussions((prev) => ({
+        ...prev,
+        [answerId]: {
+          ...prev[answerId],
+          [criterionId]: [
+            ...(prev[answerId]?.[criterionId] ?? []),
+            { id: `student-${Date.now()}`, role: "student", text: data.reply ?? "" },
+          ],
+        },
+      }));
+    } catch {
+      // Ignore discussion errors; the TA's message stays in the thread either way.
+    } finally {
+      setDiscussionPending((prev) => ({
+        ...prev,
+        [answerId]: { ...prev[answerId], [criterionId]: false },
+      }));
     }
   };
 
@@ -261,6 +347,10 @@ function GradeLinesPageContent() {
           loadingAnswerId={loadingAnswerId}
           onSubmitAnswer={handleSubmitAnswer}
           comments={comments}
+          discussions={discussions}
+          discussionPending={discussionPending}
+          onSendDiscussionMessage={handleSendDiscussionMessage}
+          discussionMode={discussionMode}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}
           onComplete={handleComplete}
