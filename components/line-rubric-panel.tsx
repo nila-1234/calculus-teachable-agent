@@ -28,12 +28,12 @@ const SPEAKER_STYLES: Record<
   { bubble: string; avatar: string; initial: string }
 > = {
   student: {
-    bubble: "border border-stone-200 bg-white text-stone-700",
-    avatar: "bg-sky-600 text-white",
+    bubble: "bg-white text-stone-700",
+    avatar: "bg-lime-600 text-white",
     initial: "S",
   },
   professor: {
-    bubble: "border border-stone-200 bg-white text-stone-700",
+    bubble: "bg-white text-stone-700",
     avatar: "bg-stone-700 text-white",
     initial: "P",
   },
@@ -304,7 +304,7 @@ export default function LineRubricPanel({
                               draggable={!isLoading}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
-                              className={`flex flex-col gap-1.5 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs ${
+                              className={`flex flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm ${
                                 isSubmitted && criterionFeedback
                                   ? criterionFeedback.correct
                                     ? "bg-green-50"
@@ -330,10 +330,10 @@ export default function LineRubricPanel({
                                     type="button"
                                     disabled={isLoading}
                                     onClick={() => setStatus(criterion.id, "pass")}
-                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                    className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "pass"
-                                        ? "border-slate-500 bg-slate-200 text-slate-800"
-                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                        ? "bg-stone-300 text-slate-800"
+                                        : "bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
                                     AI Student Pass
@@ -342,10 +342,10 @@ export default function LineRubricPanel({
                                     type="button"
                                     disabled={isLoading}
                                     onClick={() => setStatus(criterion.id, "fail")}
-                                    className={`rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors disabled:cursor-not-allowed ${
+                                    className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
                                       placement?.status === "fail"
-                                        ? "border-slate-500 bg-slate-200 text-slate-800"
-                                        : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
+                                        ? "bg-stone-300 text-slate-800"
+                                        : "bg-white text-stone-500 hover:border-stone-300"
                                     }`}
                                   >
                                     AI Student Fail
@@ -362,8 +362,8 @@ export default function LineRubricPanel({
                                 </button>
                               </div>
 
-                              {isSubmitted && criterionFeedback && !criterionFeedback.correct ? (
-                                <p className="pl-5 text-[11px] font-medium text-red-700">
+                              {/* {isSubmitted && criterionFeedback && !criterionFeedback.correct ? (
+                                <p className="pl-5 text-xs font-medium text-red-700">
                                   Expected:
                                   {!criterionFeedback.stepCorrect &&
                                     ` step ${criterionFeedback.expectedStep}`}
@@ -373,7 +373,7 @@ export default function LineRubricPanel({
                                   {!criterionFeedback.statusCorrect &&
                                     ` ${criterionFeedback.expectedStatus}`}
                                 </p>
-                              ) : null}
+                              ) : null} */}
 
                               {isSubmitted && criterionFeedback && !criterionFeedback.correct
                                 ? (currentComments[criterion.id] ?? [])
@@ -414,9 +414,9 @@ export default function LineRubricPanel({
                                                   onClick={() =>
                                                     setActiveDiscussionCriterionId(criterion.id)
                                                   }
-                                                  className="mt-1.5 flex items-center gap-1 text-[11px] font-semibold text-sky-700 hover:text-sky-900"
+                                                  className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-lime-700 hover:text-lime-900"
                                                 >
-                                                  <ChatBubbleIcon width={12} height={12} />
+                                                  <ChatBubbleIcon width={15} height={15} />
                                                   Reply
                                                   {(currentDiscussions[criterion.id]?.length ??
                                                     0) > 0
