@@ -24,7 +24,7 @@ function GradeLinesPageContent() {
   const searchParams = useSearchParams();
   const query = searchParams.toString();
   // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
-  // student "Reply" discussion drawer added in this pass. Defaults to 2.
+  // "Reply" discussion drawer. Defaults to 2.
   const discussionMode = parseInt(searchParams.get("discussionMode") || "2", 10);
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -43,10 +43,10 @@ function GradeLinesPageContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [comments, setComments] = useState<Record<string, Record<string, GradeComment[]>>>({});
   const [discussions, setDiscussions] = useState<
-    Record<string, Record<string, DiscussionMessage[]>>
+    Record<string, Record<string, Partial<Record<CommentSpeaker, DiscussionMessage[]>>>>
   >({});
   const [discussionPending, setDiscussionPending] = useState<
-    Record<string, Record<string, boolean>>
+    Record<string, Record<string, Partial<Record<CommentSpeaker, boolean>>>>
   >({});
 
   // Patches one speaker's bubble on a criterion, leaving any other speaker's bubble alone.
@@ -149,16 +149,17 @@ function GradeLinesPageContent() {
   const handleSendDiscussionMessage = async (
     answerId: string,
     criterionId: string,
+    speaker: CommentSpeaker,
     text: string
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     const criterionFeedback = reviewStates[answerId]?.feedback?.[criterionId];
-    const studentComment = comments[answerId]?.[criterionId]?.find(
-      (c) => c.speaker === "student"
+    const openingComment = comments[answerId]?.[criterionId]?.find(
+      (c) => c.speaker === speaker
     );
-    if (!answer || !criterionFeedback || !studentComment) return;
+    if (!answer || !criterionFeedback || !openingComment) return;
 
-    const priorMessages = discussions[answerId]?.[criterionId] ?? [];
+    const priorMessages = discussions[answerId]?.[criterionId]?.[speaker] ?? [];
     const userMessage: DiscussionMessage = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -169,12 +170,21 @@ function GradeLinesPageContent() {
       ...prev,
       [answerId]: {
         ...prev[answerId],
-        [criterionId]: [...priorMessages, userMessage],
+        [criterionId]: {
+          ...prev[answerId]?.[criterionId],
+          [speaker]: [...priorMessages, userMessage],
+        },
       },
     }));
     setDiscussionPending((prev) => ({
       ...prev,
-      [answerId]: { ...prev[answerId], [criterionId]: true },
+      [answerId]: {
+        ...prev[answerId],
+        [criterionId]: {
+          ...prev[answerId]?.[criterionId],
+          [speaker]: true,
+        },
+      },
     }));
 
     try {
@@ -182,6 +192,7 @@ function GradeLinesPageContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          speaker,
           answerTitle: answer.label,
           answerText: answer.steps.join("\n\n"),
           question,
@@ -194,7 +205,7 @@ function GradeLinesPageContent() {
           userStatus: criterionFeedback.status,
           expectedStatus: criterionFeedback.expectedStatus,
           placedStep: criterionFeedback.placedStep,
-          openingComment: studentComment.text,
+          openingComment: openingComment.text,
           messages: priorMessages.map((m) => ({ role: m.role, text: m.text })),
           userMessage: text,
         }),
@@ -205,10 +216,13 @@ function GradeLinesPageContent() {
         ...prev,
         [answerId]: {
           ...prev[answerId],
-          [criterionId]: [
-            ...(prev[answerId]?.[criterionId] ?? []),
-            { id: `student-${Date.now()}`, role: "student", text: data.reply ?? "" },
-          ],
+          [criterionId]: {
+            ...prev[answerId]?.[criterionId],
+            [speaker]: [
+              ...(prev[answerId]?.[criterionId]?.[speaker] ?? []),
+              { id: `${speaker}-${Date.now()}`, role: speaker, text: data.reply ?? "" },
+            ],
+          },
         },
       }));
     } catch {
@@ -216,7 +230,13 @@ function GradeLinesPageContent() {
     } finally {
       setDiscussionPending((prev) => ({
         ...prev,
-        [answerId]: { ...prev[answerId], [criterionId]: false },
+        [answerId]: {
+          ...prev[answerId],
+          [criterionId]: {
+            ...prev[answerId]?.[criterionId],
+            [speaker]: false,
+          },
+        },
       }));
     }
   };

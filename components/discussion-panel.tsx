@@ -6,14 +6,14 @@ import MathDisplay from "@/components/math-display";
 
 export type DiscussionMessage = {
   id: string;
-  role: "user" | "student";
+  role: "user" | "student" | "professor";
   text: string;
 };
 
 type DiscussionPanelProps = {
   open: boolean;
   onClose: () => void;
-  studentLabel: string;
+  counterpartLabel: string;
   criterionLabel: string;
   openingComment: string;
   messages: DiscussionMessage[];
@@ -24,7 +24,7 @@ type DiscussionPanelProps = {
 export default function DiscussionPanel({
   open,
   onClose,
-  studentLabel,
+  counterpartLabel,
   criterionLabel,
   openingComment,
   messages,
@@ -59,7 +59,7 @@ export default function DiscussionPanel({
             <span className="text-xs font-bold uppercase tracking-wider text-sky-600">
               Discussion
             </span>
-            <h3 className="text-base font-bold text-stone-800">{studentLabel}</h3>
+            <h3 className="text-base font-bold text-stone-800">{counterpartLabel}</h3>
             <div className="mt-0.5 text-xs text-stone-500">
               <MathDisplay text={criterionLabel} className="inline text-xs text-stone-500" />
             </div>
@@ -101,7 +101,7 @@ export default function DiscussionPanel({
           {pending ? (
             <div className="flex justify-start">
               <div className="max-w-[85%] rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-sm italic text-sky-700">
-                {studentLabel} is thinking...
+                {counterpartLabel} is thinking...
               </div>
             </div>
           ) : null}
@@ -117,7 +117,7 @@ export default function DiscussionPanel({
                 handleSubmit(e);
               }
             }}
-            placeholder={`Reply to ${studentLabel}...`}
+            placeholder={`Reply to ${counterpartLabel}...`}
             rows={1}
             disabled={pending}
             className="min-h-[40px] flex-1 resize-none rounded-lg border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"

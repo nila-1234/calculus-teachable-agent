@@ -85,12 +85,23 @@ type LineRubricPanelProps = {
   onSubmitAnswer: (answerId: string) => void;
   // Keyed by answerId -> criterionId -> comments, in display order
   comments?: Record<string, Record<string, GradeComment[]>>;
-  // Discussion-mode follow-up turns, keyed by answerId -> criterionId. Only applies to the
-  // student speaker for now — the opening rebuttal itself lives in `comments`.
-  discussions?: Record<string, Record<string, DiscussionMessage[]>>;
-  discussionPending?: Record<string, Record<string, boolean>>;
-  onSendDiscussionMessage?: (answerId: string, criterionId: string, text: string) => void;
-  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the student
+  // Discussion-mode follow-up turns, keyed by answerId -> criterionId -> speaker.
+  // The opening comment itself lives in `comments`.
+  discussions?: Record<
+    string,
+    Record<string, Partial<Record<CommentSpeaker, DiscussionMessage[]>>>
+  >;
+  discussionPending?: Record<
+    string,
+    Record<string, Partial<Record<CommentSpeaker, boolean>>>
+  >;
+  onSendDiscussionMessage?: (
+    answerId: string,
+    criterionId: string,
+    speaker: CommentSpeaker,
+    text: string
+  ) => void;
+  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
   // "Reply" discussion drawer. Defaults to 2.
   discussionMode?: number;
   currentIndex: number;
@@ -120,9 +131,10 @@ export default function LineRubricPanel({
   const [dragCriterionId, setDragCriterionId] = useState<string | null>(null);
   const [dragOverStep, setDragOverStep] = useState<number | null>(null);
   const [dragOverBank, setDragOverBank] = useState(false);
-  const [activeDiscussionCriterionId, setActiveDiscussionCriterionId] = useState<
-    string | null
-  >(null);
+  const [activeDiscussion, setActiveDiscussion] = useState<{
+    criterionId: string;
+    speaker: CommentSpeaker;
+  } | null>(null);
 
   const currentAnswer = answers[currentIndex];
   const steps = currentAnswer.steps;
@@ -134,12 +146,16 @@ export default function LineRubricPanel({
   const currentDiscussions = discussions?.[currentAnswer.id] ?? {};
   const currentDiscussionPending = discussionPending?.[currentAnswer.id] ?? {};
 
-  const activeDiscussionComment = activeDiscussionCriterionId
-    ? currentComments[activeDiscussionCriterionId]?.find((c) => c.speaker === "student")
+  const activeDiscussionComment = activeDiscussion
+    ? currentComments[activeDiscussion.criterionId]?.find(
+        (c) => c.speaker === activeDiscussion.speaker
+      )
     : undefined;
-  const activeDiscussionCriterion = activeDiscussionCriterionId
-    ? rubric.find((c) => c.id === activeDiscussionCriterionId)
+  const activeDiscussionCriterion = activeDiscussion
+    ? rubric.find((c) => c.id === activeDiscussion.criterionId)
     : undefined;
+  const activeCounterpartLabel =
+    activeDiscussion?.speaker === "professor" ? "Professor" : currentAnswer.label;
 
   const allPlaced =
     rubric.length > 0 && rubric.every((criterion) => currentPlacements[criterion.id]?.status);
@@ -393,7 +409,7 @@ export default function LineRubricPanel({
                                           <span
                                             title={name}
                                             aria-label={name}
-                                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${style.avatar}`}
+                                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.avatar}`}
                                           >
                                             {style.initial}
                                           </span>
@@ -408,19 +424,23 @@ export default function LineRubricPanel({
                                                 text={comment.text}
                                                 className="inline text-xs"
                                               />
-                                              {discussionMode === 2 && comment.speaker === "student" ? (
+                                              {discussionMode === 2 ? (
                                                 <button
                                                   type="button"
                                                   onClick={() =>
-                                                    setActiveDiscussionCriterionId(criterion.id)
+                                                    setActiveDiscussion({
+                                                      criterionId: criterion.id,
+                                                      speaker: comment.speaker,
+                                                    })
                                                   }
                                                   className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-lime-700 hover:text-lime-900"
                                                 >
                                                   <ChatBubbleIcon width={15} height={15} />
                                                   Reply
-                                                  {(currentDiscussions[criterion.id]?.length ??
-                                                    0) > 0
-                                                    ? ` (${currentDiscussions[criterion.id]?.length})`
+                                                  {(currentDiscussions[criterion.id]?.[
+                                                    comment.speaker
+                                                  ]?.length ?? 0) > 0
+                                                    ? ` (${currentDiscussions[criterion.id]?.[comment.speaker]?.length})`
                                                     : ""}
                                                 </button>
                                               ) : null}
@@ -527,17 +547,28 @@ export default function LineRubricPanel({
         )}
       </div>
 
-      {discussionMode === 2 && activeDiscussionCriterionId && activeDiscussionComment ? (
+      {discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
         <DiscussionPanel
           open
-          onClose={() => setActiveDiscussionCriterionId(null)}
-          studentLabel={currentAnswer.label}
+          onClose={() => setActiveDiscussion(null)}
+          counterpartLabel={activeCounterpartLabel}
           criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}
           openingComment={activeDiscussionComment.text}
-          messages={currentDiscussions[activeDiscussionCriterionId] ?? []}
-          pending={currentDiscussionPending[activeDiscussionCriterionId] ?? false}
+          messages={
+            currentDiscussions[activeDiscussion.criterionId]?.[activeDiscussion.speaker] ?? []
+          }
+          pending={
+            currentDiscussionPending[activeDiscussion.criterionId]?.[
+              activeDiscussion.speaker
+            ] ?? false
+          }
           onSend={(text) =>
-            onSendDiscussionMessage?.(currentAnswer.id, activeDiscussionCriterionId, text)
+            onSendDiscussionMessage?.(
+              currentAnswer.id,
+              activeDiscussion.criterionId,
+              activeDiscussion.speaker,
+              text
+            )
           }
         />
       ) : null}
