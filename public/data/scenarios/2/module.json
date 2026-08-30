@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function ____ to model the reservoir inflow rate.",
+      "label": "Use the function ▁▁▁▁ to model the reservoir inflow rate.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply ____, and determine if the reservoir will overflow or not.",
+      "label": "To determine how much additional water enters the reservoir during the first 4 hours, apply ▁▁▁▁, and determine if the reservoir will overflow or not.",
       "options": [
         {
           "id": "op1",
@@ -110,18 +110,26 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "Since \\(R(t)\\) is a rate, I should integrate it from 0 to 4.\n\n\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)\n\n\\(=\\left[20t+5t^2-\\frac{1}{2}t^3\\right]_{0}^{4}\\)\n\n\\(=80+80-32\\)\n\n\\(=128\\)\n\nSo 128 thousand gallons enter the reservoir. Since \\(450+128=578\\), the reservoir will overflow.",
+      "steps": [
+        "Since \\(R(t)\\) is a rate, I should integrate it from 0 to 4.",
+        "\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)",
+        "\\(=\\left[20t+5t^2-\\frac{1}{2}t^3\\right]_{0}^{4}\\)\n\n\\(=80+80-32\\)\n\n\\(=128\\)",
+        "So 128 thousand gallons enter the reservoir. Since \\(450+128=578\\), the reservoir will overflow."
+      ],
       "rubricFit": {
         "identifies-integration": {
           "pass": true,
+          "step": 1,
           "feedback": "The answer correctly identifies integration as the needed operation for accumulated water."
         },
         "sets-integral-bounds": {
           "pass": true,
+          "step": 2,
           "feedback": "The answer sets up the definite integral with correct bounds from 0 to 4."
         },
         "computes-antiderivative": {
           "pass": false,
+          "step": 3,
           "feedback": "The antiderivative is computed incorrectly, leading to an incorrect accumulated water value."
         }
       }
@@ -129,18 +137,25 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "To find the amount of water added, I will use the rate at 4 hours.\n\n\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)\n\nSo 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow.",
+      "steps": [
+        "To find the amount of water added, I will use the rate at 4 hours.",
+        "\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)",
+        "So 32 thousand gallons enter the reservoir during the first 4 hours.\n\n\\(450+32=482\\)\n\nSince \\(482<500\\), the reservoir will not overflow."
+      ],
       "rubricFit": {
         "identifies-integration": {
           "pass": false,
+          "step": 1,
           "feedback": "This answer evaluates the rate at one time instead of integrating over the interval, so it confuses instantaneous rate with accumulated water."
         },
         "sets-integral-bounds": {
           "pass": false,
+          "step": 2,
           "feedback": "The answer does not set up a definite integral, which is needed to calculate total water added over the time interval."
         },
         "computes-antiderivative": {
           "pass": false,
+          "step": 2,
           "feedback": "The answer does not compute an antiderivative because it does not use integration."
         }
       }

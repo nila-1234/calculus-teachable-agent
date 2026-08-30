@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Flex, Text } from "@radix-ui/themes";
 import ScatterPlot from "@/components/scatter-plot";
 import QuestionPartCardDeck from "@/components/question-part-card-deck";
+import MathDisplay from "@/components/math-display";
 
 type Choice = {
   id: string;
@@ -123,9 +124,7 @@ export default function AuthorQuestionPanel({
             <Text size="1" weight="bold" className="mb-2 block uppercase tracking-wider text-stone-400">
               Scenario
             </Text>
-            <Text size="3" className="whitespace-pre-wrap leading-7 text-stone-700">
-              {scenario}
-            </Text>
+            <MathDisplay text={scenario} className="text-base leading-7 text-stone-700" />
           </div>
 
           {scatterPlotSrc ? (

@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function ____ to model the machine’s estimated risk score.",
+      "label": "Use the function ▁▁▁▁ to model the machine’s estimated risk score.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether ____.",
+      "label": "The system marked t=4 as a critical point of the model. To check this claim, determine whether ▁▁▁▁.",
       "options": [
         {
           "id": "c1",
@@ -116,22 +116,30 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)\n\nThe denominator becomes zero, so \\(R(4)\\) is undefined.\n\nAlso, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point.",
+      "steps": [
+        "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)",
+        "The denominator becomes zero, so \\(R(4)\\) is undefined.",
+        "Also, the derivative is undefined near \\(t=4\\), so this means \\(t=4\\) is a critical point."
+      ],
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,
+          "step": 1,
           "feedback": "The answer correctly checks whether \\(R(4)\\) exists."
         },
         "identifies-r4-undefined": {
           "pass": true,
+          "step": 2,
           "feedback": "The answer correctly identifies that \\(R(4)\\) is undefined."
         },
         "applies-critical-point-definition": {
           "pass": false,
+          "step": 3,
           "feedback": "The answer does not correctly apply the full definition of a critical point. Since \\(R(4)\\) does not exist, \\(t=4\\) cannot be a critical point."
         },
         "concludes-not-critical": {
           "pass": false,
+          "step": 3,
           "feedback": "The answer incorrectly concludes that \\(t=4\\) is a critical point."
         }
       }
@@ -139,22 +147,30 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.\n\nSince the graph changes direction around \\(t=4\\), that must be a critical point.\n\nTherefore, the system’s claim is correct.",
+      "steps": [
+        "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.",
+        "Since the graph changes direction around \\(t=4\\), that must be a critical point.",
+        "Therefore, the system’s claim is correct."
+      ],
       "rubricFit": {
         "checks-r4-exists": {
           "pass": true,
+          "step": 1,
           "feedback": "The answer correctly check whether \\(R(4)\\) exists, which is necessary for determining whether \\(t=4\\) is a critical point."
         },
         "identifies-r4-undefined": {
           "pass": false,
+          "step": 1,
           "feedback": "The answer does not identify that \\(R(4)\\) is undefined, which is a key reason why \\(t=4\\) cannot be a critical point."
         },
         "applies-critical-point-definition": {
           "pass": false,
+          "step": 2,
           "feedback": "The answer does not correctly apply the full definition of a critical point. The function value must exist at \\(t=4\\) for it to be a critical point."
         },
         "concludes-not-critical": {
           "pass": false,
+          "step": 2,
           "feedback": "It incorrectly concludes that \\(t=4\\) is a critical point."
         }
       }

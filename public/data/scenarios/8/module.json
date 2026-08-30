@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function ____ that best fits the power data.",
+      "label": "Use the function ▁▁▁▁ that best fits the power data.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "To find the average power, compute ____.",
+      "label": "To find the average power, compute ▁▁▁▁.",
       "options": [
         {
           "id": "a1",
@@ -116,22 +116,29 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(\\int_0^{12}(-t^3+21t^2-120t+300)\\,dt=1872\\)\n\nSo the average power is 1872 watts.",
+      "steps": [
+        "\\(\\int_0^{12}(-t^3+21t^2-120t+300)\\,dt=1872\\)",
+        "So the average power is 1872 watts."
+      ],
       "rubricFit": {
         "finds-antiderivative": {
           "pass": true,
+          "step": 1,
           "feedback": "The antiderivative of P(t) is found correctly."
         },
         "evaluates-integral": {
           "pass": true,
+          "step": 1,
           "feedback": "The integral over [0, 12] is evaluated correctly, obtaining 1872."
         },
         "divides-by-interval-length": {
           "pass": false,
+          "step": 2,
           "feedback": "The result is never divided by the interval length 12; 1872 is the accumulated total in watt-hours, not the average."
         },
         "interprets-result": {
           "pass": false,
+          "step": 2,
           "feedback": "The stated average (1872 watts) is wrong; the average is 1872 / 12 = 156 watts."
         }
       }
@@ -139,22 +146,30 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(\\dfrac{1}{12}\\int_0^{12}(-t^3+21t^2-120t)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+7t^3-60t^2\\right]_0^{12}=-1728,\\ -1728/12=-144\\)\n\nSo the average power is \\(-144\\) watts.",
+      "steps": [
+        "\\(\\dfrac{1}{12}\\int_0^{12}(-t^3+21t^2-120t)\\,dt\\)",
+        "\\(\\left[-\\dfrac{t^4}{4}+7t^3-60t^2\\right]_0^{12}=-1728,\\ -1728/12=-144\\)",
+        "So the average power is \\(-144\\) watts."
+      ],
       "rubricFit": {
         "finds-antiderivative": {
           "pass": false,
+          "step": 1,
           "feedback": "The constant term 300 is dropped when integrating, so the antiderivative is incomplete."
         },
         "evaluates-integral": {
           "pass": false,
+          "step": 2,
           "feedback": "Because the antiderivative is incomplete, the evaluated integral (−1728) is incorrect."
         },
         "divides-by-interval-length": {
           "pass": true,
+          "step": 2,
           "feedback": "The result is correctly divided by the interval length, 12, showing the average step is understood."
         },
         "interprets-result": {
           "pass": false,
+          "step": 3,
           "feedback": "A negative average power is impossible, and the stated result (−144 watts) is wrong."
         }
       }

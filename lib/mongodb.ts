@@ -1,21 +1,16 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI!;
-
-if (!uri) {
-  throw new Error("Missing MONGODB_URI");
-}
+const uri = process.env.MONGODB_URI;
 
 declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-const client = new MongoClient(uri);
+const clientPromise = uri
+  ? global._mongoClientPromise ?? new MongoClient(uri).connect()
+  : Promise.resolve(new MongoClient("mongodb://127.0.0.1:1"));
 
-const clientPromise =
-  global._mongoClientPromise ?? client.connect();
-
-if (process.env.NODE_ENV === "development") {
+if (uri && process.env.NODE_ENV === "development") {
   global._mongoClientPromise = clientPromise;
 }
 

@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/04-student-task.schema.json",
+  "title": "Stage 04 Student Task",
+  "description": "The composed question and the two four-choice learner steps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "question", "questionParts"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+    "question": {
+      "type": "string",
+      "minLength": 30,
+      "allOf": [{ "pattern": "__\\(1\\)__" }, { "pattern": "__\\(2\\)__" }],
+      "description": "Learner-facing template containing __(1)__ and __(2)__ exactly once each."
+    },
+    "questionParts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "$ref": "#/$defs/modelPart" },
+        { "$ref": "#/$defs/analysisPart" }
+      ],
+      "items": false,
+      "description": "Exactly Step 1 model selection and Step 2 analysis selection."
+    }
+  },
+  "$defs": {
+    "choice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text", "correct", "feedback"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^(model|analysis)-[a-d]$", "description": "Deterministic option ID." },
+        "text": { "type": "string", "minLength": 2, "description": "Text inserted into the corresponding question placeholder." },
+        "correct": { "type": "boolean", "description": "Whether this is the sole correct option in its part." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Substantive mathematical feedback for this option." }
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "options"],
+      "properties": {
+        "id": { "enum": ["1", "2"], "description": "Stable question-part ID." },
+        "label": { "type": "string", "pattern": "____", "description": "Learner-facing label containing exactly one visible blank." },
+        "options": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/choice" }, "description": "Exactly four answer choices." }
+      }
+    },
+    "modelPart": {
+      "allOf": [
+        { "$ref": "#/$defs/part" },
+        {
+          "properties": {
+            "id": { "const": "1" },
+            "options": {
+              "prefixItems": [
+                { "$ref": "#/$defs/modelA" }, { "$ref": "#/$defs/modelB" }, { "$ref": "#/$defs/modelC" }, { "$ref": "#/$defs/modelD" }
+              ],
+              "items": false
+            }
+          }
+        }
+      ]
+    },
+    "analysisPart": {
+      "allOf": [
+        { "$ref": "#/$defs/part" },
+        {
+          "properties": {
+            "id": { "const": "2" },
+            "options": {
+              "prefixItems": [
+                { "$ref": "#/$defs/analysisA" }, { "$ref": "#/$defs/analysisB" }, { "$ref": "#/$defs/analysisC" }, { "$ref": "#/$defs/analysisD" }
+              ],
+              "items": false
+            }
+          }
+        }
+      ]
+    },
+    "modelA": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "model-a" } } }] },
+    "modelB": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "model-b" } } }] },
+    "modelC": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "model-c" } } }] },
+    "modelD": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "model-d" } } }] },
+    "analysisA": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "analysis-a" } } }] },
+    "analysisB": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "analysis-b" } } }] },
+    "analysisC": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "analysis-c" } } }] },
+    "analysisD": { "allOf": [{ "$ref": "#/$defs/choice" }, { "properties": { "id": { "const": "analysis-d" } } }] }
+  },
+  "$comment": "Each part must contain exactly one correct option. Each placeholder and visible blank must occur exactly once. Step 2 feedback must include the governing definition in all four choices whenever that definition is needed, so feedback does not reveal correctness by presence alone."
+}

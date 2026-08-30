@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/07-ai-student-answers.schema.json",
+  "title": "Stage 07 AI Student Answers",
+  "description": "Three or four neutral-labeled answers with generation-only trajectory metadata and no grading.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "answers"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+    "answers": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 4,
+      "prefixItems": [
+        { "$ref": "#/$defs/answerA" }, { "$ref": "#/$defs/answerB" }, { "$ref": "#/$defs/answerC" }
+      ],
+      "items": { "$ref": "#/$defs/answerD" },
+      "description": "A complete answer, targeted misconception, early slip, and optional fourth taxonomy."
+    }
+  },
+  "$defs": {
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "steps", "trajectory"],
+      "properties": {
+        "id": { "enum": ["answer-a", "answer-b", "answer-c", "answer-d"], "description": "Stable deterministic answer ID." },
+        "label": { "type": "string", "pattern": "^AI Student [1-4]$", "description": "Neutral student-visible label without correctness hints." },
+        "steps": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Three to six ordered, nonempty student-visible semantic steps."
+        },
+        "trajectory": { "$ref": "#/$defs/trajectory" }
+      }
+    },
+    "trajectory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "misconceptionId", "firstAffectedCriterionId", "internalSummary"],
+      "properties": {
+        "type": { "enum": ["complete", "targeted-misconception", "early-slip", "early-stop", "right-conclusion-wrong-process", "interpretation-error"], "description": "Generation-only answer taxonomy." },
+        "misconceptionId": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "description": "Stage 01 misconception ID, or null for the complete answer." },
+        "firstAffectedCriterionId": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "description": "First essential rubric criterion affected, or null for the complete answer." },
+        "internalSummary": { "type": "string", "minLength": 15, "description": "Generation-only trajectory summary stripped by the assembler." }
+      }
+    },
+    "answerA": { "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "id": { "const": "answer-a" }, "label": { "const": "AI Student 1" }, "trajectory": { "properties": { "type": { "const": "complete" }, "misconceptionId": { "type": "null" }, "firstAffectedCriterionId": { "type": "null" } } } } }] },
+    "answerB": { "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "id": { "const": "answer-b" }, "label": { "const": "AI Student 2" }, "trajectory": { "properties": { "type": { "const": "targeted-misconception" } } } } }] },
+    "answerC": { "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "id": { "const": "answer-c" }, "label": { "const": "AI Student 3" }, "trajectory": { "properties": { "type": { "const": "early-slip" } } } } }] },
+    "answerD": { "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "id": { "const": "answer-d" }, "label": { "const": "AI Student 4" } } }] }
+  },
+  "$comment": "text and rubricFit are forbidden at this stage. IDs and labels must be unique and ordered. Wrong answers must have one error trajectory each and distinct wrong values. Critical-points sets must make answer-b solve f(x)=0 without analyzing f'(x). Hidden percentages may be computed internally but never emitted."
+}

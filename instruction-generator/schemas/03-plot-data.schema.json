@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/03-plot-data.schema.json",
+  "title": "Stage 03 Plot Data",
+  "description": "A disabled marker for CONSTRUCTED sets or app-compatible scatter data for FITTED sets.",
+  "oneOf": [
+    { "$ref": "#/$defs/disabled" },
+    { "$ref": "#/$defs/enabled" }
+  ],
+  "$defs": {
+    "base": {
+      "type": "object",
+      "required": ["schemaVersion", "scenarioId", "enabled"],
+      "properties": {
+        "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+        "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+        "enabled": { "type": "boolean", "description": "Whether an app plot-data file must be assembled." }
+      }
+    },
+    "disabled": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "scenarioId", "enabled", "reason"],
+          "properties": {
+            "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+            "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+            "enabled": { "const": false, "description": "Indicates that this CONSTRUCTED set has no plot." },
+            "reason": { "const": "CONSTRUCTED representation does not use scatter data.", "description": "Deterministic skip reason." }
+          }
+        }
+      ]
+    },
+    "enabled": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schemaVersion", "scenarioId", "enabled", "modelSpec", "plotData"],
+          "properties": {
+            "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+            "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+            "enabled": { "const": true, "description": "Indicates that this FITTED set needs plot-data.json." },
+            "modelSpec": { "$ref": "#/$defs/modelSpec" },
+            "plotData": { "$ref": "#/$defs/plotData" }
+          }
+        }
+      ]
+    },
+    "modelSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "expression", "domain", "rationale"],
+      "properties": {
+        "family": {
+          "enum": ["polynomial", "sine", "cosine", "exponential", "absolute-value", "rational"],
+          "description": "ScatterPlot-compatible family used to generate the noisy observations."
+        },
+        "expression": {
+          "type": "string",
+          "pattern": "^\\\\\\(f\\(x\\)=",
+          "description": "Exact hidden source expression. Stage 04 copies it into the correct FITTED model option."
+        },
+        "domain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number", "description": "Lower endpoint of the modeled scenario interval." },
+            "max": { "type": "number", "description": "Upper endpoint of the modeled scenario interval." }
+          },
+          "description": "Closed interval on which observations are generated; min must be less than max."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Pipeline-only explanation of why the family supports the scenario and target calculus."
+        }
+      }
+    },
+    "plotData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "xAxisLabel", "yAxisLabel", "data"],
+      "properties": {
+        "title": { "type": "string", "minLength": 5, "description": "Student-facing scatter-plot title." },
+        "xAxisLabel": { "type": "string", "minLength": 3, "description": "Horizontal-axis quantity and units." },
+        "yAxisLabel": { "type": "string", "minLength": 3, "description": "Vertical-axis quantity and units." },
+        "data": {
+          "type": "array",
+          "minItems": 30,
+          "items": { "$ref": "#/$defs/point" },
+          "description": "At least thirty realistically noisy observations sorted by nondecreasing x."
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "description": "Independent-variable observation." },
+        "y": { "type": "number", "description": "Measured dependent-variable observation." }
+      }
+    }
+  },
+  "$comment": "enabled must be false for CONSTRUCTED and true for FITTED. modelSpec.domain.min must be less than max and match the scenario interval. Every point x must lie in that domain; data must be sorted by nondecreasing x and represent noisy observations from modelSpec.expression. The assembler writes only plotData, never the wrapper or modelSpec, to the app plot-data.json."
+}

@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function ____ that best fits the rate data.",
+      "label": "Use the function ▁▁▁▁ that best fits the rate data.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "To find the net change in cash, compute ____.",
+      "label": "To find the net change in cash, compute ▁▁▁▁.",
       "options": [
         {
           "id": "a1",
@@ -116,22 +116,31 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\)\n\ninflow \\([0,6]\\): 108\noutflow \\([6,8]\\): 44\n\ntotal: \\(108+44=152\\)\n\nSo the cash changed by 152 thousand dollars.",
+      "steps": [
+        "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\)",
+        "inflow \\([0,6]\\): 108\noutflow \\([6,8]\\): 44",
+        "total: \\(108+44=152\\)",
+        "So the cash changed by 152 thousand dollars."
+      ],
       "rubricFit": {
         "sets-up-signed-integral": {
           "pass": true,
+          "step": 2,
           "feedback": "The net change is correctly set up as the integral of the rate over [0, 8], split into the [0, 6] and [6, 8] phases."
         },
         "finds-antiderivative": {
           "pass": true,
+          "step": 1,
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-keeping-sign": {
           "pass": false,
+          "step": 3,
           "feedback": "The outflow is added rather than subtracted, so the sign is not kept."
         },
         "interprets-result": {
           "pass": false,
+          "step": 4,
           "feedback": "Keeping the sign gives a net change of +64, not 152, so the stated total is wrong."
         }
       }
@@ -139,22 +148,30 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(\\int_0^{6}(-t^3+12t^2-48t+72)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\right]_0^{6}=108\\)\n\nSo the cash increased by 108 thousand dollars.",
+      "steps": [
+        "\\(\\int_0^{6}(-t^3+12t^2-48t+72)\\,dt\\)",
+        "\\(\\left[-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\right]_0^{6}=108\\)",
+        "So the cash increased by 108 thousand dollars."
+      ],
       "rubricFit": {
         "sets-up-signed-integral": {
           "pass": false,
+          "step": 1,
           "feedback": "Only the inflow phase [0, 6] is integrated; the interval should be the full [0, 8]."
         },
         "finds-antiderivative": {
           "pass": true,
+          "step": 2,
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-keeping-sign": {
           "pass": false,
+          "step": 1,
           "feedback": "The outflow after month 6 is left out entirely, so the sign of the later phase is never applied."
         },
         "interprets-result": {
           "pass": false,
+          "step": 3,
           "feedback": "This is not the net change over the full 8 months, which is +64, not 108."
         }
       }

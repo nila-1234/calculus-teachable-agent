@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/08-line-grading.schema.json",
+  "title": "Stage 08 Line Grading",
+  "description": "Criterion-by-criterion consequential grading for each AI answer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "answerGradings"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+    "answerGradings": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/answerGrading" },
+      "description": "One grading object per Stage 07 answer."
+    }
+  },
+  "$defs": {
+    "answerGrading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["answerId", "rubricFit"],
+      "properties": {
+        "answerId": { "enum": ["answer-a", "answer-b", "answer-c", "answer-d"], "description": "ID of the Stage 07 answer being graded." },
+        "rubricFit": {
+          "type": "object",
+          "minProperties": 5,
+          "maxProperties": 5,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+          "additionalProperties": { "$ref": "#/$defs/grading" },
+          "description": "Exactly the five essential rubric IDs as keys."
+        }
+      }
+    },
+    "grading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pass", "step", "feedback"],
+      "properties": {
+        "pass": { "type": "boolean", "description": "Whether the answer literally meets this criterion under consequential grading." },
+        "step": { "type": "integer", "minimum": 1, "description": "The single one-based Stage 07 semantic step that best supports or exposes this judgment." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Concrete problem-specific reason for the pass or fail judgment." }
+      }
+    }
+  },
+  "$comment": "answerId values must exactly match Stage 07. Every rubricFit must have exactly the five Stage 05 essential IDs and no not-necessary IDs. Every step must be within the referenced answer's steps array. Correctness criteria fail for wrong values; downstream method criteria may pass when correctly applied to an answer's own earlier value."
+}

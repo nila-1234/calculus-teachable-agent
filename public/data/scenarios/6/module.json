@@ -5,7 +5,7 @@
   "questionParts": [
     {
       "id": "1",
-      "label": "Use the function ____ that best fits the rate data.",
+      "label": "Use the function ▁▁▁▁ that best fits the rate data.",
       "options": [
         {
           "id": "f1",
@@ -35,7 +35,7 @@
     },
     {
       "id": "2",
-      "label": "To find the total new users, compute ____.",
+      "label": "To find the total new users, compute ▁▁▁▁.",
       "options": [
         {
           "id": "a1",
@@ -116,22 +116,30 @@
     {
       "id": "answer-50",
       "label": "AI Student 1",
-      "text": "\\(\\int_0^{10}(-t^3+12t^2-20t+30)\\,dt\\)\n\nantiderivative: \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\)\n\nSo the total is \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\).",
+      "steps": [
+        "\\(\\int_0^{10}(-t^3+12t^2-20t+30)\\,dt\\)",
+        "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\)",
+        "So the total is \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\)."
+      ],
       "rubricFit": {
         "sets-up-integral": {
           "pass": true,
+          "step": 1,
           "feedback": "The integral is correctly set up over [0, 10]."
         },
         "finds-antiderivative": {
           "pass": true,
+          "step": 2,
           "feedback": "The antiderivative of the rate is found correctly."
         },
         "evaluates-bounds-ftc": {
           "pass": false,
+          "step": 3,
           "feedback": "The antiderivative is never evaluated at the bounds, so no total is produced."
         },
         "interprets-result": {
           "pass": false,
+          "step": 3,
           "feedback": "No numerical total or interpretation is given."
         }
       }
@@ -139,22 +147,30 @@
     {
       "id": "answer-25",
       "label": "AI Student 2",
-      "text": "\\(\\int_0^{10}(-t^3+12t^2-20t)\\,dt\\)\n\n\\(\\left[-\\dfrac{t^4}{4}+4t^3-10t^2\\right]_0^{10}=500\\)\n\nSo about 500 thousand new users.",
+      "steps": [
+        "\\(\\int_0^{10}(-t^3+12t^2-20t)\\,dt\\)",
+        "\\(\\left[-\\dfrac{t^4}{4}+4t^3-10t^2\\right]_0^{10}=500\\)",
+        "So about 500 thousand new users."
+      ],
       "rubricFit": {
         "sets-up-integral": {
           "pass": true,
+          "step": 1,
           "feedback": "The integral is correctly set up over [0, 10]."
         },
         "finds-antiderivative": {
           "pass": false,
+          "step": 2,
           "feedback": "The constant term 30 is dropped when integrating, so a piece of the rate is left out."
         },
         "evaluates-bounds-ftc": {
           "pass": false,
+          "step": 2,
           "feedback": "Bounds are evaluated, but on an incorrect antiderivative, giving 500 instead of 800."
         },
         "interprets-result": {
           "pass": false,
+          "step": 3,
           "feedback": "The stated total (500 thousand) is wrong because the antiderivative was incomplete."
         }
       }

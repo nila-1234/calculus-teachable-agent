@@ -1,619 +1,104 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://calculus-teachable-agent.local/schemas/instruction-problem-set.json",
-  "title": "Instruction Problem-Set Generation Package",
-  "description": "The complete JSON response returned by the instruction problem-set generation prompt. moduleJson maps to public/data/scenarios/{scenarioId}/module.json. plotDataJson maps to plot-data.json when the representation is FITTED.",
+  "$id": "https://calculus-teachable-agent.local/pipeline-manifest.schema.json",
+  "title": "Instruction Problem-Set Pipeline Manifest",
+  "description": "Compatibility entry point for a manifest that lists and embeds all nine validated pipeline outputs. The former monolithic generation package is superseded.",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "scenarioId",
-    "scenarioName",
-    "representationType",
-    "moduleJson",
-    "plotDataJson"
-  ],
+  "required": ["schemaVersion", "scenarioId", "outputs"],
   "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "description": "Version of the multi-stage pipeline manifest contract."
+    },
     "scenarioId": {
       "type": "integer",
       "minimum": 1,
-      "description": "The numeric scenario identifier. It determines the scenario directory, route parameter, registry key, and plot-data path."
+      "description": "Positive scenario identifier that must match every embedded intermediate output."
     },
-    "scenarioName": {
-      "type": "string",
-      "minLength": 3,
-      "maxLength": 80,
-      "description": "A short student-facing name for the scenario card on the homepage."
-    },
-    "representationType": {
-      "type": "string",
-      "enum": [
-        "CONSTRUCTED",
-        "FITTED"
+    "outputs": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "prefixItems": [
+        { "$ref": "#/$defs/output01" },
+        { "$ref": "#/$defs/output02" },
+        { "$ref": "#/$defs/output03" },
+        { "$ref": "#/$defs/output04" },
+        { "$ref": "#/$defs/output05" },
+        { "$ref": "#/$defs/output06" },
+        { "$ref": "#/$defs/output07" },
+        { "$ref": "#/$defs/output08" },
+        { "$ref": "#/$defs/output09" }
       ],
-      "description": "CONSTRUCTED means the learner builds a function from a stated rule or constraint and no scatter plot is generated. FITTED means the learner selects a continuous model for dense noisy measurements shown in a scatter plot."
+      "items": false,
+      "description": "The nine stage outputs in deterministic execution order."
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["filename", "document"],
+      "properties": {
+        "filename": { "type": "string", "description": "Required output filename." },
+        "document": { "type": "object", "description": "Parsed JSON document validated by its stage schema." }
+      }
     },
-    "moduleJson": {
-      "$ref": "#/$defs/moduleJson"
+    "output01": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "01-generation-plan.json" }, "document": { "$ref": "instruction-generator/schemas/01-generation-plan.schema.json" } } }
+      ]
     },
-    "plotDataJson": {
-      "description": "The contents of plot-data.json for a FITTED set. Must be null for a CONSTRUCTED set.",
-      "oneOf": [
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "#/$defs/plotDataJson"
-        }
+    "output02": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "02-scenario.json" }, "document": { "$ref": "instruction-generator/schemas/02-scenario.schema.json" } } }
+      ]
+    },
+    "output03": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "03-plot-data.json" }, "document": { "$ref": "instruction-generator/schemas/03-plot-data.schema.json" } } }
+      ]
+    },
+    "output04": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "04-student-task.json" }, "document": { "$ref": "instruction-generator/schemas/04-student-task.schema.json" } } }
+      ]
+    },
+    "output05": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "05-rubric.json" }, "document": { "$ref": "instruction-generator/schemas/05-rubric.schema.json" } } }
+      ]
+    },
+    "output06": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "06-sample-answers.json" }, "document": { "$ref": "instruction-generator/schemas/06-sample-answers.schema.json" } } }
+      ]
+    },
+    "output07": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "07-ai-student-answers.json" }, "document": { "$ref": "instruction-generator/schemas/07-ai-student-answers.schema.json" } } }
+      ]
+    },
+    "output08": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "08-line-grading.json" }, "document": { "$ref": "instruction-generator/schemas/08-line-grading.schema.json" } } }
+      ]
+    },
+    "output09": {
+      "allOf": [
+        { "$ref": "#/$defs/entry" },
+        { "properties": { "filename": { "const": "09-module.json" }, "document": { "$ref": "instruction-generator/schemas/09-module.schema.json" } } }
       ]
     }
   },
-  "allOf": [
-    {
-      "if": {
-        "properties": {
-          "representationType": {
-            "const": "CONSTRUCTED"
-          }
-        },
-        "required": [
-          "representationType"
-        ]
-      },
-      "then": {
-        "properties": {
-          "moduleJson": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/moduleJson"
-              },
-              {
-                "properties": {
-                  "plotDataSrc": {
-                    "const": ""
-                  }
-                }
-              }
-            ]
-          },
-          "plotDataJson": {
-            "type": "null"
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "representationType": {
-            "const": "FITTED"
-          }
-        },
-        "required": [
-          "representationType"
-        ]
-      },
-      "then": {
-        "properties": {
-          "moduleJson": {
-            "allOf": [
-              {
-                "$ref": "#/$defs/moduleJson"
-              },
-              {
-                "properties": {
-                  "plotDataSrc": {
-                    "type": "string",
-                    "pattern": "^/data/scenarios/[1-9][0-9]*/plot-data\\.json$"
-                  }
-                }
-              }
-            ]
-          },
-          "plotDataJson": {
-            "$ref": "#/$defs/plotDataJson"
-          }
-        }
-      }
-    }
-  ],
-  "$defs": {
-    "moduleJson": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "scenario",
-        "question",
-        "plotDataSrc",
-        "questionParts",
-        "rubricOptions",
-        "sampleAnswers",
-        "finalAiAnswers"
-      ],
-      "properties": {
-        "scenario": {
-          "type": "string",
-          "minLength": 80,
-          "description": "Two to four student-facing sentences that define the real-world situation, variables, units, constraints, and decision without revealing the answer."
-        },
-        "question": {
-          "type": "string",
-          "allOf": [
-            {
-              "pattern": "__\\(1\\)__"
-            },
-            {
-              "pattern": "__\\(2\\)__"
-            }
-          ],
-          "description": "The composed-question template. It must contain __(1)__ and __(2)__ exactly once each. The question page replaces those tokens with the selected Step 1 and Step 2 option text."
-        },
-        "plotDataSrc": {
-          "type": "string",
-          "description": "An empty string for CONSTRUCTED sets, or /data/scenarios/{scenarioId}/plot-data.json for FITTED sets."
-        },
-        "scenarioImageSrc": {
-          "type": "string",
-          "pattern": "^/images/",
-          "description": "Optional path to an existing scenario illustration. This is separate from a scatter plot and should be omitted unless the asset already exists."
-        },
-        "questionParts": {
-          "type": "array",
-          "minItems": 2,
-          "maxItems": 2,
-          "description": "Exactly two question parts. Part 1 selects the model. Part 2 selects the required analysis.",
-          "prefixItems": [
-            {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/questionPart"
-                },
-                {
-                  "properties": {
-                    "id": {
-                      "const": "1"
-                    },
-                    "options": {
-                      "prefixItems": [
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "model-a"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "model-b"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "model-c"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "model-d"
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                }
-              ]
-            },
-            {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/questionPart"
-                },
-                {
-                  "properties": {
-                    "id": {
-                      "const": "2"
-                    },
-                    "options": {
-                      "prefixItems": [
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "analysis-a"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "analysis-b"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "analysis-c"
-                                }
-                              }
-                            }
-                          ]
-                        },
-                        {
-                          "allOf": [
-                            {
-                              "$ref": "#/$defs/choice"
-                            },
-                            {
-                              "properties": {
-                                "id": {
-                                  "const": "analysis-d"
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                }
-              ]
-            }
-          ],
-          "items": false
-        },
-        "rubricOptions": {
-          "type": "array",
-          "minItems": 7,
-          "maxItems": 7,
-          "items": {
-            "$ref": "#/$defs/rubricOption"
-          },
-          "description": "Exactly seven candidate rubric criteria. Business rule: exactly five have correct=true and exactly two have correct=false."
-        },
-        "sampleAnswers": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "correct",
-            "incorrect"
-          ],
-          "properties": {
-            "correct": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/sampleAnswer"
-                },
-                {
-                  "properties": {
-                    "title": {
-                      "const": "Sample AI Answer"
-                    }
-                  }
-                }
-              ],
-              "description": "A complete correct solution used as the rubric-creation hint."
-            },
-            "incorrect": {
-              "allOf": [
-                {
-                  "$ref": "#/$defs/sampleAnswer"
-                },
-                {
-                  "properties": {
-                    "title": {
-                      "const": "Common Incorrect Answer"
-                    }
-                  }
-                }
-              ],
-              "description": "A solution containing one concept-specific misconception. The current interface does not normally display it, but it is generated for content completeness."
-            }
-          }
-        },
-        "finalAiAnswers": {
-          "type": "array",
-          "minItems": 3,
-          "maxItems": 4,
-          "items": {
-            "$ref": "#/$defs/finalAiAnswer"
-          },
-          "description": "Three or four student-visible AI solutions used in the final line-by-line grading activity."
-        }
-      }
-    },
-    "questionPart": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "label",
-        "options"
-      ],
-      "properties": {
-        "id": {
-          "type": "string",
-          "enum": [
-            "1",
-            "2"
-          ],
-          "description": "The stable question-part identifier."
-        },
-        "label": {
-          "type": "string",
-          "pattern": "____",
-          "description": "The student-facing half-written sentence. It must contain one visible ____ blank."
-        },
-        "options": {
-          "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
-          "items": {
-            "$ref": "#/$defs/choice"
-          },
-          "description": "Exactly four choices. Business rule: exactly one choice has correct=true."
-        }
-      }
-    },
-    "choice": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "text",
-        "correct",
-        "feedback"
-      ],
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^(model|analysis)-[a-d]$",
-          "description": "Stable choice ID. Use model-a through model-d for Step 1 and analysis-a through analysis-d for Step 2."
-        },
-        "text": {
-          "type": "string",
-          "minLength": 2,
-          "description": "The student-facing option text. FITTED model options use escaped LaTeX in the form \\(f(x)=...\\)."
-        },
-        "correct": {
-          "type": "boolean",
-          "description": "Whether this is the single correct option for the question part."
-        },
-        "feedback": {
-          "type": "string",
-          "minLength": 20,
-          "description": "Immediate option-specific feedback explaining the mathematical reason the choice is correct or incorrect."
-        }
-      }
-    },
-    "rubricOption": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "label",
-        "correct",
-        "feedback"
-      ],
-      "properties": {
-        "id": {
-          "type": "string",
-          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
-          "description": "Stable lowercase kebab-case criterion ID. Every essential ID must be reused as a rubricFit key in every final AI answer."
-        },
-        "label": {
-          "type": "string",
-          "minLength": 15,
-          "description": "A generalized, descriptive, judgeable rubric criterion shown in the Include/Exclude activity."
-        },
-        "correct": {
-          "type": "boolean",
-          "description": "true means the criterion is essential and should be included. false means it is one of the two not-necessary distractors."
-        },
-        "feedback": {
-          "type": "string",
-          "minLength": 20,
-          "description": "Why the criterion is essential or why it should be excluded."
-        }
-      }
-    },
-    "sampleAnswer": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "title",
-        "text"
-      ],
-      "properties": {
-        "title": {
-          "type": "string",
-          "minLength": 3
-        },
-        "text": {
-          "type": "string",
-          "minLength": 40,
-          "description": "The complete displayed answer text. Use two newline characters between assessable solution lines."
-        }
-      }
-    },
-    "finalAiAnswer": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "label",
-        "text",
-        "rubricFit"
-      ],
-      "properties": {
-        "id": {
-          "type": "string",
-          "enum": [
-            "answer-a",
-            "answer-b",
-            "answer-c",
-            "answer-d"
-          ],
-          "description": "Stable internal answer identifier."
-        },
-        "label": {
-          "type": "string",
-          "pattern": "^AI Student [1-4]$",
-          "description": "Student-visible neutral answer label. It must not reveal correctness, percentage, misconception, or answer type."
-        },
-        "text": {
-          "type": "string",
-          "minLength": 40,
-          "description": "The student-visible solution. The final grading interface splits this string on exactly two newline characters, trims each segment, removes empty segments, and numbers the remaining displayed lines starting at 1."
-        },
-        "rubricFit": {
-          "type": "object",
-          "minProperties": 5,
-          "maxProperties": 5,
-          "propertyNames": {
-            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/rubricFitItem"
-          },
-          "description": "Exactly one entry for each of the five essential rubric IDs. Do not include the two not-necessary IDs. The keys must exactly match rubricOptions entries whose correct value is true."
-        }
-      }
-    },
-    "rubricFitItem": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "pass",
-        "line",
-        "feedback"
-      ],
-      "properties": {
-        "pass": {
-          "type": "boolean",
-          "description": "The expected Pass or Fail status for this criterion. Judge independently using consequential grading."
-        },
-        "line": {
-          "type": "array",
-          "minItems": 1,
-          "uniqueItems": true,
-          "items": {
-            "type": "integer",
-            "minimum": 1
-          },
-          "description": "Accepted one-based displayed-line numbers where the criterion should be placed. Multiple values are allowed when the evidence genuinely spans multiple lines."
-        },
-        "feedback": {
-          "type": "string",
-          "minLength": 20,
-          "description": "Concrete problem-specific grading feedback explaining why the criterion passes or fails and, when relevant, how consequential grading applies."
-        }
-      }
-    },
-    "plotDataJson": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "title",
-        "xAxisLabel",
-        "yAxisLabel",
-        "data"
-      ],
-      "properties": {
-        "title": {
-          "type": "string",
-          "minLength": 5,
-          "description": "Student-facing scatter-plot title."
-        },
-        "xAxisLabel": {
-          "type": "string",
-          "minLength": 3,
-          "description": "Horizontal-axis quantity and units."
-        },
-        "yAxisLabel": {
-          "type": "string",
-          "minLength": 3,
-          "description": "Vertical-axis measured quantity and units."
-        },
-        "data": {
-          "type": "array",
-          "minItems": 30,
-          "items": {
-            "$ref": "#/$defs/plotPoint"
-          },
-          "description": "Dense noisy measurements ordered by nondecreasing x. Repeated x values are allowed when repeated measurements are realistic."
-        }
-      }
-    },
-    "plotPoint": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "x",
-        "y"
-      ],
-      "properties": {
-        "x": {
-          "type": "number",
-          "description": "Independent-variable measurement."
-        },
-        "y": {
-          "type": "number",
-          "description": "Observed dependent-variable measurement."
-        }
-      }
-    }
-  },
-  "$comment": "Cross-field business rules that require semantic validation: scenarioId must equal the numeric segment in plotDataSrc; each question part must have exactly one correct choice; rubricOptions must contain exactly five true and two false values; rubricFit keys must equal the five essential rubric IDs; each rubricFit.line value must be within the displayed-line count obtained by splitting its answer text on two newline characters; plot points must be ordered by x; all mathematical values, feedback, and consequential-grading judgments must be internally consistent."
+  "$comment": "Validate referenced schemas with a resolver rooted at this repository. Every intermediate document's scenarioId must equal the manifest scenarioId. Stage 09 intentionally omits schemaVersion and scenarioId because it is the exact app module."
 }

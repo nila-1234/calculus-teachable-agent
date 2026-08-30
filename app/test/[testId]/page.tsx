@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CheckIcon } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
 import StepIntro from "@/components/step-intro";
@@ -12,9 +12,10 @@ import { getTest } from "@/lib/tests/definitions";
 import { TestAnswers, TestItemAnswer } from "@/lib/tests/types";
 import { logEvent } from "@/lib/logger";
 
-export default function TestPage() {
+function TestPageContent() {
   const router = useRouter();
   const params = useParams();
+  const query = useSearchParams().toString();
   const testId = typeof params.testId === "string" ? params.testId : "";
   const test = getTest(testId);
 
@@ -34,6 +35,15 @@ export default function TestPage() {
 
   useEffect(() => {
     if (!test) return;
+
+    if (
+      test.id === "pretest" &&
+      sessionStorage.getItem("survey:pre:completed") !== "true"
+    ) {
+      router.replace(query ? `/survey/pre?${query}` : "/survey/pre");
+      return;
+    }
+
     const saved = sessionStorage.getItem(`test:${test.id}:answers`);
     if (saved) {
       try {
@@ -41,7 +51,7 @@ export default function TestPage() {
       } catch {
       }
     }
-  }, [test]);
+  }, [test, query, router]);
 
   if (!test) {
     return <main className="p-6">Test not found.</main>;
@@ -186,13 +196,43 @@ export default function TestPage() {
                 Your answers have been recorded. Thank you for completing this
                 assessment.
               </p>
-              <Button className="mt-6" onClick={() => router.push("/test")}>
-                Back to assessments
-              </Button>
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(query ? `/test?${query}` : "/test")}
+                >
+                  Back to assessments
+                </Button>
+                <Button
+                  onClick={() =>
+                    router.push(
+                      test.id === "posttest"
+                        ? query
+                          ? `/survey/post?${query}`
+                          : "/survey/post"
+                        : query
+                          ? `/scenarios?${query}`
+                          : "/scenarios"
+                    )
+                  }
+                >
+                  {test.id === "posttest"
+                    ? "Continue to post-survey"
+                    : "Continue"}
+                </Button>
+              </div>
             </div>
           </div>
         )}
       </div>
     </main>
+  );
+}
+
+export default function TestPage() {
+  return (
+    <Suspense>
+      <TestPageContent />
+    </Suspense>
   );
 }

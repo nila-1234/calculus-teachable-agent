@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/05-rubric.schema.json",
+  "title": "Stage 05 Rubric",
+  "description": "Seven rubric candidates with exactly five essential criteria and two not-necessary distractors.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "rubricOptions"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+    "rubricOptions": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "prefixItems": [
+        { "$ref": "#/$defs/essential" }, { "$ref": "#/$defs/essential" }, { "$ref": "#/$defs/essential" },
+        { "$ref": "#/$defs/essential" }, { "$ref": "#/$defs/essential" },
+        { "$ref": "#/$defs/notNecessary" }, { "$ref": "#/$defs/notNecessary" }
+      ],
+      "items": false,
+      "description": "Five essential criteria followed by two not-necessary criteria in deterministic order."
+    }
+  },
+  "$defs": {
+    "base": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "correct", "feedback", "criterionType"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "description": "Stable lowercase kebab-case criterion ID." },
+        "label": { "type": "string", "minLength": 15, "description": "Generalized, descriptive, judgeable learner-facing criterion." },
+        "correct": { "type": "boolean", "description": "Whether the criterion belongs in the rubric." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Why the criterion is essential or should be excluded." },
+        "criterionType": { "enum": ["correctness", "method", "not-necessary"], "description": "Intermediate consequential-grading classification; stripped by the assembler." }
+      }
+    },
+    "essential": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "properties": { "correct": { "const": true }, "criterionType": { "enum": ["correctness", "method"] } } }
+      ]
+    },
+    "notNecessary": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "properties": { "correct": { "const": false }, "criterionType": { "const": "not-necessary" } } }
+      ]
+    }
+  },
+  "$comment": "All seven IDs must be unique. The first five essential criteria must cover the complete correct solution. Labels must avoid scenario-specific coefficients and answers. The assembler removes criterionType."
+}
