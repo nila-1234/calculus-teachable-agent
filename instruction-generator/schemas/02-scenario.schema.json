@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/02-scenario.schema.json",
+  "title": "Stage 02 Scenario",
+  "description": "Exact learner-facing scenario plus explicit variable, unit, and decision metadata.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "scenarioName", "representationType", "scenario", "variables", "units", "decision", "constraint", "plotDataSrc"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied exactly from Stage 01." },
+    "scenarioName": { "type": "string", "minLength": 3, "maxLength": 80, "description": "Homepage scenario name copied from Stage 01." },
+    "representationType": { "enum": ["CONSTRUCTED", "FITTED"], "description": "Representation selected in Stage 01." },
+    "scenario": { "type": "string", "minLength": 80, "description": "Exact two-to-four-sentence learner-facing scenario text." },
+    "variables": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": { "$ref": "#/$defs/variable" },
+      "description": "Definitions of every symbol needed by the learner."
+    },
+    "units": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "All units used in the scenario and calculations."
+    },
+    "decision": { "type": "string", "minLength": 15, "description": "The contextual decision, interpretation, or requirement the learner must answer." },
+    "constraint": { "type": "string", "minLength": 3, "description": "The governing constraint, interval, relationship, or theorem conditions." },
+    "plotDataSrc": { "type": "string", "description": "Empty for CONSTRUCTED, otherwise the scenario-specific plot-data path." },
+    "scenarioImageSrc": { "type": "string", "pattern": "^/images/", "description": "Optional path to an existing learner-facing illustration." }
+  },
+  "$defs": {
+    "variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["symbol", "meaning", "unit"],
+      "properties": {
+        "symbol": { "type": "string", "minLength": 1, "description": "Symbol used in the mathematical model." },
+        "meaning": { "type": "string", "minLength": 5, "description": "Plain-language quantity represented by the symbol." },
+        "unit": { "type": "string", "minLength": 1, "description": "Unit of the represented quantity, or dimensionless when appropriate." }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "representationType": { "const": "CONSTRUCTED" } }, "required": ["representationType"] },
+      "then": { "properties": { "plotDataSrc": { "const": "" } } }
+    },
+    {
+      "if": { "properties": { "representationType": { "const": "FITTED" } }, "required": ["representationType"] },
+      "then": { "properties": { "plotDataSrc": { "pattern": "^/data/scenarios/[1-9][0-9]*/plot-data\\.json$" } } }
+    }
+  ],
+  "$comment": "scenarioId, scenarioName, and representationType must equal Stage 01. Learner-facing text must contain no em dash or first-person language, and every variable and unit used must be defined."
+}

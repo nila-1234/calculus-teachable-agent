@@ -35,6 +35,15 @@ function TestPageContent() {
 
   useEffect(() => {
     if (!test) return;
+
+    if (
+      test.id === "pretest" &&
+      sessionStorage.getItem("survey:pre:completed") !== "true"
+    ) {
+      router.replace(query ? `/survey/pre?${query}` : "/survey/pre");
+      return;
+    }
+
     const saved = sessionStorage.getItem(`test:${test.id}:answers`);
     if (saved) {
       try {
@@ -42,7 +51,7 @@ function TestPageContent() {
       } catch {
       }
     }
-  }, [test]);
+  }, [test, query, router]);
 
   if (!test) {
     return <main className="p-6">Test not found.</main>;
@@ -74,6 +83,17 @@ function TestPageContent() {
       if (choice?.allowsOtherText && !answer.otherText?.trim()) return false;
       if (item.explanationPrompt && !answer.explanation?.trim()) return false;
       return true;
+    }
+
+    if (item.kind === "matching") {
+      if (!item.matchRows?.length) return false;
+      const selectedChoices = item.matchRows.map(
+        (row) => answer.matches?.[row.id]
+      );
+      return (
+        selectedChoices.every(Boolean) &&
+        new Set(selectedChoices).size === selectedChoices.length
+      );
     }
 
     return Boolean(answer.text?.trim());
@@ -185,10 +205,20 @@ function TestPageContent() {
                 </Button>
                 <Button
                   onClick={() =>
-                    router.push(query ? `/scenarios?${query}` : "/scenarios")
+                    router.push(
+                      test.id === "posttest"
+                        ? query
+                          ? `/survey/post?${query}`
+                          : "/survey/post"
+                        : query
+                          ? `/scenarios?${query}`
+                          : "/scenarios"
+                    )
                   }
                 >
-                  Continue
+                  {test.id === "posttest"
+                    ? "Continue to post-survey"
+                    : "Continue"}
                 </Button>
               </div>
             </div>

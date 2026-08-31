@@ -6,16 +6,19 @@ import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 
 const STEPS = [
+  "Complete the pre-survey",
   "Take the pre-test",
   "Work through the TA scenarios",
   "Take the post-test",
+  "Complete the post-survey",
 ];
 
 function WelcomePageContent() {
   const router = useRouter();
   const query = useSearchParams().toString();
 
-  const goToTests = () => router.push(query ? `/test?${query}` : "/test");
+  const goToPreSurvey = () =>
+    router.push(query ? `/survey/pre?${query}` : "/survey/pre");
 
   return (
     <main className="flex min-h-screen flex-col bg-stone-100">
@@ -27,10 +30,10 @@ function WelcomePageContent() {
         </h1>
         <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
           Thank you for taking part in this study. You&apos;ll start with a
-          short assessment on optimization, then work through a set of calculus
-          TA scenarios where you write questions, build rubrics, and grade
-          student answers. At the end, you&apos;ll take a second assessment so
-          we can see how your thinking changed.
+          short survey and a pre-test on optimization, then work through a set
+          of calculus TA scenarios where you write questions, build rubrics, and
+          grade student answers. At the end, you&apos;ll take a second
+          assessment and a brief post-survey.
         </p>
 
         <div className="mt-8">
@@ -65,7 +68,7 @@ function WelcomePageContent() {
         </ol>
 
         <div className="mt-8 flex justify-center">
-          <Button onClick={goToTests}>Next</Button>
+          <Button onClick={goToPreSurvey}>Next</Button>
         </div>
       </div>
     </main>

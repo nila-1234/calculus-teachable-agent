@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/09-module.schema.json",
+  "title": "Assembled Application Module",
+  "description": "Final module.json contract matching the application semantic-step rubricFit shape.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scenario", "question", "plotDataSrc", "questionParts", "rubricOptions", "sampleAnswers", "finalAiAnswers"],
+  "properties": {
+    "scenario": { "type": "string", "minLength": 80, "description": "Exact learner-facing scenario from Stage 02." },
+    "question": { "type": "string", "minLength": 1, "description": "Composed learner question from Stage 04." },
+    "plotDataSrc": { "type": "string", "pattern": "^(|/data/scenarios/[1-9][0-9]*/plot-data\\.json)$", "description": "Empty for CONSTRUCTED or the FITTED plot path." },
+    "scenarioImageSrc": { "type": "string", "pattern": "^/images/", "description": "Optional existing scenario illustration path." },
+    "questionParts": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/questionPart" },
+      "description": "Exactly the two learner task parts from Stage 04."
+    },
+    "rubricOptions": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/rubricOption" },
+      "description": "Exactly five essential and two not-necessary app rubric options."
+    },
+    "sampleAnswers": { "$ref": "#/$defs/sampleAnswers" },
+    "finalAiAnswers": {
+      "type": "array", "minItems": 1,
+      "items": { "$ref": "#/$defs/finalAnswer" },
+      "description": "Stage 07 answers merged with Stage 08 rubricFit maps."
+    }
+  },
+  "$defs": {
+    "choice": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "text", "correct", "feedback"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stable option ID." },
+        "text": { "type": "string", "minLength": 2, "description": "Learner-facing option text." },
+        "correct": { "type": "boolean", "description": "Whether the option is correct." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Option-specific feedback." }
+      }
+    },
+    "questionPart": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "options"],
+      "properties": {
+        "id": { "enum": ["1", "2"], "description": "Stable part ID." },
+        "label": { "type": "string", "minLength": 1, "description": "Part label with visible blank." },
+        "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/choice" }, "description": "Learner choices." }
+      }
+    },
+    "rubricOption": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "correct", "feedback"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "description": "Stable criterion ID." },
+        "label": { "type": "string", "minLength": 15, "description": "Generalized learner-facing criterion." },
+        "correct": { "type": "boolean", "description": "Whether the criterion is essential." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Criterion inclusion feedback." }
+      }
+    },
+    "sampleAnswer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["title", "text"],
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "description": "Sample title." },
+        "text": { "type": "string", "minLength": 40, "description": "Sample solution text." }
+      }
+    },
+    "sampleAnswers": {
+      "type": "object", "additionalProperties": false,
+      "required": ["correct", "incorrect"],
+      "properties": {
+        "correct": { "$ref": "#/$defs/sampleAnswer" },
+        "incorrect": { "$ref": "#/$defs/sampleAnswer" }
+      }
+    },
+    "rubricFitItem": {
+      "type": "object", "additionalProperties": false,
+      "required": ["pass", "step", "feedback"],
+      "properties": {
+        "pass": { "type": "boolean", "description": "Expected criterion status." },
+        "step": { "type": "integer", "minimum": 1, "description": "The single one-based semantic answer step supporting this judgment." },
+        "feedback": { "type": "string", "minLength": 20, "description": "Criterion-specific grading feedback." }
+      }
+    },
+    "finalAnswer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "label", "steps", "rubricFit"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "description": "Stable answer ID." },
+        "label": { "type": "string", "pattern": "^AI Student [1-4]$", "description": "Neutral learner-visible label." },
+        "steps": {
+          "type": "array", "minItems": 3, "maxItems": 6,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Ordered student-visible semantic answer steps."
+        },
+        "rubricFit": {
+          "type": "object", "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+          "additionalProperties": { "$ref": "#/$defs/rubricFitItem" },
+          "description": "Exactly five essential criterion gradings."
+        }
+      }
+    }
+  },
+  "$comment": "Semantic validation must enforce deterministic IDs, exactly one correct option per part, five true and two false rubric options, exact essential rubricFit keys, valid one-based step ranges, representation/path consistency, and mathematical agreement across all source stages. Final answers must not contain text, line, or trajectory."
+}

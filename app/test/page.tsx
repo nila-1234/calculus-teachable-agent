@@ -63,11 +63,18 @@ function TestHomePageContent() {
             return (
               <RippleButton
                 key={test.id}
-                onClick={() =>
+                onClick={() => {
+                  if (
+                    test.id === "pretest" &&
+                    sessionStorage.getItem("survey:pre:completed") !== "true"
+                  ) {
+                    router.push(query ? `/survey/pre?${query}` : "/survey/pre");
+                    return;
+                  }
                   router.push(
                     query ? `/test/${test.id}?${query}` : `/test/${test.id}`
-                  )
-                }
+                  );
+                }}
                 className="flex items-center gap-3 rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-lime-600 focus-visible:outline-none focus-visible:border-lime-600 focus-visible:bg-lime-50"
               >
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-lime-600 text-sm font-bold text-white">

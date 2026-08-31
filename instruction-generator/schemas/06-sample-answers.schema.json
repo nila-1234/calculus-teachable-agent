@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/06-sample-answers.schema.json",
+  "title": "Stage 06 Sample Answers",
+  "description": "A complete correct sample and a one-misconception incorrect sample.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "scenarioId", "sampleAnswers"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0", "description": "Version of this intermediate contract." },
+    "scenarioId": { "type": "integer", "minimum": 1, "description": "Scenario identifier copied from prior stages." },
+    "sampleAnswers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["correct", "incorrect"],
+      "properties": {
+        "correct": {
+          "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "title": { "const": "Sample AI Answer" } } }],
+          "description": "Complete mathematically correct solution meeting all five essential criteria."
+        },
+        "incorrect": {
+          "allOf": [{ "$ref": "#/$defs/answer" }, { "properties": { "title": { "const": "Common Incorrect Answer" } } }],
+          "description": "Internally consistent solution with one clear concept-specific misconception."
+        }
+      }
+    }
+  },
+  "$defs": {
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "text"],
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "description": "Fixed learner-facing sample title." },
+        "text": { "type": "string", "minLength": 40, "description": "Solution text with assessable steps separated by exactly two newline characters." }
+      }
+    }
+  },
+  "$comment": "The correct sample must meet all five essential criteria and agree with the scenario, task, and rubric. The incorrect sample must contain exactly one misconception trajectory. Learner-facing text must contain no first person, em dash, correctness percentage, or diagnostic annotation."
+}

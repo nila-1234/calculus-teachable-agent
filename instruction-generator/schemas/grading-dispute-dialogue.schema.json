@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://calculus-teachable-agent.local/instruction-generator/schemas/grading-dispute-dialogue.schema.json",
+  "title": "Runtime Step-Grading Dispute Dialogue",
+  "description": "One hidden runtime dialogue turn for a learner mark that conflicts with the expected rubric judgment.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "speaker",
+    "message",
+    "status",
+    "recommendedMark",
+    "reasoningFocus",
+    "evidenceStep"
+  ],
+  "properties": {
+    "speaker": {
+      "enum": ["ai-student", "professor"]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    },
+    "status": {
+      "enum": ["continue", "resolved"]
+    },
+    "recommendedMark": {
+      "enum": ["pass", "fail"]
+    },
+    "reasoningFocus": {
+      "enum": ["criterion-satisfaction", "criterion-gap", "respond-to-user"]
+    },
+    "evidenceStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["number", "quote"],
+      "properties": {
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        }
+      }
+    }
+  },
+  "$comment": "Runtime semantic checks additionally require speaker and recommendedMark to match the server-derived conflict role, evidenceStep.number to be in range, and evidenceStep.quote to occur in that immutable answer step."
+}
