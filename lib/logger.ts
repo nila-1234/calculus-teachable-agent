@@ -1,4 +1,4 @@
-const USERNAME = "user1";
+import { getSubjectId } from "@/lib/subject";
 
 export async function logEvent(
   event: string,
@@ -10,7 +10,7 @@ export async function logEvent(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        username: USERNAME,
+        subject_id: getSubjectId(),
         timestamp: new Date().toISOString(),
         event,
         scenario_id: String(scenarioId),

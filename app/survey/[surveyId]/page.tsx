@@ -17,6 +17,7 @@ import {
 } from "@/lib/surveys/storage";
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
+import { setSubjectId } from "@/lib/subject";
 
 function SurveyPageContent() {
   const router = useRouter();
@@ -53,6 +54,10 @@ function SurveyPageContent() {
         saved["subject-id"] = preAnswers["subject-id"];
         saveSurveyAnswers(survey.id, saved);
       }
+    }
+
+    if (saved["subject-id"]) {
+      setSubjectId(saved["subject-id"]);
     }
 
     const nextScreen = isSurveyCompleted(survey.id) ? "complete" : "form";
@@ -114,9 +119,10 @@ function SurveyPageContent() {
             <SurveyPanel
               survey={survey}
               answers={answers}
-              onAnswerChange={(itemId, value) =>
-                saveAnswers({ ...answers, [itemId]: value })
-              }
+              onAnswerChange={(itemId, value) => {
+                if (itemId === "subject-id") setSubjectId(value);
+                saveAnswers({ ...answers, [itemId]: value });
+              }}
             />
 
             <div className="mt-6 flex items-center justify-between">
