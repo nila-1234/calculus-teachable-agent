@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
+import getMongoClient from "@/lib/mongodb";
+import { gradeTest } from "@/lib/tests/grade";
+import {
+  buildGradeReport,
+  buildPairReport,
+  collectSubmissions,
+  toCsv,
+  type GradedSubmission,
+  type LogDoc,
+} from "@/lib/tests/report";
+import {
+  buildAnswerSheet,
+  buildEventSheet,
+  buildSubjectSheet,
+} from "@/lib/tests/export";
+
+/**
+ * Instructor-only grading export.
+ *
+ * Grades are never returned to a participant: this endpoint refuses every
+ * request unless GRADING_EXPORT_TOKEN is set in the environment AND the caller
+ * presents it. It fails closed — an unset token disables the endpoint entirely
+ * rather than leaving it open, so forgetting to configure it cannot expose
+ * scores.
+ *
+ * Nothing in the participant flow links to or calls this.
+ */
+
+export const dynamic = "force-dynamic";
+
+function tokenMatches(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+  // timingSafeEqual throws on length mismatch, which would itself leak length.
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+}
+
+function authorize(req: NextRequest): NextResponse | null {
+  const expected = process.env.GRADING_EXPORT_TOKEN?.trim();
+
+  if (!expected) {
+    return NextResponse.json(
+      {
+        error:
+          "Grading export is disabled. Set GRADING_EXPORT_TOKEN in the environment to enable it.",
+      },
+      { status: 503 }
+    );
+  }
+
+  const provided =
+    req.headers.get("x-grading-token")?.trim() ||
+    req.nextUrl.searchParams.get("token")?.trim() ||
+    "";
+
+  if (!provided || !tokenMatches(provided, expected)) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 401 });
+  }
+
+  return null;
+}
+
+export async function GET(req: NextRequest) {
+  const denied = authorize(req);
+  if (denied) return denied;
+
+  try {
+    const dbName = process.env.MONGODB_DB;
+    if (!dbName) throw new Error("MONGODB_DB is not set");
+
+    const format = req.nextUrl.searchParams.get("format") ?? "json";
+    const subject = req.nextUrl.searchParams.get("subject");
+    const env = req.nextUrl.searchParams.get("env");
+
+    // The whole event stream — survey, scenario and timing events all feed the
+    // subject sheet, so filtering to test events here would silently empty it.
+    const query: Record<string, unknown> = {};
+    if (subject) query.subject_id = subject;
+    if (env) query.env = env;
+
+    const client = await getMongoClient();
+    const docs = (await client
+      .db(dbName)
+      .collection("logs")
+      .find(query, { projection: { _id: 0 } })
+      .sort({ timestamp: 1 })
+      .toArray()) as LogDoc[];
+
+    const submissions = collectSubmissions(docs);
+
+    const graded: GradedSubmission[] = [];
+    for (const submission of submissions) {
+      graded.push({
+        submission,
+        result: await gradeTest(submission.testId, submission.answers),
+      });
+    }
+
+    const stamp = new Date().toISOString().slice(0, 10);
+
+    const sheets: Record<string, { report: { rows: Record<string, unknown>[]; columns: string[] }; name: string }> = {
+      subjects: { report: buildSubjectSheet(docs, graded), name: `subjects-${stamp}.csv` },
+      answers: { report: buildAnswerSheet(docs, graded), name: `answers-${stamp}.csv` },
+      events: { report: buildEventSheet(docs), name: `events-${stamp}.csv` },
+      grades: { report: buildGradeReport(graded), name: `grades-${stamp}.csv` },
+      csv: { report: buildGradeReport(graded), name: `grades-${stamp}.csv` },
+      pairs: { report: buildPairReport(graded), name: `pre-post-${stamp}.csv` },
+    };
+
+    if (sheets[format]) {
+      const { report, name: filename } = sheets[format];
+
+      return new NextResponse(toCsv(report.rows, report.columns), {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    const incomplete = graded.filter(({ result }) => !result.complete);
+
+    return NextResponse.json(
+      {
+        generatedAt: new Date().toISOString(),
+        submissions: graded.length,
+        // Callers must check this before treating totals as scores.
+        allComplete: incomplete.length === 0,
+        incomplete: incomplete.map(({ submission, result }) => ({
+          subject_id: submission.subjectId,
+          test_id: submission.testId,
+          ungraded: result.ungraded,
+          error: result.gradingError,
+        })),
+        results: graded.map(({ submission, result }) => ({
+          subject_id: submission.subjectId,
+          test_id: submission.testId,
+          submitted_at: submission.submittedAt,
+          answers: submission.answers,
+          result,
+        })),
+      },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err) {
+    console.error("Grading export failed:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
+}

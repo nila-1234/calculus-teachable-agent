@@ -6,6 +6,9 @@ import "./globals.css";
 import { Theme } from "@radix-ui/themes";
 import Providers from "@/components/providers";
 import AppFooter from "@/components/app-footer";
+import LogStatus from "@/components/log-status";
+import SubjectGuard from "@/components/subject-guard";
+import StepTimer from "@/components/step-timer";
 
 const dmSans = DM_Sans({
   variable: "--font-app-sans",
@@ -33,8 +36,11 @@ export default function RootLayout({
         className={`${dmSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <SubjectGuard />
+          <StepTimer />
           {children}
           <AppFooter />
+          <LogStatus />
         </Providers>
       </body>
     </html>
