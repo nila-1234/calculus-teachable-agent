@@ -392,7 +392,9 @@ export default function LineRubricPanel({
                                 </p>
                               ) : null} */}
 
-                              {isSubmitted && criterionFeedback && !criterionFeedback.correct
+                              {isSubmitted &&
+                              criterionFeedback &&
+                              (currentComments[criterion.id]?.length ?? 0) > 0
                                 ? (currentComments[criterion.id] ?? [])
                                     .filter((comment) => comment.pending || comment.text)
                                     .map((comment) => {
@@ -551,6 +553,7 @@ export default function LineRubricPanel({
       {discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
         <DiscussionPanel
           open
+          forceReply
           onClose={() => setActiveDiscussion(null)}
           counterpartLabel={activeCounterpartLabel}
           criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}

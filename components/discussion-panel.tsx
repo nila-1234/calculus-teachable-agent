@@ -10,6 +10,10 @@ export type DiscussionMessage = {
   text: string;
 };
 
+// Quick replies the TA can send with one click instead of typing, covering the three
+// natural responses to a challenge or correction: hold your ground, back down, or concede.
+const QUICK_REPLIES = ["Yes, I'm sure", "No, let me look again", "Oh, you're right"];
+
 type DiscussionPanelProps = {
   open: boolean;
   onClose: () => void;
@@ -19,6 +23,9 @@ type DiscussionPanelProps = {
   messages: DiscussionMessage[];
   pending: boolean;
   onSend: (text: string) => void;
+  // When true, the panel can't be dismissed until the TA has sent at least one reply —
+  // used so a challenge or correction can't just be closed away unanswered.
+  forceReply?: boolean;
 };
 
 export default function DiscussionPanel({
@@ -30,9 +37,12 @@ export default function DiscussionPanel({
   messages,
   pending,
   onSend,
+  forceReply = false,
 }: DiscussionPanelProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const hasReplied = messages.some((message) => message.role === "user");
+  const canClose = !forceReply || hasReplied;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -48,8 +58,16 @@ export default function DiscussionPanel({
     setDraft("");
   };
 
+  const handleQuickReply = (text: string) => {
+    if (pending) return;
+    onSend(text);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-stone-900/30" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex justify-end bg-stone-900/30"
+      onClick={canClose ? onClose : undefined}
+    >
       <div
         className="flex h-full w-full max-w-sm flex-col border-l border-stone-200 bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -66,9 +84,11 @@ export default function DiscussionPanel({
           </div>
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Close discussion"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+            onClick={canClose ? onClose : undefined}
+            disabled={!canClose}
+            aria-label={canClose ? "Close discussion" : "Reply before closing this discussion"}
+            title={canClose ? undefined : "Reply before closing this discussion"}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-600 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Cross1Icon width={16} height={16} />
           </button>
@@ -107,7 +127,26 @@ export default function DiscussionPanel({
           ) : null}
         </div>
 
-        <form onSubmit={handleSubmit} className="flex items-end gap-2 border-t border-stone-200 p-3">
+        {!hasReplied ? (
+          <div className="flex flex-wrap gap-2 border-t border-stone-200 px-3 pt-3">
+            {QUICK_REPLIES.map((reply) => (
+              <button
+                key={reply}
+                type="button"
+                disabled={pending}
+                onClick={() => handleQuickReply(reply)}
+                className="rounded-full border border-stone-200 px-3 py-1 text-xs font-semibold text-stone-600 transition-colors hover:border-lime-600 hover:text-lime-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <form
+          onSubmit={handleSubmit}
+          className={`flex items-end gap-2 p-3 ${hasReplied ? "border-t border-stone-200" : ""}`}
+        >
           <textarea
             value={draft}
             onChange={(e) => setDraft(e.target.value)}

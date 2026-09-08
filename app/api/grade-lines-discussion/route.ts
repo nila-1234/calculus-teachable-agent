@@ -22,6 +22,9 @@ type GradeLinesDiscussionRequestBody = {
   openingComment?: string;
   messages?: DiscussionTurn[];
   userMessage?: string;
+  // True when this thread was opened as a random challenge to a criterion the TA
+  // actually graded correctly, not a correction of a real mistake.
+  challenge?: boolean;
 };
 
 // Placeholder replies for when the LLM backend (LiteLLM proxy) is unavailable, so the
@@ -129,6 +132,76 @@ The TA is now discussing your correction with you directly. Stay in character as
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
 
+function buildStudentChallengeDiscussionPrompt(
+  body: GradeLinesDiscussionRequestBody,
+  studentName: string
+): string {
+  const {
+    criterionLabel,
+    stepText,
+    feedback,
+    placedStep,
+    openingComment,
+    question,
+    answerText,
+  } = body;
+
+  return `You are role-playing as an AI student named "${studentName}" in a calculus tutoring exercise.
+
+You previously submitted the following solution in response to a question. A teaching assistant (TA) marked the criterion "${criterionLabel ?? "this criterion"}" (on step ${placedStep ?? "?"} of your work, "${stepText ?? ""}") as FAIL, and you voiced a nagging doubt about it, not a confident objection:
+"${openingComment ?? "(no opening message)"}"
+
+Question:
+${question || "(question not provided)"}
+
+Your submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this FAIL is actually correct.
+"${feedback || "(no additional context)"}"
+
+The TA is now responding to your doubt. Stay in character as the student:
+- If the TA's explanation actually engages with your work and matches the ground truth reasoning, let your doubt go and genuinely agree — you were, in fact, failed correctly. Don't keep arguing once they've made their case.
+- If the TA's response is vague, hand-wavy, or doesn't really address your work, stay unconvinced and press for a real answer.
+- Keep responses short (1-2 sentences), conversational, and a little tentative — you were never sure you were right to begin with.
+- Never break character or mention that you are an AI/LLM.`;
+}
+
+function buildProfessorChallengeDiscussionPrompt(
+  body: GradeLinesDiscussionRequestBody,
+  studentName: string
+): string {
+  const {
+    criterionLabel,
+    stepText,
+    feedback,
+    placedStep,
+    openingComment,
+    question,
+    answerText,
+  } = body;
+
+  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
+
+The student named "${studentName}" submitted a solution. The TA marked the criterion "${criterionLabel ?? "this criterion"}" (attached to step ${placedStep ?? "?"} of the work, "${stepText ?? ""}") as PASS, and you asked them to justify it rather than asserting it was wrong:
+"${openingComment ?? "(no opening message)"}"
+
+Question:
+${question || "(question not provided)"}
+
+The student's submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this PASS is actually correct.
+"${feedback || "(no additional context)"}"
+
+The TA is now defending their call. Stay in character as the professor:
+- If the TA's justification actually engages with the student's work and matches the ground truth reasoning, accept it and let it go — don't keep pressing once they've made their case.
+- If the TA's justification is vague or doesn't really engage with the work, keep pressing for specifics.
+- Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
+- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
+}
+
 export async function POST(req: Request) {
   const body: GradeLinesDiscussionRequestBody = await req.json();
   const {
@@ -140,10 +213,14 @@ export async function POST(req: Request) {
 
   const speaker: CommentSpeaker = rawSpeaker === "professor" ? "professor" : "student";
   const studentName = body.answerTitle || "the AI student";
+  const challenge = body.challenge === true;
 
   try {
-    const systemPrompt =
-      speaker === "professor"
+    const systemPrompt = challenge
+      ? speaker === "professor"
+        ? buildProfessorChallengeDiscussionPrompt(body, studentName)
+        : buildStudentChallengeDiscussionPrompt(body, studentName)
+      : speaker === "professor"
         ? buildProfessorDiscussionPrompt(body, studentName)
         : buildStudentDiscussionPrompt(body, studentName);
 

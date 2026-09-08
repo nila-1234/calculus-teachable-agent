@@ -10,13 +10,17 @@ import LineRubricPanel, {
   StepReviewState,
   RubricCriterion,
 } from "@/components/line-rubric-panel";
-import { CommentSpeaker, pickSpeakers } from "@/lib/grading-voice";
+import { CommentSpeaker, pickChallengeSpeaker, pickSpeakers } from "@/lib/grading-voice";
 import { getScenario } from "@/lib/scenarios/registry";
 import AppHeader from "@/components/app-header";
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
+
+// Chance that a correctly-graded criterion still gets challenged in discussion, so the
+// TA sometimes has to defend a right call instead of only ever fixing wrong ones.
+const CHALLENGE_RATE = 0.2;
 
 function GradeLinesPageContent() {
   const params = useParams();
@@ -48,6 +52,10 @@ function GradeLinesPageContent() {
   const [discussionPending, setDiscussionPending] = useState<
     Record<string, Record<string, Partial<Record<CommentSpeaker, boolean>>>>
   >({});
+  // Keyed by answerId -> criterionId: true when the thread on this criterion was opened
+  // as a random challenge to a correct grade, not a correction of a mistake. Read by the
+  // comment/discussion API calls so they can voice doubt instead of asserting an error.
+  const [challenges, setChallenges] = useState<Record<string, Record<string, boolean>>>({});
 
   // Patches one speaker's bubble on a criterion, leaving any other speaker's bubble alone.
   const patchComment = (
@@ -105,7 +113,8 @@ function GradeLinesPageContent() {
       stepCorrect: boolean;
       feedback: string;
     },
-    assignment: { speaker: CommentSpeaker; coversStep: boolean; coversStatus: boolean }
+    assignment: { speaker: CommentSpeaker; coversStep: boolean; coversStatus: boolean },
+    challenge: boolean
   ) => {
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     if (!answer) return;
@@ -131,6 +140,7 @@ function GradeLinesPageContent() {
           speaker: assignment.speaker,
           coversStep: assignment.coversStep,
           coversStatus: assignment.coversStatus,
+          challenge,
         }),
       });
       const data = await res.json();
@@ -158,6 +168,8 @@ function GradeLinesPageContent() {
       (c) => c.speaker === speaker
     );
     if (!answer || !criterionFeedback || !openingComment) return;
+
+    const challenge = challenges[answerId]?.[criterionId] ?? false;
 
     const priorMessages = discussions[answerId]?.[criterionId]?.[speaker] ?? [];
     const userMessage: DiscussionMessage = {
@@ -208,6 +220,7 @@ function GradeLinesPageContent() {
           openingComment: openingComment.text,
           messages: priorMessages.map((m) => ({ role: m.role, text: m.text })),
           userMessage: text,
+          challenge,
         }),
       });
       const data = await res.json();
@@ -295,32 +308,52 @@ function GradeLinesPageContent() {
       }));
 
       const incorrect = feedbackList.filter((item) => !item.correct);
+      // Even when the TA got it right, occasionally challenge the call anyway so they
+      // have to defend a correct grade, not just fix wrong ones.
+      const challenged = feedbackList.filter(
+        (item) => item.correct && Math.random() < CHALLENGE_RATE
+      );
+      const threaded = [...incorrect, ...challenged];
+
+      const assignmentsFor = (item: (typeof feedbackList)[number]) =>
+        item.correct
+          ? [{ speaker: pickChallengeSpeaker(item.status), coversStep: false, coversStatus: false }]
+          : pickSpeakers(item);
+
+      // A resubmit re-grades every criterion from scratch, so this answer's old threads
+      // are replaced wholesale rather than merged — otherwise a criterion that was
+      // incorrect (or challenged) last time but is now correct and unchallenged would
+      // keep showing its stale comment/discussion from before the fix.
+      setChallenges((prev) => ({
+        ...prev,
+        [answerId]: Object.fromEntries(challenged.map((item) => [item.criterionId, true])),
+      }));
+
+      setDiscussions((prev) => ({ ...prev, [answerId]: {} }));
+      setDiscussionPending((prev) => ({ ...prev, [answerId]: {} }));
 
       // Seed every bubble as pending up front so both speakers on one criterion appear
       // together and keep a stable order while their replies come back independently.
       setComments((prev) => ({
         ...prev,
-        [answerId]: {
-          ...prev[answerId],
-          ...Object.fromEntries(
-            incorrect.map((item) => [
-              item.criterionId,
-              pickSpeakers(item).map(({ speaker }) => ({
-                speaker,
-                text: "",
-                pending: true,
-              })),
-            ])
-          ),
-        },
+        [answerId]: Object.fromEntries(
+          threaded.map((item) => [
+            item.criterionId,
+            assignmentsFor(item).map(({ speaker }) => ({
+              speaker,
+              text: "",
+              pending: true,
+            })),
+          ])
+        ),
       }));
 
-      incorrect.forEach((item) => {
+      threaded.forEach((item) => {
         const stepText =
           item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "";
         const expectedStepText = answer.steps[item.expectedStep - 1] ?? "";
 
-        pickSpeakers(item).forEach((assignment) => {
+        assignmentsFor(item).forEach((assignment) => {
           fetchNudgeComment(
             answerId,
             item.criterionId,
@@ -328,7 +361,8 @@ function GradeLinesPageContent() {
             stepText,
             expectedStepText,
             item,
-            assignment
+            assignment,
+            item.correct
           );
         });
       });

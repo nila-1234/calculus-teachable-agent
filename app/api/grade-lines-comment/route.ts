@@ -22,6 +22,9 @@ type GradeLinesCommentRequestBody = {
   speaker?: CommentSpeaker;
   coversStep?: boolean;
   coversStatus?: boolean;
+  // True when this criterion was actually graded correctly and the bubble is a random
+  // challenge to make the TA defend the call, not a correction of a real mistake.
+  challenge?: boolean;
 };
 
 // Openers rotate deterministically per-criterion (not random) so a given
@@ -80,6 +83,77 @@ function buildFallbackReply(
   }
 
   return `${opener}something about "${label}" feels off to me — mind double-checking it?`;
+}
+
+// Placeholder replies for a challenge on a criterion the TA actually got right, used
+// when the LLM backend is unavailable.
+function buildFallbackChallengeReply(
+  body: GradeLinesCommentRequestBody,
+  speaker: CommentSpeaker
+): string {
+  const label = body.criterionLabel ?? "this criterion";
+  const step = body.placedStep ?? "?";
+
+  if (speaker === "professor") {
+    return `Are you sure "${label}" earns a pass on step ${step}? Why is it correct?`;
+  }
+
+  return `Wait, are you sure I actually got "${label}" wrong on step ${step}?`;
+}
+
+function buildStudentChallengePrompt(
+  body: GradeLinesCommentRequestBody,
+  studentName: string
+): string {
+  const { answerText, question, criterionLabel, stepText, feedback, placedStep } = body;
+
+  return `You are role-playing as an AI student named "${studentName}" in a calculus tutoring exercise.
+
+You previously submitted the following solution in response to a question. A teaching assistant (TA) is grading your work step by step, and just now marked the criterion "${criterionLabel ?? "this criterion"}" (on step ${placedStep ?? "?"} of your work, "${stepText ?? ""}") as FAIL.
+
+Question:
+${question || "(question not provided)"}
+
+Your submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this FAIL is actually correct, so do not claim you were wrongly failed.
+"${feedback || "(no additional context)"}"
+
+Write a short, genuinely uncertain reaction from the student — NOT a confident objection:
+- You have a nagging feeling you should push back, but you're not sure you're actually right.
+- Directly challenge the call with a pointed question — literally ask something like "Are you sure I got this wrong?" or "Wait, why is this a fail?" Don't just muse or make a vague observation; put the question to the TA and make them answer it.
+- Reference your own work on step ${placedStep ?? "?"} specifically — don't ask something generic that could apply to any criterion.
+- Keep it to 1 sentence, tentative and a little anxious, but still a direct question.
+- Never break character or mention that you are an AI/LLM.`;
+}
+
+function buildProfessorChallengePrompt(
+  body: GradeLinesCommentRequestBody,
+  studentName: string
+): string {
+  const { answerText, question, criterionLabel, stepText, feedback, placedStep } = body;
+
+  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
+
+The student named "${studentName}" submitted the following solution. The TA just graded the criterion "${criterionLabel ?? "this criterion"}" by attaching it to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}") and marking it PASS.
+
+Question:
+${question || "(question not provided)"}
+
+The student's submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this PASS is actually correct, so don't claim it's wrong.
+"${feedback || "(no additional context)"}"
+
+Write a short, skeptical-but-fair rebuttal to the TA:
+- Directly challenge the call with a pointed question — literally ask something like "Are you sure this deserves a pass?" or "Why is this correct?" Don't hedge into a vague request like "can you explain how..." — put them on the spot and make them defend the specific call.
+- Reference step ${placedStep ?? "?"} of the student's work specifically — don't ask something generic that could apply to any criterion.
+- You expect them to be able to defend it, and if they do, you'll accept it — but the opening line itself should read as doubt, not curiosity.
+- Keep it to 1 sentence, brief and matter-of-fact, not accusatory.
+- Do not greet or sign off. Open with the question itself.
+- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
 
 function buildStudentPrompt(
@@ -184,28 +258,38 @@ export async function POST(req: Request) {
   // Default to covering everything so a caller that omits the flags behaves as before.
   const coversStep = body.coversStep ?? true;
   const coversStatus = body.coversStatus ?? true;
+  const challenge = body.challenge === true;
 
   const studentName = answerTitle || "the AI student";
 
   try {
-    const mistakes: string[] = [];
-    if (coversStatus) {
-      mistakes.push(
-        speaker === "professor"
-          ? `The TA marked this criterion as ${(userStatus ?? "ungraded").toUpperCase()}, but that's the wrong call — it should be ${(expectedStatus ?? "the other way").toUpperCase()}.`
-          : `The TA marked this criterion as ${(userStatus ?? "ungraded").toUpperCase()}, but that's actually the wrong call — it should be ${(expectedStatus ?? "the other way").toUpperCase()}.`
-      );
-    }
-    if (coversStep) {
-      mistakes.push(
-        `The TA attached this criterion to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"), but it really belongs on step ${expectedStep ?? "?"} ("${expectedStepText ?? ""}") instead.`
-      );
-    }
+    let systemPrompt: string;
 
-    const systemPrompt =
-      speaker === "professor"
-        ? buildProfessorPrompt(body, studentName, mistakes)
-        : buildStudentPrompt(body, studentName, mistakes);
+    if (challenge) {
+      systemPrompt =
+        speaker === "professor"
+          ? buildProfessorChallengePrompt(body, studentName)
+          : buildStudentChallengePrompt(body, studentName);
+    } else {
+      const mistakes: string[] = [];
+      if (coversStatus) {
+        mistakes.push(
+          speaker === "professor"
+            ? `The TA marked this criterion as ${(userStatus ?? "ungraded").toUpperCase()}, but that's the wrong call — it should be ${(expectedStatus ?? "the other way").toUpperCase()}.`
+            : `The TA marked this criterion as ${(userStatus ?? "ungraded").toUpperCase()}, but that's actually the wrong call — it should be ${(expectedStatus ?? "the other way").toUpperCase()}.`
+        );
+      }
+      if (coversStep) {
+        mistakes.push(
+          `The TA attached this criterion to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"), but it really belongs on step ${expectedStep ?? "?"} ("${expectedStepText ?? ""}") instead.`
+        );
+      }
+
+      systemPrompt =
+        speaker === "professor"
+          ? buildProfessorPrompt(body, studentName, mistakes)
+          : buildStudentPrompt(body, studentName, mistakes);
+    }
 
     const completion = await client.chat.completions.create({
       model: MODELS.GEMINI_FAST,
@@ -226,13 +310,19 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       speaker,
-      reply: reply || buildFallbackReply(body, speaker, coversStep, coversStatus),
+      reply:
+        reply ||
+        (challenge
+          ? buildFallbackChallengeReply(body, speaker)
+          : buildFallbackReply(body, speaker, coversStep, coversStatus)),
     });
   } catch (error) {
     console.error("grade-lines-comment error, using hardcoded fallback:", error);
     return NextResponse.json({
       speaker,
-      reply: buildFallbackReply(body, speaker, coversStep, coversStatus),
+      reply: challenge
+        ? buildFallbackChallengeReply(body, speaker)
+        : buildFallbackReply(body, speaker, coversStep, coversStatus),
     });
   }
 }
