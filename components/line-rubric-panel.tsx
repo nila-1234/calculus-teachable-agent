@@ -271,8 +271,9 @@ export default function LineRubricPanel({
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
-            You are grading this AI student&apos;s work. Drag a rubric item from the bank onto the
-            step it applies to, then decide whether the student met that criterion:{" "}
+            You are grading this AI student&apos;s work.{" "}
+            <span className="font-semibold text-stone-600">Drag all</span> rubric items onto the
+            steps they apply to, then decide whether the student met each criterion:{" "}
             <span className="font-semibold text-stone-600">Pass</span> if their step satisfies it,{" "}
             <span className="font-semibold text-stone-600">Fail</span> if it does not. After you
             submit, the AI student or the professor will comment on any grading they disagree
@@ -475,7 +476,7 @@ export default function LineRubricPanel({
             }`}
           >
             <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-stone-400">
-              Rubric bank
+              Drag these rubric items to the appropriate step
             </span>
 
             {unassigned.length === 0 ? (
