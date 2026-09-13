@@ -6,15 +6,23 @@ import { hasSubjectId } from "@/lib/subject";
 
 /**
  * Routes reachable without a subject ID: the welcome page (where the study
- * starts), the surveys (where the ID is entered), and the instructor tooling
- * (researcher-only, not part of a participant run).
+ * starts), the surveys (where the ID is entered), the instructor tooling
+ * (researcher-only, not part of a participant run), and the scenarios
+ * section (/scenarios and /[id]/...) so it can be reached directly by URL
+ * without first going through the pre-survey/pre-test.
  */
-const EXEMPT = [/^\/$/, /^\/survey(\/|$)/, /^\/instructor(\/|$)/];
+const EXEMPT = [
+  /^\/$/,
+  /^\/survey(\/|$)/,
+  /^\/instructor(\/|$)/,
+  /^\/scenarios(\/|$)/,
+  /^\/[^/]+\/(question|apply-rubric|create-rubric|grade|grade-lines)(\/|$)/,
+];
 
 /**
  * Keeps participants from reaching a logged step before they have an ID.
- * Landing on /scenarios or a test directly used to work fine and tag every
- * event "unknown", which is unrecoverable after the fact.
+ * Landing on a test directly used to work fine and tag every event
+ * "unknown", which is unrecoverable after the fact.
  */
 export default function SubjectGuard() {
   const pathname = usePathname();

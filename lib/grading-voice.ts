@@ -1,45 +1,35 @@
 export type CommentSpeaker = "student" | "professor";
 
-export type SpeakerAssignment = {
-  speaker: CommentSpeaker;
-  // Which mistakes this speaker's bubble should address, so two bubbles on the same
-  // criterion don't repeat each other.
-  coversStep: boolean;
-  coversStatus: boolean;
-};
+// Step placement and pass/fail status are graded — and discussed — as two separate,
+// sequential moments (drag first, mark second), so speaker selection is split the same
+// way rather than picking one set of bubbles for a criterion as a whole.
 
-type GradedItem = {
-  stepCorrect: boolean;
-  statusCorrect: boolean;
+// A misplaced criterion is always caught by the professor — a student wouldn't
+// second-guess where the TA attached a criterion, only whether the pass/fail call is
+// fair to their own work.
+export function pickPlacementSpeaker(): CommentSpeaker {
+  return "professor";
+}
+
+// Even a correctly-placed criterion is sometimes challenged just to make the TA defend
+// the placement. Same reasoning as above: only the professor would raise that doubt.
+export function pickPlacementChallengeSpeaker(): CommentSpeaker {
+  return "professor";
+}
+
+type StatusItem = {
   status: "pass" | "fail" | null;
   expectedStatus: "pass" | "fail" | null;
+  statusCorrect: boolean;
 };
 
-// A student would point out that their correct work was marked Fail, but would never
-// volunteer that they should have been failed — that correction, and any misplaced
-// rubric item, belongs to the professor.
-export function pickSpeakers(item: GradedItem): SpeakerAssignment[] {
-  const stepWrong = !item.stepCorrect;
-  const tooLenient =
-    !item.statusCorrect && item.status === "pass" && item.expectedStatus === "fail";
-  const tooHarsh =
-    !item.statusCorrect && item.status === "fail" && item.expectedStatus === "pass";
-
-  const assignments: SpeakerAssignment[] = [];
-
-  if (stepWrong || tooLenient) {
-    assignments.push({
-      speaker: "professor",
-      coversStep: stepWrong,
-      coversStatus: tooLenient,
-    });
-  }
-
-  if (tooHarsh) {
-    assignments.push({ speaker: "student", coversStep: false, coversStatus: true });
-  }
-
-  return assignments;
+// A student would point out that their correct work was marked Fail (too harsh), but
+// would never volunteer that they should have been failed (too lenient) — that
+// correction belongs to the professor. Returns null when the status is actually correct.
+export function pickStatusSpeaker(item: StatusItem): CommentSpeaker | null {
+  if (item.statusCorrect) return null;
+  const tooHarsh = item.status === "fail" && item.expectedStatus === "pass";
+  return tooHarsh ? "student" : "professor";
 }
 
 // For a criterion the TA actually graded correctly, we sometimes have someone voice

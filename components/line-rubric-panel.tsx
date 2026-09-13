@@ -74,6 +74,9 @@ export type StepAnswerReviewState = {
 // Keyed by answerId
 export type StepReviewState = Record<string, StepAnswerReviewState>;
 
+// A thread key is `${criterionId}::placement` or `${criterionId}::status` — placement
+// and status are graded and discussed as two separate, sequential moments on the same
+// criterion, so every comment/discussion map below is keyed by thread, not by criterion.
 type LineRubricPanelProps = {
   question?: string;
   rubric: RubricCriterion[];
@@ -81,11 +84,12 @@ type LineRubricPanelProps = {
   placements: StepPlacementsState;
   onPlacementsChange: (answerId: string, placements: Record<string, StepPlacement>) => void;
   reviewStates: StepReviewState;
-  loadingAnswerId?: string | null;
-  onSubmitAnswer: (answerId: string) => void;
-  // Keyed by answerId -> criterionId -> comments, in display order
+  // Keyed by answerId -> criterionId: true while that criterion's placement or status
+  // check is in flight.
+  gradingCriteria?: Record<string, Record<string, boolean>>;
+  // Keyed by answerId -> threadKey -> comments, in display order
   comments?: Record<string, Record<string, GradeComment[]>>;
-  // Discussion-mode follow-up turns, keyed by answerId -> criterionId -> speaker.
+  // Discussion-mode follow-up turns, keyed by answerId -> threadKey -> speaker.
   // The opening comment itself lives in `comments`.
   discussions?: Record<
     string,
@@ -95,9 +99,11 @@ type LineRubricPanelProps = {
     string,
     Record<string, Partial<Record<CommentSpeaker, boolean>>>
   >;
+  // Keyed by answerId -> threadKey: true once the counterpart has conceded the point.
+  resolvedThreads?: Record<string, Record<string, boolean>>;
   onSendDiscussionMessage?: (
     answerId: string,
-    criterionId: string,
+    threadKey: string,
     speaker: CommentSpeaker,
     text: string
   ) => void;
@@ -106,7 +112,7 @@ type LineRubricPanelProps = {
   discussionMode?: number;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
-  // Called from the last answer once every answer has been submitted.
+  // Called from the last answer once every criterion in every answer has been graded.
   onComplete?: () => void;
 };
 
@@ -117,11 +123,11 @@ export default function LineRubricPanel({
   placements,
   onPlacementsChange,
   reviewStates,
-  loadingAnswerId,
-  onSubmitAnswer,
+  gradingCriteria,
   comments,
   discussions,
   discussionPending,
+  resolvedThreads,
   onSendDiscussionMessage,
   discussionMode = 2,
   currentIndex,
@@ -132,7 +138,7 @@ export default function LineRubricPanel({
   const [dragOverStep, setDragOverStep] = useState<number | null>(null);
   const [dragOverBank, setDragOverBank] = useState(false);
   const [activeDiscussion, setActiveDiscussion] = useState<{
-    criterionId: string;
+    key: string;
     speaker: CommentSpeaker;
   } | null>(null);
 
@@ -141,24 +147,55 @@ export default function LineRubricPanel({
   const currentPlacements = placements[currentAnswer.id] ?? {};
   const currentReview = reviewStates[currentAnswer.id];
   const isSubmitted = currentReview?.submitted ?? false;
-  const isLoading = loadingAnswerId === currentAnswer.id;
+  const currentGrading = gradingCriteria?.[currentAnswer.id] ?? {};
   const currentComments = comments?.[currentAnswer.id] ?? {};
   const currentDiscussions = discussions?.[currentAnswer.id] ?? {};
   const currentDiscussionPending = discussionPending?.[currentAnswer.id] ?? {};
+  const currentResolved = resolvedThreads?.[currentAnswer.id] ?? {};
+
+  const isThreadOpenAndUnresolved = (key: string) =>
+    (currentComments[key]?.length ?? 0) > 0 && !(currentResolved[key] ?? false);
+
+  // A challenge on an already-correct call can only be cleared through discussion — if
+  // discussion isn't available in this mode, it can't block progress, since there's
+  // nothing to fix and no way to resolve it.
+  const canDiscuss = discussionMode === 2;
+
+  // One phase (placement or status) is settled — and only then does it lock — once it's
+  // actually right AND, if the professor or student challenged it anyway, that challenge
+  // has been resolved. Being right isn't enough on its own to wave away an open
+  // challenge; being wrong always needs either a fix or a resolution, discussion or not.
+  const isPhaseSettled = (correct: boolean, key: string): boolean =>
+    correct ? !canDiscuss || !isThreadOpenAndUnresolved(key) : !isThreadOpenAndUnresolved(key);
+
+  // A criterion is "done" — and only then does the TA get to touch a different one —
+  // once its placement is settled and, in turn, its pass/fail call is settled too.
+  const isCriterionComplete = (criterionId: string): boolean => {
+    const feedback = currentReview?.feedback?.[criterionId];
+    if (!feedback) return false;
+    if (!isPhaseSettled(feedback.stepCorrect, `${criterionId}::placement`)) return false;
+    if (feedback.status == null) return false;
+    if (!isPhaseSettled(feedback.statusCorrect, `${criterionId}::status`)) return false;
+    return true;
+  };
+
+  const inProgressCriterionId =
+    rubric.find(
+      (criterion) => currentPlacements[criterion.id] && !isCriterionComplete(criterion.id)
+    )?.id ?? null;
 
   const activeDiscussionComment = activeDiscussion
-    ? currentComments[activeDiscussion.criterionId]?.find(
-        (c) => c.speaker === activeDiscussion.speaker
-      )
+    ? currentComments[activeDiscussion.key]?.find((c) => c.speaker === activeDiscussion.speaker)
     : undefined;
   const activeDiscussionCriterion = activeDiscussion
-    ? rubric.find((c) => c.id === activeDiscussion.criterionId)
+    ? rubric.find((c) => c.id === activeDiscussion.key.split("::")[0])
     : undefined;
   const activeCounterpartLabel =
     activeDiscussion?.speaker === "professor" ? "Professor" : currentAnswer.label;
 
-  const allPlaced =
-    rubric.length > 0 && rubric.every((criterion) => currentPlacements[criterion.id]?.status);
+  const gradedCount = rubric.filter(
+    (criterion) => currentReview?.feedback?.[criterion.id]?.status != null
+  ).length;
 
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex < answers.length - 1;
@@ -174,8 +211,8 @@ export default function LineRubricPanel({
 
   const assignToStep = (criterionId: string, stepIndex: number) => {
     const existing = currentPlacements[criterionId];
-    // Moving a criterion to a different step invalidates its pass/fail, so it has to be marked
-    // again. The earlier feedback stays on screen to inform that decision.
+    // Moving a criterion to a different step invalidates its earlier checks, so it's
+    // placement-checked again (and has to be marked pass/fail again too).
     const moved = existing != null && existing.stepIndex !== stepIndex;
 
     updatePlacements({
@@ -259,25 +296,26 @@ export default function LineRubricPanel({
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-bold text-stone-800">{currentAnswer.label}</h3>
-            {isSubmitted ? (
-              <span className="rounded-full bg-lime-50 px-2.5 py-1 text-xs font-semibold text-lime-700">
-                Submitted
-              </span>
-            ) : (
-              <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-500">
-                Not submitted
-              </span>
-            )}
+            <span
+              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                isSubmitted ? "bg-lime-50 text-lime-700" : "bg-stone-100 text-stone-500"
+              }`}
+            >
+              {gradedCount} of {rubric.length} graded
+            </span>
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
             You are grading this AI student&apos;s work.{" "}
-            <span className="font-semibold text-stone-600">Drag all</span> rubric items onto the
-            steps they apply to, then decide whether the student met each criterion:{" "}
-            <span className="font-semibold text-stone-600">Pass</span> if their step satisfies it,{" "}
-            <span className="font-semibold text-stone-600">Fail</span> if it does not. After you
-            submit, the AI student or the professor will comment on any grading they disagree
-            with.
+            <span className="font-semibold text-stone-600">Drag all</span>{" "}
+            rubric items onto the steps they apply to. As soon as you place one,
+            you&apos;ll see whether the placement is right; once it&apos;s placed, mark{" "}
+            <span className="font-semibold text-stone-600">
+              Pass
+            </span>{" "}
+            if the step satisfies it or <span className="font-semibold text-stone-600">Fail</span>{" "}
+            if it does not, and you&apos;ll see whether that call is right too. The AI student or
+            the professor may comment on or challenge either decision.
           </p>
 
           <div className="flex flex-col gap-2">
@@ -290,7 +328,7 @@ export default function LineRubricPanel({
                   key={stepIndex}
                   onDragOver={(e) => {
                     e.preventDefault();
-                    if (!isLoading) setDragOverStep(stepIndex);
+                    setDragOverStep(stepIndex);
                   }}
                   onDragLeave={() => setDragOverStep((prev) => (prev === stepIndex ? null : prev))}
                   onDrop={handleStepDrop(stepIndex)}
@@ -314,24 +352,45 @@ export default function LineRubricPanel({
                         {stepPlacements.map((criterion) => {
                           const placement = currentPlacements[criterion.id];
                           const criterionFeedback = currentReview?.feedback?.[criterion.id];
+                          const isGrading = currentGrading[criterion.id] ?? false;
+                          // Placement has been checked once feedback exists at all — its
+                          // `status` field is only non-null once the status phase has
+                          // also run.
+                          const placementChecked = criterionFeedback != null;
+                          const fullyGraded =
+                            placementChecked && criterionFeedback.status != null;
+                          const placementKey = `${criterion.id}::placement`;
+                          const statusKey = `${criterion.id}::status`;
+                          // While a different criterion is in progress (a misplacement or
+                          // a challenge still needs fixing or resolving), every other
+                          // criterion is locked — only the one in progress stays live.
+                          const lockedByOther =
+                            inProgressCriterionId != null &&
+                            inProgressCriterionId !== criterion.id;
+                          // Pass/Fail only make sense once the placement is settled:
+                          // actually right, and any challenge to it has been resolved
+                          // (not just correct underneath).
+                          const placementOk =
+                            placementChecked &&
+                            isPhaseSettled(criterionFeedback!.stepCorrect, placementKey);
 
                           return (
                             <div
                               key={criterion.id}
-                              draggable={!isLoading}
+                              draggable={!isGrading && !lockedByOther}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
                               className={`flex flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm ${
-                                isSubmitted && criterionFeedback
-                                  ? criterionFeedback.correct
+                                fullyGraded
+                                  ? criterionFeedback!.correct
                                     ? "bg-green-50"
                                     : "bg-red-50"
                                   : "bg-stone-50"
                               }`}
                             >
                               <div className="flex items-center gap-2">
-                                {isSubmitted && criterionFeedback ? (
-                                  criterionFeedback.correct ? (
+                                {fullyGraded ? (
+                                  criterionFeedback!.correct ? (
                                     <CheckIcon className="shrink-0 text-green-700" />
                                   ) : (
                                     <Cross2Icon className="shrink-0 text-red-700" />
@@ -342,117 +401,118 @@ export default function LineRubricPanel({
                                 <span className="flex-1 font-medium text-stone-700">
                                   <MathDisplay text={criterion.label} />
                                 </span>
-                                <div className="inline-flex shrink-0 gap-1">
-                                  <button
-                                    type="button"
-                                    disabled={isLoading}
-                                    onClick={() => setStatus(criterion.id, "pass")}
-                                    className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
-                                      placement?.status === "pass"
-                                        ? "bg-stone-300 text-slate-800"
-                                        : "bg-white text-stone-500 hover:border-stone-300"
-                                    }`}
-                                  >
-                                    AI Student Pass
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={isLoading}
-                                    onClick={() => setStatus(criterion.id, "fail")}
-                                    className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
-                                      placement?.status === "fail"
-                                        ? "bg-stone-300 text-slate-800"
-                                        : "bg-white text-stone-500 hover:border-stone-300"
-                                    }`}
-                                  >
-                                    AI Student Fail
-                                  </button>
-                                </div>
+                                {isGrading ? (
+                                  <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+                                    Checking...
+                                  </span>
+                                ) : null}
+                                {placementOk ? (
+                                  <div className="inline-flex shrink-0 gap-1">
+                                    <button
+                                      type="button"
+                                      disabled={isGrading || lockedByOther}
+                                      onClick={() => setStatus(criterion.id, "pass")}
+                                      title={
+                                        lockedByOther
+                                          ? "Finish the criterion in progress before grading this one"
+                                          : undefined
+                                      }
+                                      className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        placement?.status === "pass"
+                                          ? "bg-stone-300 text-slate-800"
+                                          : "bg-white text-stone-500 hover:border-stone-300"
+                                      }`}
+                                    >
+                                      AI Student Pass
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isGrading || lockedByOther}
+                                      onClick={() => setStatus(criterion.id, "fail")}
+                                      title={
+                                        lockedByOther
+                                          ? "Finish the criterion in progress before grading this one"
+                                          : undefined
+                                      }
+                                      className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                        placement?.status === "fail"
+                                          ? "bg-stone-300 text-slate-800"
+                                          : "bg-white text-stone-500 hover:border-stone-300"
+                                      }`}
+                                    >
+                                      AI Student Fail
+                                    </button>
+                                  </div>
+                                ) : null}
                                 <button
                                   type="button"
-                                  disabled={isLoading}
+                                  disabled={isGrading || lockedByOther}
                                   onClick={() => unassign(criterion.id)}
-                                  className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed"
+                                  className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed disabled:opacity-50"
                                   aria-label="Remove rubric item from this step"
                                 >
                                   <Cross2Icon />
                                 </button>
                               </div>
 
-                              {/* {isSubmitted && criterionFeedback && !criterionFeedback.correct ? (
-                                <p className="pl-5 text-xs font-medium text-red-700">
-                                  Expected:
-                                  {!criterionFeedback.stepCorrect &&
-                                    ` step ${criterionFeedback.expectedStep}`}
-                                  {!criterionFeedback.stepCorrect &&
-                                    !criterionFeedback.statusCorrect &&
-                                    ","}
-                                  {!criterionFeedback.statusCorrect &&
-                                    ` ${criterionFeedback.expectedStatus}`}
-                                </p>
-                              ) : null} */}
+                              {[placementKey, statusKey].flatMap((key) =>
+                                (currentComments[key] ?? [])
+                                  .filter((comment) => comment.pending || comment.text)
+                                  .map((comment) => {
+                                    const style = SPEAKER_STYLES[comment.speaker];
+                                    const name =
+                                      comment.speaker === "professor"
+                                        ? "Professor"
+                                        : currentAnswer.label;
 
-                              {isSubmitted &&
-                              criterionFeedback &&
-                              (currentComments[criterion.id]?.length ?? 0) > 0
-                                ? (currentComments[criterion.id] ?? [])
-                                    .filter((comment) => comment.pending || comment.text)
-                                    .map((comment) => {
-                                      const style = SPEAKER_STYLES[comment.speaker];
-                                      const name =
-                                        comment.speaker === "professor"
-                                          ? "Professor"
-                                          : currentAnswer.label;
-
-                                      return (
-                                        <div
-                                          key={comment.speaker}
-                                          className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${style.bubble}`}
+                                    return (
+                                      <div
+                                        key={key}
+                                        className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${style.bubble}`}
+                                      >
+                                        <span
+                                          title={name}
+                                          aria-label={name}
+                                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.avatar}`}
                                         >
-                                          <span
-                                            title={name}
-                                            aria-label={name}
-                                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.avatar}`}
-                                          >
-                                            {style.initial}
+                                          {style.initial}
+                                        </span>
+                                        {comment.pending ? (
+                                          <span className="italic opacity-80">
+                                            {name} is thinking...
                                           </span>
-                                          {comment.pending ? (
-                                            <span className="italic opacity-80">
-                                              {name} is thinking...
-                                            </span>
-                                          ) : (
-                                            <div className="flex-1">
-                                              <span className="font-semibold">{name}: </span>
-                                              <MathDisplay
-                                                text={comment.text}
-                                                className="inline text-xs"
-                                              />
-                                              {discussionMode === 2 ? (
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    setActiveDiscussion({
-                                                      criterionId: criterion.id,
-                                                      speaker: comment.speaker,
-                                                    })
-                                                  }
-                                                  className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-lime-700 hover:text-lime-900"
-                                                >
-                                                  <ChatBubbleIcon width={15} height={15} />
-                                                  Reply
-                                                  {(currentDiscussions[criterion.id]?.[
-                                                    comment.speaker
-                                                  ]?.length ?? 0) > 0
-                                                    ? ` (${currentDiscussions[criterion.id]?.[comment.speaker]?.length})`
-                                                    : ""}
-                                                </button>
-                                              ) : null}
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })
-                                : null}
+                                        ) : (
+                                          <div className="flex-1">
+                                            <span className="font-semibold">{name}: </span>
+                                            <MathDisplay
+                                              text={comment.text}
+                                              className="inline text-xs"
+                                            />
+                                            {discussionMode === 2 ? (
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  setActiveDiscussion({
+                                                    key,
+                                                    speaker: comment.speaker,
+                                                  })
+                                                }
+                                                className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-lime-700 hover:text-lime-900"
+                                              >
+                                                <ChatBubbleIcon width={15} height={15} />
+                                                Reply
+                                                {(currentDiscussions[key]?.[comment.speaker]
+                                                  ?.length ?? 0) > 0
+                                                  ? ` (${currentDiscussions[key]?.[comment.speaker]?.length})`
+                                                  : ""}
+                                              </button>
+                                            ) : null}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })
+                              )}
                             </div>
                           );
                         })}
@@ -469,7 +529,7 @@ export default function LineRubricPanel({
           <div
             onDragOver={(e) => {
               e.preventDefault();
-              if (!isLoading) setDragOverBank(true);
+              setDragOverBank(true);
             }}
             onDragLeave={() => setDragOverBank(false)}
             onDrop={handleBankDrop}
@@ -478,7 +538,7 @@ export default function LineRubricPanel({
             }`}
           >
             <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-stone-400">
-              Drag these rubric items to the appropriate step
+              Drag rubrics to the appropriate step
             </span>
 
             {unassigned.length === 0 ? (
@@ -490,12 +550,19 @@ export default function LineRubricPanel({
                 {unassigned.map((criterion) => (
                   <div
                     key={criterion.id}
-                    draggable={!isLoading}
+                    draggable={!inProgressCriterionId}
                     onDragStart={handleDragStart(criterion.id)}
                     onDragEnd={handleDragEnd}
-                    className={`flex cursor-grab items-start gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-700 transition-colors active:cursor-grabbing ${
-                      dragCriterionId === criterion.id ? "opacity-40" : ""
-                    }`}
+                    title={
+                      inProgressCriterionId
+                        ? "Finish the criterion in progress before starting another"
+                        : undefined
+                    }
+                    className={`flex items-start gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-700 transition-colors ${
+                      inProgressCriterionId
+                        ? "cursor-not-allowed opacity-50"
+                        : "cursor-grab active:cursor-grabbing"
+                    } ${dragCriterionId === criterion.id ? "opacity-40" : ""}`}
                   >
                     <DragHandleDots2Icon className="mt-0.5 shrink-0 text-stone-400" />
                     <MathDisplay text={criterion.label} />
@@ -517,13 +584,6 @@ export default function LineRubricPanel({
           Previous
         </Button>
 
-        <Button
-          onClick={() => onSubmitAnswer(currentAnswer.id)}
-          disabled={!allPlaced || isLoading}
-        >
-          {isLoading ? "Submitting..." : isSubmitted ? "Resubmit" : "Submit"}
-        </Button>
-
         {!hasNext && onComplete ? (
           <Button
             variant="secondary"
@@ -532,7 +592,7 @@ export default function LineRubricPanel({
             title={
               allSubmitted
                 ? undefined
-                : "Submit every answer before finishing this scenario"
+                : "Grade every criterion on every answer before finishing this scenario"
             }
           >
             Continue to scenarios
@@ -558,18 +618,14 @@ export default function LineRubricPanel({
           counterpartLabel={activeCounterpartLabel}
           criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}
           openingComment={activeDiscussionComment.text}
-          messages={
-            currentDiscussions[activeDiscussion.criterionId]?.[activeDiscussion.speaker] ?? []
-          }
+          messages={currentDiscussions[activeDiscussion.key]?.[activeDiscussion.speaker] ?? []}
           pending={
-            currentDiscussionPending[activeDiscussion.criterionId]?.[
-              activeDiscussion.speaker
-            ] ?? false
+            currentDiscussionPending[activeDiscussion.key]?.[activeDiscussion.speaker] ?? false
           }
           onSend={(text) =>
             onSendDiscussionMessage?.(
               currentAnswer.id,
-              activeDiscussion.criterionId,
+              activeDiscussion.key,
               activeDiscussion.speaker,
               text
             )

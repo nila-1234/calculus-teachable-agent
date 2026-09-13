@@ -19,9 +19,13 @@ type GradeLinesDiscussionRequestBody = {
   userStatus?: "pass" | "fail" | null;
   expectedStatus?: "pass" | "fail" | null;
   placedStep?: number | null;
+  expectedStep?: number;
   openingComment?: string;
   messages?: DiscussionTurn[];
   userMessage?: string;
+  // True when this thread is about the step placement rather than the pass/fail call —
+  // the two are graded and discussed as separate, sequential moments.
+  coversStep?: boolean;
   // True when this thread was opened as a random challenge to a criterion the TA
   // actually graded correctly, not a correction of a real mistake.
   challenge?: boolean;
@@ -51,6 +55,13 @@ function buildFallbackReply(speaker: CommentSpeaker, turnCount: number): string 
     speaker === "professor" ? PROFESSOR_FALLBACK_REPLIES : STUDENT_FALLBACK_REPLIES;
   return replies[turnCount % replies.length];
 }
+
+// Appended to every discussion system prompt so the model reports, alongside its reply,
+// whether the disagreement is actually over — the TA can't move on from a mistake or
+// challenge thread until it's either fixed at the source or resolved this way.
+const RESOLUTION_INSTRUCTIONS = `
+
+Respond with ONLY a JSON object of the form {"reply": "<your in-character message>", "resolved": true or false}. Set "resolved" to true ONLY if this reply genuinely concedes the point and the disagreement is over — you now agree the TA's call was right, per the rules above. Set it to false if you are still pushing back, asking a follow-up, or otherwise unconvinced. Do not set "resolved" to true just to be agreeable — only when the TA's explanation actually earned it.`;
 
 function buildStudentDiscussionPrompt(
   body: GradeLinesDiscussionRequestBody,
@@ -129,6 +140,82 @@ The TA is now discussing your correction with you directly. Stay in character as
 - Only concede the point if the TA's explanation is actually correct per the ground truth reasoning AND consistent with the student's submitted solution. If so, acknowledge it collegially and let the disagreement go — don't keep correcting just to correct.
 - If the TA's explanation is vague, wrong, or doesn't address your point, push back briefly and ask a specific follow-up.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — a mentor, not a scold.
+- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
+}
+
+function buildProfessorPlacementDiscussionPrompt(
+  body: GradeLinesDiscussionRequestBody,
+  studentName: string
+): string {
+  const {
+    criterionLabel,
+    stepText,
+    feedback,
+    placedStep,
+    expectedStep,
+    openingComment,
+    question,
+    answerText,
+  } = body;
+
+  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
+
+The student named "${studentName}" submitted a solution. The TA attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"). You already gave this correction:
+"${openingComment ?? "(no opening message)"}"
+
+For context, the ground-truth step for this criterion is step ${expectedStep ?? "?"}.
+
+Question:
+${question || "(question not provided)"}
+
+The student's submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim, only use it to judge whether the TA's explanation is correct:
+"${feedback || "(no additional context)"}"
+
+The TA is now discussing your correction with you directly. Stay in character as the professor:
+- Before agreeing with anything the TA says, check it against the student's actual submitted solution above and against the ground truth reasoning. Do not defer just because the TA is pushing back — the TA can be, and in this exchange may be, wrong.
+- Only concede the point if the TA's explanation is actually correct per the ground truth reasoning AND consistent with the student's submitted solution. If so, acknowledge it collegially and let the disagreement go — don't keep correcting just to correct.
+- If the TA's explanation is vague, wrong, or doesn't address your point, push back briefly and ask a specific follow-up.
+- Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
+- Keep responses short (1-2 sentences), collegial and matter-of-fact — a mentor, not a scold.
+- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
+}
+
+function buildProfessorPlacementChallengeDiscussionPrompt(
+  body: GradeLinesDiscussionRequestBody,
+  studentName: string
+): string {
+  const {
+    criterionLabel,
+    stepText,
+    feedback,
+    placedStep,
+    openingComment,
+    question,
+    answerText,
+  } = body;
+
+  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
+
+The student named "${studentName}" submitted a solution. The TA attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"), and you asked them to justify the placement rather than asserting it was wrong:
+"${openingComment ?? "(no opening message)"}"
+
+Question:
+${question || "(question not provided)"}
+
+The student's submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this placement is actually correct.
+"${feedback || "(no additional context)"}"
+
+The TA is now defending their placement. Stay in character as the professor:
+- If the TA's justification actually engages with the student's work and matches the ground truth reasoning, accept it and let it go — don't keep pressing once they've made their case.
+- If the TA's justification is vague or doesn't really engage with the work, keep pressing for specifics.
+- Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
+- Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
 
@@ -214,15 +301,21 @@ export async function POST(req: Request) {
   const speaker: CommentSpeaker = rawSpeaker === "professor" ? "professor" : "student";
   const studentName = body.answerTitle || "the AI student";
   const challenge = body.challenge === true;
+  const coversStep = body.coversStep === true;
 
   try {
-    const systemPrompt = challenge
-      ? speaker === "professor"
-        ? buildProfessorChallengeDiscussionPrompt(body, studentName)
-        : buildStudentChallengeDiscussionPrompt(body, studentName)
-      : speaker === "professor"
-        ? buildProfessorDiscussionPrompt(body, studentName)
-        : buildStudentDiscussionPrompt(body, studentName);
+    const basePrompt = coversStep
+      ? challenge
+        ? buildProfessorPlacementChallengeDiscussionPrompt(body, studentName)
+        : buildProfessorPlacementDiscussionPrompt(body, studentName)
+      : challenge
+        ? speaker === "professor"
+          ? buildProfessorChallengeDiscussionPrompt(body, studentName)
+          : buildStudentChallengeDiscussionPrompt(body, studentName)
+        : speaker === "professor"
+          ? buildProfessorDiscussionPrompt(body, studentName)
+          : buildStudentDiscussionPrompt(body, studentName);
+    const systemPrompt = basePrompt + RESOLUTION_INSTRUCTIONS;
 
     const history: { role: "assistant" | "user"; content: string }[] = messages.map(
       (message) => ({
@@ -245,15 +338,34 @@ export async function POST(req: Request) {
         { role: "user", content: userMessage ?? "" },
       ],
       temperature: 0.7,
+      response_format: { type: "json_object" },
     });
 
-    const reply = completion.choices[0]?.message?.content?.trim();
+    const raw = completion.choices[0]?.message?.content?.trim();
+    let reply = "";
+    let resolved = false;
+
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
+        resolved = parsed.resolved === true;
+      } catch {
+        // Model didn't return valid JSON — fall back to treating the raw text as the
+        // reply itself, unresolved, rather than losing the response entirely.
+        reply = raw;
+      }
+    }
 
     return NextResponse.json({
       reply: reply || buildFallbackReply(speaker, messages.length),
+      resolved,
     });
   } catch (error) {
     console.error("grade-lines-discussion error, using hardcoded fallback:", error);
-    return NextResponse.json({ reply: buildFallbackReply(speaker, messages.length) });
+    return NextResponse.json({
+      reply: buildFallbackReply(speaker, messages.length),
+      resolved: false,
+    });
   }
 }
