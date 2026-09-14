@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 import getFirestore from "@/lib/firestore";
 import { gradeTest } from "@/lib/tests/grade";
+import { readStoredGrade, writeStoredGrade } from "@/lib/tests/grade-store";
 import {
   buildGradeReport,
   buildPairReport,
@@ -71,6 +72,8 @@ export async function GET(req: NextRequest) {
     const format = req.nextUrl.searchParams.get("format") ?? "json";
     const subject = req.nextUrl.searchParams.get("subject");
     const env = req.nextUrl.searchParams.get("env");
+    // Escape hatch: force a re-grade after changing the key or the rubric.
+    const regrade = req.nextUrl.searchParams.has("regrade");
 
     // The whole event stream — survey, scenario and timing events all feed the
     // subject sheet, so filtering to test events here would silently empty it.
@@ -84,12 +87,26 @@ export async function GET(req: NextRequest) {
 
     const submissions = collectSubmissions(docs);
 
+    // Grade once and reuse. A stored grade is only used when it was produced
+    // from these exact answers; anything else is graded fresh and saved.
     const graded: GradedSubmission[] = [];
+    let gradedFresh = 0;
     for (const submission of submissions) {
-      graded.push({
-        submission,
-        result: await gradeTest(submission.testId, submission.answers),
-      });
+      const { subjectId, testId, answers } = submission;
+
+      const cached = regrade
+        ? null
+        : await readStoredGrade(subjectId, testId, answers);
+
+      if (cached) {
+        graded.push({ submission, result: cached });
+        continue;
+      }
+
+      const result = await gradeTest(testId, answers);
+      await writeStoredGrade(subjectId, testId, answers, result);
+      graded.push({ submission, result });
+      gradedFresh += 1;
     }
 
     const stamp = new Date().toISOString().slice(0, 10);
@@ -113,6 +130,7 @@ export async function GET(req: NextRequest) {
           generatedAt: new Date().toISOString(),
           events: docs.length,
           submissions: graded.length,
+          gradedFresh,
           allComplete: incomplete.length === 0,
           incomplete: incomplete.map(({ submission, result }) => ({
             subject_id: submission.subjectId,
