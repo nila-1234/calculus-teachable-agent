@@ -18,11 +18,14 @@ import {
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import { setSubjectId } from "@/lib/subject";
+import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 
 function SurveyPageContent() {
   const router = useRouter();
   const params = useParams();
-  const query = useSearchParams().toString();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  const preview = searchParams.has(PREVIEW_PARAM);
   const surveyId = typeof params.surveyId === "string" ? params.surveyId : "";
   const survey = getSurvey(surveyId);
 
@@ -38,6 +41,13 @@ function SurveyPageContent() {
 
   useEffect(() => {
     if (!survey) return;
+
+    // Preview opens either survey directly, always on the form, never resuming
+    // a participant's saved answers or their completed state.
+    if (isPreviewActive()) {
+      queueMicrotask(() => setScreen("form"));
+      return;
+    }
 
     if (
       survey.id === "post" &&
@@ -92,12 +102,12 @@ function SurveyPageContent() {
 
   const saveAnswers = (next: SurveyAnswers) => {
     setAnswers(next);
-    saveSurveyAnswers(survey.id, next);
+    if (!preview) saveSurveyAnswers(survey.id, next);
   };
 
   const handleSubmit = () => {
-    if (!canSubmit) return;
-    markSurveyCompleted(survey.id);
+    if (!canSubmit && !preview) return;
+    if (!preview) markSurveyCompleted(survey.id);
     logEvent("survey_completed", survey.id, { answers });
     setScreen("complete");
   };
@@ -125,14 +135,22 @@ function SurveyPageContent() {
               }}
             />
 
-            <div className="mt-6 flex items-center justify-between">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <span className="text-xs font-semibold text-stone-400">
                 {items.filter((item) => answers[item.id]?.trim()).length} of{" "}
                 {items.length} answered
               </span>
-              <Button onClick={handleSubmit} disabled={!canSubmit}>
-                Submit survey
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {!preview && (
+                  <span className="text-xs text-stone-400">
+                    Please review your answers before submitting. Once you
+                    submit, you will not be able to go back and change them.
+                  </span>
+                )}
+                <Button onClick={handleSubmit} disabled={!canSubmit && !preview}>
+                  Submit survey
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -152,9 +170,6 @@ function SurveyPageContent() {
                   : "Your responses have been recorded. Thank you for completing the study."}
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Button variant="secondary" onClick={() => setScreen("form")}>
-                  Review answers
-                </Button>
                 <Button onClick={() => router.push(nextHref)}>
                   {survey.id === "pre" ? "Continue to pre-test" : "Finish"}
                 </Button>

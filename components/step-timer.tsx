@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { logEvent } from "@/lib/logger";
+import { isNonParticipantContext } from "@/lib/preview";
 
 /**
  * Derives the scenario id from the route so timing events line up with the
@@ -30,6 +31,8 @@ export default function StepTimer() {
 
   useEffect(() => {
     if (!pathname) return;
+    // No time-on-task for instructor preview or instructor tooling.
+    if (isNonParticipantContext()) return;
 
     const previous = currentPath.current;
     if (previous === pathname) return;
@@ -57,6 +60,7 @@ export default function StepTimer() {
     // otherwise have no measured duration. pagehide is the one that survives an
     // actual unload; visibilitychange covers backgrounding without leaving.
     const logExit = (reason: string) => {
+      if (isNonParticipantContext()) return;
       if (!currentPath.current || exitLogged.current) return;
 
       exitLogged.current = true;

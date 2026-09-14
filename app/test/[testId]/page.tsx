@@ -11,11 +11,15 @@ import Button from "@/components/button";
 import { getTest } from "@/lib/tests/definitions";
 import { TestAnswers, TestItemAnswer } from "@/lib/tests/types";
 import { logEvent } from "@/lib/logger";
+import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 
 function TestPageContent() {
   const router = useRouter();
   const params = useParams();
-  const query = useSearchParams().toString();
+  const searchParams = useSearchParams();
+  const query = searchParams.toString();
+  // Derived, not stored: no effect needed and it stays correct across navigation.
+  const preview = searchParams.has(PREVIEW_PARAM);
   const testId = typeof params.testId === "string" ? params.testId : "";
   const test = getTest(testId);
 
@@ -35,6 +39,8 @@ function TestPageContent() {
 
   useEffect(() => {
     if (!test) return;
+    // Preview opens any test directly, with no prerequisite and no saved state.
+    if (isPreviewActive()) return;
 
     if (
       test.id === "pretest" &&
@@ -44,13 +50,26 @@ function TestPageContent() {
       return;
     }
 
+    let restored: TestAnswers = {};
     const saved = sessionStorage.getItem(`test:${test.id}:answers`);
     if (saved) {
       try {
-        setAnswers(JSON.parse(saved));
+        restored = JSON.parse(saved);
       } catch {
       }
     }
+
+    // Resume at the furthest question reached. Without this, a refresh or a
+    // browser-back out of the test would drop the participant at the intro and
+    // let them walk forward over answers they had already committed — which
+    // would defeat removing the Back button.
+    const stored = Number(sessionStorage.getItem(`test:${test.id}:progress`));
+    const resumeAt = Number.isInteger(stored) && stored > -1 ? stored : null;
+
+    queueMicrotask(() => {
+      setAnswers(restored);
+      if (resumeAt !== null) setScreenIndex(resumeAt);
+    });
   }, [test, query, router]);
 
   if (!test) {
@@ -69,7 +88,10 @@ function TestPageContent() {
 
   const saveAnswers = (next: TestAnswers) => {
     setAnswers(next);
-    sessionStorage.setItem(`test:${test.id}:answers`, JSON.stringify(next));
+    // Preview must not leave participant answers behind in storage.
+    if (!preview) {
+      sessionStorage.setItem(`test:${test.id}:answers`, JSON.stringify(next));
+    }
   };
 
   const isAnswered = (): boolean => {
@@ -99,17 +121,23 @@ function TestPageContent() {
     return Boolean(answer.text?.trim());
   };
 
-  const handleStart = () => {
-    logEvent("test_started", test.id, {});
-    setScreenIndex(0);
+  /** Answers are final once submitted, so progress only ever moves forward. */
+  const advanceTo = (next: number) => {
+    setScreenIndex(next);
+    // Preview must not write participant state into storage.
+    if (!preview) {
+      sessionStorage.setItem(`test:${test.id}:progress`, String(next));
+    }
   };
 
-  const handleBack = () => {
-    setScreenIndex((prev) => Math.max(prev - 1, -1));
+  const handleStart = () => {
+    logEvent("test_started", test.id, {});
+    advanceTo(0);
   };
 
   const handleNext = () => {
-    if (!current || !isAnswered()) return;
+    // Preview steps through without answering; a participant cannot.
+    if (!current || (!isAnswered() && !preview)) return;
 
     const { item } = current;
     logEvent("test_item_answered", test.id, {
@@ -117,12 +145,12 @@ function TestPageContent() {
       answer: answers[item.id],
     });
 
-    if (screenIndex === items.length - 1) {
+    if (screenIndex === items.length - 1 && !preview) {
       sessionStorage.setItem(`test:${test.id}:completed`, "true");
       logEvent("test_completed", test.id, { answers });
     }
 
-    setScreenIndex((prev) => prev + 1);
+    advanceTo(screenIndex + 1);
   };
 
   return (
@@ -169,16 +197,24 @@ function TestPageContent() {
               }
             />
 
-            <div className="mx-auto mt-6 flex w-full max-w-3xl items-center justify-between">
-              <Button variant="secondary" onClick={handleBack}>
-                Back
-              </Button>
+            <div className="mx-auto mt-6 flex w-full max-w-3xl items-center justify-between gap-4">
               <span className="text-xs font-semibold text-stone-400">
                 {screenIndex + 1} of {items.length}
               </span>
-              <Button onClick={handleNext} disabled={!isAnswered()}>
-                {screenIndex === items.length - 1 ? "Finish test" : "Next"}
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                {!preview && (
+                  <span className="text-xs text-stone-400">
+                    Please review your answer before continuing. Once you
+                    continue, you will not be able to go back and change it.
+                  </span>
+                )}
+                <Button
+                  onClick={handleNext}
+                  disabled={!isAnswered() && !preview}
+                >
+                  {screenIndex === items.length - 1 ? "Finish test" : "Next"}
+                </Button>
+              </div>
             </div>
           </>
         )}
@@ -197,12 +233,6 @@ function TestPageContent() {
                 assessment.
               </p>
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  variant="secondary"
-                  onClick={() => router.push(query ? `/test?${query}` : "/test")}
-                >
-                  Back to assessments
-                </Button>
                 <Button
                   onClick={() =>
                     router.push(

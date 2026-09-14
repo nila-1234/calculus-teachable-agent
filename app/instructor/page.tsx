@@ -1,10 +1,10 @@
 import Link from "next/link";
 import {
   ArrowRightIcon,
-  FileTextIcon,
   Pencil2Icon,
 } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
+import { PREVIEW_PHASES, previewHref } from "@/lib/preview";
 
 const instructorTools = [
   {
@@ -13,13 +13,6 @@ const instructorTools = [
     description:
       "Create a new calculus teaching module, from the student task through its grading materials.",
     icon: Pencil2Icon,
-  },
-  {
-    href: "/instructor/tests",
-    title: "Review pre/post tests",
-    description:
-      "Inspect every assessment and survey item alongside its answer key and grading notes.",
-    icon: FileTextIcon,
   },
 ];
 
@@ -33,14 +26,50 @@ export default function InstructorDashboardPage() {
           Instructor workspace
         </p>
         <h1 className="mt-2 text-3xl font-bold text-stone-800">
-          Teaching materials
+          Preview the study
         </h1>
         <p className="mt-2 max-w-2xl text-base leading-6 text-stone-500">
-          Build instruction sets and review the assessment materials students
-          encounter before and after instruction.
+          Open any phase on its own — the participant flow runs strictly in
+          order, so this is the only way to reach a later page without
+          completing everything before it. Tests and surveys step through
+          without answering; the instructions stay fully interactive so the AI
+          conversation can be tested.
         </p>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PREVIEW_PHASES.map((phase) => (
+            <Link
+              key={phase.id}
+              href={previewHref(phase.path)}
+              className="group flex flex-col rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-lime-600 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lime-600"
+            >
+              <span className="text-lg font-bold text-stone-800">
+                {phase.label}
+              </span>
+              <span className="mt-2 flex-1 text-sm leading-6 text-stone-500">
+                {phase.description}
+              </span>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-lime-700">
+                Open
+                <ArrowRightIcon
+                  width={16}
+                  height={16}
+                  aria-hidden="true"
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold text-stone-800">
+          Teaching materials
+        </h2>
+        <p className="mt-2 max-w-2xl text-base leading-6 text-stone-500">
+          Build and edit the teaching modules behind the scenarios.
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {instructorTools.map((tool) => {
             const Icon = tool.icon;
 
@@ -72,6 +101,7 @@ export default function InstructorDashboardPage() {
             );
           })}
         </div>
+
       </div>
     </main>
   );

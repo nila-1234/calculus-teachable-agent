@@ -9,6 +9,7 @@ import AppFooter from "@/components/app-footer";
 import LogStatus from "@/components/log-status";
 import SubjectGuard from "@/components/subject-guard";
 import StepTimer from "@/components/step-timer";
+import PreviewNav from "@/components/preview-nav";
 
 const dmSans = DM_Sans({
   variable: "--font-app-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <StepTimer />
           {children}
           <AppFooter />
+          <PreviewNav />
           <LogStatus />
         </Providers>
       </body>

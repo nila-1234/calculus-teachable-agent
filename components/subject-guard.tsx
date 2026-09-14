@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { hasSubjectId } from "@/lib/subject";
+import { isPreviewActive } from "@/lib/preview";
 
 /**
  * Routes reachable without a subject ID: the welcome page (where the study
@@ -30,6 +31,8 @@ export default function SubjectGuard() {
 
   useEffect(() => {
     if (!pathname) return;
+    // Instructor preview opens any page directly, with no subject ID.
+    if (isPreviewActive()) return;
     if (EXEMPT.some((pattern) => pattern.test(pathname))) return;
     if (hasSubjectId()) return;
 

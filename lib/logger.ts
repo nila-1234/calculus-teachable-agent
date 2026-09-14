@@ -1,4 +1,5 @@
 import { UNKNOWN_SUBJECT_ID, getSubjectId } from "@/lib/subject";
+import { isNonParticipantContext } from "@/lib/preview";
 
 const QUEUE_KEY = "logQueue";
 
@@ -167,6 +168,11 @@ export async function logEvent(
   data: Record<string, unknown>
 ) {
   if (typeof window === "undefined") return;
+
+  // Instructor preview and instructor tooling must never reach the study data.
+  // Dropping the event here covers every call site at once, so no page can
+  // forget to opt out.
+  if (isNonParticipantContext()) return;
 
   const subjectId = getSubjectId();
   if (subjectId === UNKNOWN_SUBJECT_ID) {
