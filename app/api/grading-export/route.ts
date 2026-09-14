@@ -103,6 +103,30 @@ export async function GET(req: NextRequest) {
       pairs: { report: buildPairReport(graded), name: `pre-post-${stamp}.csv` },
     };
 
+    // JSON shape of the same sheets, so the instructor analysis view can render
+    // a table without parsing CSV on the client.
+    if (format === "summary") {
+      const incomplete = graded.filter(({ result }) => !result.complete);
+
+      return NextResponse.json(
+        {
+          generatedAt: new Date().toISOString(),
+          events: docs.length,
+          submissions: graded.length,
+          allComplete: incomplete.length === 0,
+          incomplete: incomplete.map(({ submission, result }) => ({
+            subject_id: submission.subjectId,
+            test_id: submission.testId,
+            ungraded: result.ungraded,
+            error: result.gradingError,
+          })),
+          subjects: buildSubjectSheet(docs, graded),
+          pairs: buildPairReport(graded),
+        },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
     if (sheets[format]) {
       const { report, name: filename } = sheets[format];
 

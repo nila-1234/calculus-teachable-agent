@@ -1,12 +1,20 @@
 import Link from "next/link";
 import {
   ArrowRightIcon,
+  BarChartIcon,
   Pencil2Icon,
 } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
 import { PREVIEW_PHASES, previewHref } from "@/lib/preview";
 
 const instructorTools = [
+  {
+    href: "/instructor/analysis",
+    title: "Study results",
+    description:
+      "Auto-graded pre/post scores, time on task, and every logged answer — downloadable as JSON or CSV.",
+    icon: BarChartIcon,
+  },
   {
     href: "/instructor/generate",
     title: "Generate instruction set",
