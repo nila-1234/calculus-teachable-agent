@@ -10,7 +10,9 @@ const STEPS = [
   "Review and sign the consent form",
   "Complete the pre-survey",
   "Take the pre-test",
-  "Work through the TA scenarios",
+  // Deliberately generic: what happens here differs between the control
+  // and system conditions, so the entry page must not describe one of them.
+  "Complete the instruction",
   "Take the post-test",
   "Complete the post-survey",
 ];
@@ -30,12 +32,22 @@ function WelcomePageContent() {
         <h1 className="text-3xl font-bold text-stone-800">
           Teachable Calculus Agent Study
         </h1>
+        {/*
+          Wording matters here: at this point the visitor has not been screened
+          or consented, so this cannot thank them for taking part or imply that
+          they will.
+        */}
         <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
-          Thank you for taking part in this study. You&apos;ll start with a
-          short survey and a pre-test on optimization, then work through a set
-          of calculus TA scenarios where you write questions, build rubrics, and
-          grade student answers. At the end, you&apos;ll take a second
-          assessment and a brief post-survey.
+          Thank you for your interest in this study. You&apos;ll begin with a few
+          short questions about your background in mathematics, which take about
+          a minute and tell us whether this study is a fit for you. If you are
+          eligible, you&apos;ll then be asked to review and sign a consent form
+          before anything else.
+        </p>
+        <p className="mt-3 max-w-3xl text-base leading-6 text-stone-500">
+          The study itself takes about 90 minutes: a pre-survey and a pre-test on
+          optimization, then the instruction, and finally a second assessment and
+          a brief post-survey.
         </p>
 
         <div className="mt-8">

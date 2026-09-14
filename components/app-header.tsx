@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar, Flex, Text } from "@radix-ui/themes";
 
@@ -24,7 +23,9 @@ export default function AppHeader() {
           weight="bold"
           className="hidden truncate text-stone-800 sm:block"
         >
-          <Link href="/scenarios">Teachable Calculus Agent</Link>
+          {/* Not a link: /scenarios now routes into the study, so clicking
+              the logo mid-run would jump the participant out of their step. */}
+          Teachable Calculus Agent
         </Text>
       </Flex>
 

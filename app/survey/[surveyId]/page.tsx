@@ -102,8 +102,6 @@ function SurveyPageContent() {
   const progressStep = screen === "complete" ? survey.sections.length : 0;
   const canSubmit = areSurveyAnswersComplete(survey, answers);
   const withQuery = (path: string) => (query ? `${path}?${query}` : path);
-  const nextHref =
-    survey.id === "pre" ? withQuery("/test/pretest") : withQuery("/scenarios");
 
   /**
    * Updates one item. Uses a functional update because two answers changed
@@ -121,9 +119,11 @@ function SurveyPageContent() {
 
   const handleSubmit = () => {
     if (!canSubmit && !preview) return;
-    if (!preview) markSurveyCompleted(survey.id);
 
     // Screening decides eligibility and leaves the normal flow entirely.
+    // It is deliberately never marked complete: it has no completion screen to
+    // return to, and marking it meant coming back showed that screen instead of
+    // the questions.
     if (survey.id === "screening") {
       const eligibility = evaluateEligibility(answers);
       logEvent("screening_completed", survey.id, {
@@ -144,6 +144,7 @@ function SurveyPageContent() {
       return;
     }
 
+    if (!preview) markSurveyCompleted(survey.id);
     logEvent("survey_completed", survey.id, { answers });
     setScreen("complete");
   };
@@ -203,13 +204,20 @@ function SurveyPageContent() {
               <p className="mt-2 max-w-md text-sm leading-6 text-stone-500">
                 {survey.id === "pre"
                   ? "Your responses have been recorded. Continue to the pre-test."
-                  : "Your responses have been recorded. Thank you for completing the study."}
+                  : "Your responses have been recorded. This is the end of the study — thank you for taking part. You may now close this page."}
               </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Button onClick={() => router.push(nextHref)}>
-                  {survey.id === "pre" ? "Continue to pre-test" : "Finish"}
-                </Button>
-              </div>
+              {/*
+                The post-survey ends the study, so there is nothing to continue
+                to. It previously offered "Finish", which navigated back into the
+                instruction.
+              */}
+              {survey.id === "pre" && (
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <Button onClick={() => router.push(withQuery("/test/pretest"))}>
+                    Continue to pre-test
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
