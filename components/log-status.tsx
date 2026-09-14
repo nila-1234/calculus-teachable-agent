@@ -29,7 +29,7 @@ const subscribeSubject = (listener: () => void) => {
 const notifySubject = () => subjectListeners.forEach((listener) => listener());
 
 /**
- * Researcher-facing badge confirming events are actually reaching MongoDB.
+ * Researcher-facing badge confirming events are actually reaching Firestore.
  *
  * It stays hidden during a normal participant run and only appears when
  * something is wrong — or when opened with ?logcheck, which is how you verify a

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import getMongoClient from "@/lib/mongodb";
+import getFirestore from "@/lib/firestore";
 import { gradeTest } from "@/lib/tests/grade";
 import {
   buildGradeReport,
@@ -68,26 +68,19 @@ export async function GET(req: NextRequest) {
   if (denied) return denied;
 
   try {
-    const dbName = process.env.MONGODB_DB;
-    if (!dbName) throw new Error("MONGODB_DB is not set");
-
     const format = req.nextUrl.searchParams.get("format") ?? "json";
     const subject = req.nextUrl.searchParams.get("subject");
     const env = req.nextUrl.searchParams.get("env");
 
     // The whole event stream — survey, scenario and timing events all feed the
     // subject sheet, so filtering to test events here would silently empty it.
-    const query: Record<string, unknown> = {};
-    if (subject) query.subject_id = subject;
-    if (env) query.env = env;
+    let query: FirebaseFirestore.Query = getFirestore().collection("logs");
+    if (subject) query = query.where("subject_id", "==", subject);
+    if (env) query = query.where("env", "==", env);
+    query = query.orderBy("timestamp", "asc");
 
-    const client = await getMongoClient();
-    const docs = (await client
-      .db(dbName)
-      .collection("logs")
-      .find(query, { projection: { _id: 0 } })
-      .sort({ timestamp: 1 })
-      .toArray()) as LogDoc[];
+    const snapshot = await query.get();
+    const docs = snapshot.docs.map((doc) => doc.data() as LogDoc);
 
     const submissions = collectSubmissions(docs);
 

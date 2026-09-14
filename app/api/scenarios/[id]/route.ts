@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import getMongoClient from "@/lib/mongodb";
+import getFirestore from "@/lib/firestore";
 
 export async function GET(
   req: Request,
@@ -7,22 +7,14 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const client = await getMongoClient();
+  const snapshot = await getFirestore().collection("scenarios").doc(id).get();
 
-  const db = client.db(process.env.MONGODB_DB);
-
-  const scenario = await db.collection("scenarios")
-    .findOne(
-      { scenarioId: id },
-      { projection: { _id: 0 } }
-    );
-
-  if (!scenario) {
+  if (!snapshot.exists) {
     return NextResponse.json(
       { error: "Scenario not found" },
       { status: 404 }
     );
   }
 
-  return NextResponse.json(scenario);
+  return NextResponse.json(snapshot.data());
 }

@@ -1,68 +1,48 @@
-import { MongoClient } from "mongodb";
 import fs from "fs/promises";
 import path from "path";
 import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
+import getFirestore from "../lib/firestore";
+
 async function main() {
-  const uri = process.env.MONGODB_URI;
-  const dbName = process.env.MONGODB_DB;
+  const collection = getFirestore().collection("scenarios");
 
-  if (!uri) throw new Error("Missing MONGODB_URI");
-  if (!dbName) throw new Error("Missing MONGODB_DB");
+  const scenariosRoot = path.join(
+    process.cwd(),
+    "public",
+    "data",
+    "scenarios"
+  );
 
-  const client = new MongoClient(uri);
+  const scenarioIds = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
-  try {
-    await client.connect();
+  for (const scenarioId of scenarioIds) {
+    const scenarioDir = path.join(scenariosRoot, scenarioId);
 
-    const db = client.db(dbName);
-    const collection = db.collection("scenarios");
+    const modulePath = path.join(scenarioDir, "module.json");
+    const plotDataPath = path.join(scenarioDir, "plot-data.json");
 
-    const scenariosRoot = path.join(
-      process.cwd(),
-      "public",
-      "data",
-      "scenarios"
-    );
+    const moduleData = JSON.parse(await fs.readFile(modulePath, "utf-8"));
+    const plotData = await fs
+      .readFile(plotDataPath, "utf-8")
+      .then(JSON.parse)
+      .catch(() => null);
 
-    const scenarioIds = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    delete moduleData.plotDataSrc;
 
-    for (const scenarioId of scenarioIds) {
-      const scenarioDir = path.join(scenariosRoot, scenarioId);
+    await collection.doc(scenarioId).set({
+      scenarioId,
+      module: moduleData,
+      plotData,
+      updatedAt: new Date(),
+    });
 
-      const modulePath = path.join(scenarioDir, "module.json");
-      const plotDataPath = path.join(scenarioDir, "plot-data.json");
-
-      const module = JSON.parse(await fs.readFile(modulePath, "utf-8"));
-      const plotData = await fs
-        .readFile(plotDataPath, "utf-8")
-        .then(JSON.parse)
-        .catch(() => null);
-
-      delete module.plotDataSrc;
-
-      await collection.updateOne(
-        { scenarioId },
-        {
-          $set: {
-            scenarioId,
-            module,
-            plotData,
-            updatedAt: new Date(),
-          },
-        },
-        { upsert: true }
-      );
-
-      console.log(`Seeded scenario ${scenarioId}`);
-    }
-
-    console.log("All scenarios seeded successfully.");
-  } finally {
-    await client.close();
+    console.log(`Seeded scenario ${scenarioId}`);
   }
+
+  console.log("All scenarios seeded successfully.");
 }
 
 main().catch((err) => {

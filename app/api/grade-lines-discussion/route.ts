@@ -56,6 +56,35 @@ function buildFallbackReply(speaker: CommentSpeaker, turnCount: number): string 
   return replies[turnCount % replies.length];
 }
 
+// The model is asked for `{"reply": "...", "resolved": true|false}`, but nothing
+// guarantees it comes back as clean, parseable JSON (a stray unescaped quote in the
+// reply text, a markdown code fence, extra prose). Falls back to regex-extracting just
+// the reply field rather than ever surfacing the raw JSON blob to the TA.
+function extractDiscussionReply(raw: string): { reply: string; resolved: boolean } | null {
+  const stripped = raw
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    const parsed = JSON.parse(stripped);
+    if (typeof parsed.reply === "string") {
+      return { reply: parsed.reply.trim(), resolved: parsed.resolved === true };
+    }
+  } catch {
+    // Fall through to regex extraction below.
+  }
+
+  const replyMatch = stripped.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  if (!replyMatch) return null;
+
+  const reply = replyMatch[1].replace(/\\"/g, '"').replace(/\\n/g, "\n").trim();
+  if (!reply) return null;
+
+  const resolvedMatch = stripped.match(/"resolved"\s*:\s*(true|false)/);
+  return { reply, resolved: resolvedMatch?.[1] === "true" };
+}
+
 // Appended to every discussion system prompt so the model reports, alongside its reply,
 // whether the disagreement is actually over — the TA can't move on from a mistake or
 // challenge thread until it's either fixed at the source or resolved this way.
@@ -346,15 +375,13 @@ export async function POST(req: Request) {
     let resolved = false;
 
     if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        reply = typeof parsed.reply === "string" ? parsed.reply.trim() : "";
-        resolved = parsed.resolved === true;
-      } catch {
-        // Model didn't return valid JSON — fall back to treating the raw text as the
-        // reply itself, unresolved, rather than losing the response entirely.
-        reply = raw;
+      const extracted = extractDiscussionReply(raw);
+      if (extracted) {
+        reply = extracted.reply;
+        resolved = extracted.resolved;
       }
+      // If the reply field couldn't be recovered at all, `reply` stays empty and the
+      // canned fallback below covers it — never show the raw model output verbatim.
     }
 
     return NextResponse.json({

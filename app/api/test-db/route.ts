@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
-import getMongoClient from "@/lib/mongodb";
+import getFirestore from "@/lib/firestore";
 
 export async function GET() {
   try {
-    const client = await getMongoClient();
-
-    const db = client.db(process.env.MONGODB_DB);
-
-    await db.collection("test").insertOne({
+    await getFirestore().collection("test").add({
       connected: true,
       createdAt: new Date(),
     });

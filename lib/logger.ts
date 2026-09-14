@@ -110,7 +110,7 @@ function writeQueue(entries: LogEntry[]) {
 /**
  * Delivers everything buffered locally. Entries stay in the queue until the
  * server confirms it wrote them, so a failed request (offline, 500, missing
- * MONGODB_URI) is retried on the next event, on the next page load, and when
+ * Firebase credentials) is retried on the next event, on the next page load, and when
  * the browser comes back online instead of being silently dropped.
  */
 export async function flushLogQueue(): Promise<void> {
