@@ -10,6 +10,7 @@ import LogStatus from "@/components/log-status";
 import SubjectGuard from "@/components/subject-guard";
 import StepTimer from "@/components/step-timer";
 import PreviewNav from "@/components/preview-nav";
+import AiLogger from "@/components/ai-logger";
 
 const dmSans = DM_Sans({
   variable: "--font-app-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
         <Providers>
           <SubjectGuard />
           <StepTimer />
+          <AiLogger />
           {children}
           <AppFooter />
           <PreviewNav />

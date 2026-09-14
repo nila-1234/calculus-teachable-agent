@@ -189,6 +189,18 @@ export function buildSubjectSheet(docs: LogDoc[], graded: GradedSubmission[]) {
 
         scenarios_visited: [...scenarioIds].sort((a, b) => +a - +b).join(" "),
         scenario_events: list.filter((d) => phaseOf(d) === "scenarios").length,
+        // Whether, and how much, the participant engaged with the AI.
+        ai_exchanges: list.filter((d) => d.event === "ai_exchange").length,
+        ai_routes_used: [
+          ...new Set(
+            list
+              .filter((d) => d.event === "ai_exchange")
+              .map((d) => String(d.data?.route ?? ""))
+              .filter(Boolean)
+          ),
+        ]
+          .sort()
+          .join(" "),
 
         pre_points: pre?.totalPoints ?? "",
         pre_max: pre?.totalMaxPoints ?? "",
@@ -241,6 +253,8 @@ export function buildSubjectSheet(docs: LogDoc[], graded: GradedSubmission[]) {
       "min_post_survey",
       "scenarios_visited",
       "scenario_events",
+      "ai_exchanges",
+      "ai_routes_used",
       "pre_points",
       "pre_max",
       "post_points",
