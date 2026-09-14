@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Cross1Icon, PaperPlaneIcon } from "@radix-ui/react-icons";
+import { Cross1Icon, PaperPlaneIcon, UpdateIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 
 export type DiscussionMessage = {
@@ -120,8 +120,9 @@ export default function DiscussionPanel({
 
           {pending ? (
             <div className="flex justify-start">
-              <div className="max-w-[85%] rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-sm italic text-sky-700">
-                {counterpartLabel} is thinking...
+              <div className="flex items-center gap-1.5 rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-sky-500">
+                <UpdateIcon className="shrink-0 animate-spin" />
+                Checking...
               </div>
             </div>
           ) : null}

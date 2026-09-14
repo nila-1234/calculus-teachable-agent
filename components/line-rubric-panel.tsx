@@ -8,6 +8,7 @@ import {
   CheckIcon,
   Cross2Icon,
   DragHandleDots2Icon,
+  UpdateIcon,
 } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 import Button from "@/components/button";
@@ -43,6 +44,20 @@ export type RubricCriterion = {
   id: string;
   label: string;
 };
+
+// Where the single active criterion currently stands. Drives the spotlight/dim
+// treatment and the header status pill.
+type Phase = "place" | "checking" | "mark" | "resolve-placement" | "resolve-status" | "done";
+
+const PHASE_PILL: Partial<Record<Phase, { text: string; className: string }>> = {
+  place: { text: "Place it on a step", className: "bg-lime-100 text-lime-700" },
+  checking: { text: "Checking…", className: "bg-stone-100 text-stone-500" },
+  mark: { text: "Mark pass or fail", className: "bg-lime-100 text-lime-700" },
+  "resolve-placement": { text: "Move to the correct step", className: "bg-red-100 text-red-700" },
+  "resolve-status": { text: "Reply to resolve", className: "bg-amber-100 text-amber-700" },
+};
+
+const DIM = "opacity-40 pointer-events-none";
 
 export type StepPlacement = {
   criterionId: string;
@@ -179,10 +194,38 @@ export default function LineRubricPanel({
     return true;
   };
 
-  const inProgressCriterionId =
-    rubric.find(
-      (criterion) => currentPlacements[criterion.id] && !isCriterionComplete(criterion.id)
-    )?.id ?? null;
+  // Exactly one criterion is ever actionable, chosen by rubric order — everything before
+  // it is done, everything after it waits its turn.
+  const activeCriterionId = rubric.find((criterion) => !isCriterionComplete(criterion.id))?.id ?? null;
+  const activePlacement = activeCriterionId ? currentPlacements[activeCriterionId] : undefined;
+  const activeFeedback = activeCriterionId
+    ? currentReview?.feedback?.[activeCriterionId]
+    : undefined;
+  const activeIsGrading = activeCriterionId ? (currentGrading[activeCriterionId] ?? false) : false;
+  const activeStepIndex = activePlacement?.stepIndex ?? null;
+
+  // True while a thread's opening comment is still being fetched — the pill and mark
+  // block hold at "checking" until that comment has actually arrived, so the verdict
+  // doesn't flash in ahead of the note explaining it.
+  const isThreadPending = (key: string) => (currentComments[key] ?? []).some((c) => c.pending);
+
+  const phase: Phase = !activeCriterionId
+    ? "done"
+    : !activePlacement
+      ? "place"
+      : activeIsGrading || !activeFeedback
+        ? "checking"
+        : !isPhaseSettled(activeFeedback.stepCorrect, `${activeCriterionId}::placement`)
+          ? isThreadPending(`${activeCriterionId}::placement`)
+            ? "checking"
+            : "resolve-placement"
+          : activeFeedback.status == null
+            ? "mark"
+            : !isPhaseSettled(activeFeedback.statusCorrect, `${activeCriterionId}::status`)
+              ? isThreadPending(`${activeCriterionId}::status`)
+                ? "checking"
+                : "resolve-status"
+              : "done";
 
   const activeDiscussionComment = activeDiscussion
     ? currentComments[activeDiscussion.key]?.find((c) => c.speaker === activeDiscussion.speaker)
@@ -294,15 +337,24 @@ export default function LineRubricPanel({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
         <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-base font-bold text-stone-800">{currentAnswer.label}</h3>
-            <span
-              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                isSubmitted ? "bg-lime-50 text-lime-700" : "bg-stone-100 text-stone-500"
-              }`}
-            >
-              {gradedCount} of {rubric.length} graded
-            </span>
+            <div className="flex items-center gap-2">
+              {PHASE_PILL[phase] ? (
+                <span
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${PHASE_PILL[phase]!.className}`}
+                >
+                  {PHASE_PILL[phase]!.text}
+                </span>
+              ) : null}
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  isSubmitted ? "bg-lime-50 text-lime-700" : "bg-stone-100 text-stone-500"
+                }`}
+              >
+                {gradedCount} of {rubric.length} graded
+              </span>
+            </div>
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
@@ -322,6 +374,18 @@ export default function LineRubricPanel({
             {steps.map((step, stepIndex) => {
               const stepPlacements = placementsByStep(stepIndex);
               const isDragOver = dragOverStep === stepIndex;
+              // Every step is a valid drop target while the active criterion still needs
+              // placing or re-placing (a wrong first guess has to be movable to any other
+              // step, not just stuck wherever it landed); once it's correctly placed, only
+              // its own step stays bright.
+              const needsPlacement = phase === "place" || phase === "resolve-placement";
+              const isStepDimmed = !needsPlacement && activeStepIndex !== stepIndex;
+              // Skip the hint on the step the active criterion is already (wrongly) sitting
+              // on — that step's card makes the drop target obvious without it. And only
+              // show it once something is actually being dragged, not just sitting there
+              // unplaced in the bank.
+              const showDropHint =
+                needsPlacement && activeStepIndex !== stepIndex && dragCriterionId != null;
 
               return (
                 <div
@@ -332,11 +396,11 @@ export default function LineRubricPanel({
                   }}
                   onDragLeave={() => setDragOverStep((prev) => (prev === stepIndex ? null : prev))}
                   onDrop={handleStepDrop(stepIndex)}
-                  className={`flex gap-3 rounded-xl border-2 border-dashed p-3 transition-colors ${
+                  className={`flex gap-3 rounded-xl border-2 border-dashed p-3 transition-colors transition-opacity ${
                     isDragOver
                       ? "border-lime-500 bg-lime-50"
                       : "border-transparent hover:border-stone-200"
-                  }`}
+                  } ${isStepDimmed ? DIM : ""}`}
                 >
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-500">
                     {stepIndex + 1}
@@ -346,6 +410,12 @@ export default function LineRubricPanel({
                     <div className="text-sm leading-7 text-stone-700">
                       <MathDisplay text={step} />
                     </div>
+
+                    {showDropHint ? (
+                      <div className="mt-2 rounded-lg border border-dashed border-stone-300 py-2 text-center text-xs font-medium text-stone-400">
+                        {isDragOver ? "Release to place" : "↓ Drop the highlighted rubric here"}
+                      </div>
+                    ) : null}
 
                     {stepPlacements.length > 0 ? (
                       <div className="mt-1 flex flex-col gap-2">
@@ -361,18 +431,14 @@ export default function LineRubricPanel({
                             placementChecked && criterionFeedback.status != null;
                           const placementKey = `${criterion.id}::placement`;
                           const statusKey = `${criterion.id}::status`;
-                          // While a different criterion is in progress (a misplacement or
-                          // a challenge still needs fixing or resolving), every other
-                          // criterion is locked — only the one in progress stays live.
-                          const lockedByOther =
-                            inProgressCriterionId != null &&
-                            inProgressCriterionId !== criterion.id;
-                          // Pass/Fail only make sense once the placement is settled:
-                          // actually right, and any challenge to it has been resolved
-                          // (not just correct underneath).
-                          const placementOk =
-                            placementChecked &&
-                            isPhaseSettled(criterionFeedback!.stepCorrect, placementKey);
+                          // Only the active criterion is ever interactive — every other
+                          // placed card, by construction, is already done.
+                          const isActive = criterion.id === activeCriterionId;
+                          const lockedByOther = !isActive;
+                          // The mark block only shows for the active card, once its
+                          // placement is settled (actually right, and any challenge to it
+                          // resolved) and it hasn't been marked yet.
+                          const showMarkBlock = isActive && phase === "mark";
 
                           return (
                             <div
@@ -380,16 +446,18 @@ export default function LineRubricPanel({
                               draggable={!isGrading && !lockedByOther}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
-                              className={`flex flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm ${
+                              className={`flex flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm transition-opacity ${
                                 fullyGraded
                                   ? criterionFeedback!.correct
                                     ? "bg-green-50"
                                     : "bg-red-50"
                                   : "bg-stone-50"
-                              }`}
+                              } ${lockedByOther ? DIM : ""}`}
                             >
                               <div className="flex items-center gap-2">
-                                {fullyGraded ? (
+                                {isGrading ? (
+                                  <UpdateIcon className="shrink-0 animate-spin text-stone-400" />
+                                ) : fullyGraded ? (
                                   criterionFeedback!.correct ? (
                                     <CheckIcon className="shrink-0 text-green-700" />
                                   ) : (
@@ -406,43 +474,16 @@ export default function LineRubricPanel({
                                     Checking...
                                   </span>
                                 ) : null}
-                                {placementOk ? (
-                                  <div className="inline-flex shrink-0 gap-1">
-                                    <button
-                                      type="button"
-                                      disabled={isGrading || lockedByOther}
-                                      onClick={() => setStatus(criterion.id, "pass")}
-                                      title={
-                                        lockedByOther
-                                          ? "Finish the criterion in progress before grading this one"
-                                          : undefined
-                                      }
-                                      className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                        placement?.status === "pass"
-                                          ? "bg-stone-300 text-slate-800"
-                                          : "bg-white text-stone-500 hover:border-stone-300"
-                                      }`}
-                                    >
-                                      AI Student Pass
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={isGrading || lockedByOther}
-                                      onClick={() => setStatus(criterion.id, "fail")}
-                                      title={
-                                        lockedByOther
-                                          ? "Finish the criterion in progress before grading this one"
-                                          : undefined
-                                      }
-                                      className={`rounded-md px-2 py-1 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                                        placement?.status === "fail"
-                                          ? "bg-stone-300 text-slate-800"
-                                          : "bg-white text-stone-500 hover:border-stone-300"
-                                      }`}
-                                    >
-                                      AI Student Fail
-                                    </button>
-                                  </div>
+                                {fullyGraded ? (
+                                  <span
+                                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                      criterionFeedback!.correct
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-red-100 text-red-700"
+                                    }`}
+                                  >
+                                    AI Student {placement?.status === "fail" ? "Fail" : "Pass"}
+                                  </span>
                                 ) : null}
                                 <button
                                   type="button"
@@ -454,6 +495,36 @@ export default function LineRubricPanel({
                                   <Cross2Icon />
                                 </button>
                               </div>
+
+                              {showMarkBlock ? (
+                                <div className="animate-fade-in-slide flex flex-col gap-2 border-t border-stone-200 pt-2.5">
+                                  <div className="flex items-center gap-1.5 text-xs text-stone-600">
+                                    <CheckIcon className="shrink-0 text-green-700" />
+                                    <span>
+                                      <span className="font-semibold">Placement confirmed.</span>{" "}
+                                      Does this step meet the criterion?
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={isGrading}
+                                      onClick={() => setStatus(criterion.id, "pass")}
+                                      className="h-10 rounded-lg border border-green-300 text-xs font-semibold text-green-700 transition-colors hover:bg-green-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      AI Student Pass
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isGrading}
+                                      onClick={() => setStatus(criterion.id, "fail")}
+                                      className="h-10 rounded-lg border border-red-300 text-xs font-semibold text-red-700 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      AI Student Fail
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
 
                               {[placementKey, statusKey].flatMap((key) =>
                                 (currentComments[key] ?? [])
@@ -470,16 +541,20 @@ export default function LineRubricPanel({
                                         key={key}
                                         className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${style.bubble}`}
                                       >
-                                        <span
-                                          title={name}
-                                          aria-label={name}
-                                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.avatar}`}
-                                        >
-                                          {style.initial}
-                                        </span>
                                         {comment.pending ? (
-                                          <span className="italic opacity-80">
-                                            {name} is thinking...
+                                          <UpdateIcon className="mt-0.5 shrink-0 animate-spin text-stone-400" />
+                                        ) : (
+                                          <span
+                                            title={name}
+                                            aria-label={name}
+                                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${style.avatar}`}
+                                          >
+                                            {style.initial}
+                                          </span>
+                                        )}
+                                        {comment.pending ? (
+                                          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+                                            Checking...
                                           </span>
                                         ) : (
                                           <div className="flex-1">
@@ -547,27 +622,38 @@ export default function LineRubricPanel({
               </p>
             ) : (
               <div className="flex flex-col gap-2">
-                {unassigned.map((criterion) => (
-                  <div
-                    key={criterion.id}
-                    draggable={!inProgressCriterionId}
-                    onDragStart={handleDragStart(criterion.id)}
-                    onDragEnd={handleDragEnd}
-                    title={
-                      inProgressCriterionId
-                        ? "Finish the criterion in progress before starting another"
-                        : undefined
-                    }
-                    className={`flex items-start gap-2 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-700 transition-colors ${
-                      inProgressCriterionId
-                        ? "cursor-not-allowed opacity-50"
-                        : "cursor-grab active:cursor-grabbing"
-                    } ${dragCriterionId === criterion.id ? "opacity-40" : ""}`}
-                  >
-                    <DragHandleDots2Icon className="mt-0.5 shrink-0 text-stone-400" />
-                    <MathDisplay text={criterion.label} />
-                  </div>
-                ))}
+                {unassigned.map((criterion) => {
+                  const isActive = criterion.id === activeCriterionId;
+
+                  return (
+                    <div
+                      key={criterion.id}
+                      draggable={isActive}
+                      onDragStart={handleDragStart(criterion.id)}
+                      onDragEnd={handleDragEnd}
+                      title={
+                        isActive
+                          ? undefined
+                          : "Finish the criterion in progress before starting another"
+                      }
+                      className={`flex flex-col gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-stone-700 transition-colors transition-opacity ${
+                        isActive
+                          ? "cursor-grab border-lime-500 bg-lime-50 active:cursor-grabbing animate-pulse-ring"
+                          : `cursor-not-allowed border-stone-200 bg-stone-50 ${DIM}`
+                      } ${dragCriterionId === criterion.id ? "opacity-40" : ""}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <DragHandleDots2Icon className="mt-0.5 shrink-0 text-stone-400" />
+                        <MathDisplay text={criterion.label} />
+                      </div>
+                      {isActive ? (
+                        <span className="ml-5 inline-flex w-fit items-center gap-1 rounded-full bg-lime-100 px-2 py-0.5 text-[10px] font-semibold text-lime-700">
+                          → Start here — drag to its step
+                        </span>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

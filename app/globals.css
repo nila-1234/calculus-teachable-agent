@@ -56,6 +56,35 @@ body {
   animation: ripple 600ms ease-out;
 }
 
+@keyframes fade-in-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-slide {
+  animation: fade-in-slide 0.3s ease-out;
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(101, 163, 13, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(101, 163, 13, 0.15);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.8s ease-in-out infinite;
+}
+
 .katex {
   font-family: var(--font-app-sans), serif;
   font-size: 1em;
