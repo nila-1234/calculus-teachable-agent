@@ -29,6 +29,20 @@ function choiceItem(
   };
 }
 
+function multiItem(
+  id: string,
+  prompt: string,
+  choices: string[]
+): SurveyItem {
+  return {
+    id,
+    kind: "multi",
+    prompt,
+    required: true,
+    choices: choices.map((text) => ({ id: text, text })),
+  };
+}
+
 function textItem(id: string, prompt: string, placeholder: string): SurveyItem {
   return { id, kind: "text", prompt, required: true, placeholder };
 }
@@ -42,121 +56,90 @@ function openItem(
   return { id, kind: "open", prompt, required, placeholder };
 }
 
-const PRE_SURVEY: SurveyDefinition = {
-  id: "pre",
-  title: "Pre-Survey — Pilot Study",
+/**
+ * Screening runs before consent and decides eligibility. Option labels are the
+ * option ids, and lib/surveys/eligibility.ts matches on them — keep the two in
+ * step when editing wording.
+ */
+const SCREENING_SURVEY: SurveyDefinition = {
+  id: "screening",
+  title: "Screening",
   intro: [
-    "Please complete this short survey before the pre-test. There are no right or wrong answers.",
-    "Your responses help us understand your academic background and how you currently work with calculus and AI tools.",
+    "Before you begin, please answer a few questions about your background in mathematics.",
+    "This takes about a minute and tells us whether this study is a fit for you.",
   ],
   sections: [
     {
-      id: "subject",
-      title: "Subject ID",
-      shortTitle: "ID",
-      items: [textItem("subject-id", "Subject ID", "Enter your subject ID")],
-    },
-    {
-      id: "academic",
-      title: "Academic background",
-      shortTitle: "Academic",
-      items: [
-        choiceItem("1", "Year in school", [
-          "Freshman",
-          "Sophomore",
-          "Junior",
-          "Senior",
-          "Master’s",
-          "PhD",
-          "Other",
-          "Prefer not to say",
-        ]),
-        textItem("2", "Major or field of study", "Your major or field of study"),
-        textItem(
-          "3",
-          "What calculus or math course are you currently taking, or have most recently taken?",
-          "Course name"
-        ),
-        choiceItem("4", "How many college-level calculus courses have you taken?", [
-          "0",
-          "1",
-          "2",
-          "3",
-          "4+",
-        ]),
-        likertItem("5", "How comfortable are you with calculus?", {
-          min: 1,
-          max: 7,
-          minLabel: "Very uncomfortable",
-          maxLabel: "Very comfortable",
-        }),
-        likertItem(
-          "6",
-          "How confident are you in solving calculus problems involving functions, graphs, derivatives, or optimization?",
-          {
-            min: 1,
-            max: 7,
-            minLabel: "Not confident",
-            maxLabel: "Very confident",
-          }
-        ),
-      ],
-    },
-    {
-      id: "ai",
-      title: "AI and learning background",
-      shortTitle: "AI & learning",
+      id: "background",
+      title: "Mathematics background",
+      shortTitle: "Background",
       items: [
         choiceItem(
-          "7",
-          "How often do you use AI tools such as ChatGPT, Gemini, Copilot, or Claude for learning?",
-          ["Never", "Rarely", "Sometimes", "Often", "Very often"]
+          "highest-math",
+          "What is the highest level of mathematics you have studied?",
+          [
+            "High school mathematics",
+            "Precalculus or college algebra",
+            "Calculus I",
+            "Calculus II",
+            "Calculus III or higher",
+            "Other college-level mathematics (e.g., linear algebra, differential equations)",
+            "I am not sure",
+          ]
         ),
-        likertItem("8", "I can effectively explain what I need to an AI tool."),
-        likertItem(
-          "9",
-          "I am confident in judging whether an AI-generated math solution is correct."
+        multiItem(
+          "calculus-topics",
+          "Which calculus topics have you studied? Select all that apply.",
+          [
+            "Limits and continuity",
+            "Derivatives and applications of derivatives",
+            "Extrema and the Mean Value Theorem",
+            "Integrals and applications of integrals",
+            "None of the above",
+          ]
         ),
-        likertItem(
-          "10",
-          "I am comfortable giving feedback to an AI system when its answer is incomplete or incorrect."
+        choiceItem(
+          "calculus-courses",
+          "How many college-level calculus courses have you taken?",
+          ["None", "1", "2", "3 or more", "I am not sure"]
         ),
-      ],
-    },
-    {
-      id: "reasoning",
-      title: "Calculus reasoning",
-      shortTitle: "Reasoning",
-      items: [
-        likertItem(
-          "11",
-          "I can identify what mathematical concept is needed to solve a real-world calculus problem."
-        ),
-        likertItem(
-          "12",
-          "I can create a calculus question from a real-world situation."
-        ),
-        likertItem(
-          "13",
-          "I can evaluate whether a calculus solution correctly connects the math to the real-world context."
-        ),
-        openItem(
-          "14",
-          "What do you usually find most challenging when solving or explaining calculus problems?",
-          true,
-          "Write your response…"
+        choiceItem(
+          "last-studied",
+          "When was the last time you studied or used calculus?",
+          [
+            "I am currently studying calculus",
+            "Within the past year",
+            "More than 1 year ago",
+            "I have never studied or used calculus",
+          ]
         ),
       ],
     },
   ],
 };
 
-const POST_SURVEY: SurveyDefinition = {
-  id: "post",
-  title: "Post-Survey — Pilot Study",
+const AGREE_STATEMENTS: [string, string][] = [
+  [
+    "confident-formulate",
+    "I am confident in translating a real-world situation into a mathematical problem that can be solved using calculus.",
+  ],
+  [
+    "confident-evaluate",
+    "I am confident in determining whether a calculus solution makes sense in the original real-world context.",
+  ],
+  ["useful", "Calculus is useful for solving real-world problems."],
+  [
+    "interested",
+    "I am interested in learning how calculus can be applied to real-world problems.",
+  ],
+];
+
+const PRE_SURVEY: SurveyDefinition = {
+  id: "pre",
+  title: "Pre-Survey",
   intro: [
-    "Please complete this short survey after the post-test. There are no right or wrong answers.",
-    "Your responses help us understand how the tool felt to use and what you took away from the session.",
+    "Please complete this short survey before the pre-test. There are no right or wrong answers.",
+    "Your responses help us understand your background and how you currently work with calculus and AI tools.",
   ],
   sections: [
     {
@@ -166,69 +149,150 @@ const POST_SURVEY: SurveyDefinition = {
       items: [textItem("subject-id", "Subject ID", "Enter your subject ID")],
     },
     {
+      id: "about-you",
+      title: "About you",
+      shortTitle: "About you",
+      items: [
+        choiceItem("age", "What is your age?", [
+          "18–20",
+          "21–24",
+          "25–34",
+          "35–44",
+          "45–54",
+          "55+",
+        ]),
+        choiceItem(
+          "education",
+          "What is the highest level of education you have completed?",
+          [
+            "High school or equivalent",
+            "Some college or university, but no degree",
+            "Associate degree or equivalent",
+            "Bachelor’s degree",
+            "Master’s degree",
+            "Doctoral or professional degree",
+            "Other",
+            "Prefer not to say",
+          ]
+        ),
+        choiceItem(
+          "field",
+          "What is your primary field of study or work?",
+          [
+            "STEM (science, technology, engineering, mathematics)",
+            "Social sciences",
+            "Business or economics",
+            "Humanities or arts",
+            "Education",
+            "Other",
+            "Prefer not to say",
+          ]
+        ),
+        choiceItem(
+          "first-language",
+          "What is your first language (the language you learned first)?",
+          [
+            "English",
+            "Spanish",
+            "Hindi",
+            "Portuguese",
+            "French",
+            "Chinese (Mandarin)",
+            "Other",
+            "Prefer not to say",
+          ]
+        ),
+      ],
+    },
+    {
       id: "experience",
-      title: "Experience with the tool",
+      title: "Calculus and AI experience",
       shortTitle: "Experience",
       items: [
-        likertItem("1", "The tool was easy to understand."),
-        likertItem("2", "The tool was easy to use."),
-        likertItem("3", "The instructions in the tool were clear."),
+        choiceItem(
+          "learned-real-world",
+          "Have you learned how calculus can be used to solve real-world problems as part of a course?",
+          ["Yes", "No", "Not sure"]
+        ),
+        choiceItem(
+          "used-real-world",
+          "Have you personally used calculus to solve a real-world problem (e.g., in a class project, research, work, or another activity)?",
+          ["Yes", "No", "Not sure"]
+        ),
+        choiceItem(
+          "ai-frequency",
+          "How often do you use AI tools (e.g., ChatGPT, Claude, Gemini) for learning or solving problems?",
+          ["Never", "Rarely", "Sometimes", "Often", "Very often"]
+        ),
+      ],
+    },
+    {
+      id: "attitudes",
+      title:
+        "For each statement, please indicate how much you agree or disagree.",
+      shortTitle: "Attitudes",
+      items: AGREE_STATEMENTS.map(([id, prompt]) => likertItem(id, prompt)),
+    },
+  ],
+};
+
+const POST_SURVEY: SurveyDefinition = {
+  id: "post",
+  title: "Post-Survey",
+  intro: [
+    "Thank you for completing the activity. This last survey asks about your experience.",
+    "There are no right or wrong answers.",
+  ],
+  sections: [
+    {
+      id: "subject",
+      title: "Subject ID",
+      shortTitle: "ID",
+      items: [textItem("subject-id", "Subject ID", "Enter your subject ID")],
+    },
+    {
+      id: "attitudes",
+      title:
+        "For each statement, please indicate how much you agree or disagree.",
+      shortTitle: "Attitudes",
+      items: [
+        ...AGREE_STATEMENTS.map(([id, prompt]) => likertItem(id, prompt)),
         likertItem(
-          "4",
-          "The tool helped me think more carefully about calculus reasoning."
+          "instruction-formulate",
+          "The instruction helped me understand how to formulate real-world calculus problems."
         ),
         likertItem(
-          "5",
-          "The tool helped me notice mistakes or weaknesses in AI-generated calculus answers."
+          "instruction-evaluate",
+          "The instruction helped me understand how to evaluate real-world calculus problems."
         ),
         likertItem(
-          "6",
-          "The tool helped me understand how to create or evaluate real-world calculus problems."
+          "instruction-ai",
+          "The instruction prepared me to better work with AI on real-world calculus problem-solving tasks."
         ),
       ],
     },
     {
       id: "reflection",
-      title: "Learning and reflection",
+      title: "Your experience",
       shortTitle: "Reflection",
       items: [
-        likertItem(
-          "7",
-          "After using the tool, I feel more confident creating calculus questions from real-world situations."
-        ),
-        likertItem(
-          "8",
-          "After using the tool, I feel more confident evaluating AI-generated calculus solutions."
-        ),
         openItem(
-          "9",
-          "What strategy did you use while interacting with the AI agent?",
+          "learned",
+          "What, if anything, did you learn from this activity?",
           true,
-          "Write your response…"
+          "Your answer…"
         ),
         openItem(
-          "10",
-          "What, if anything, did you learn from this interaction?",
+          "difficult",
+          "What, if anything, was confusing, difficult, or frustrating about the activity?",
           true,
-          "Write your response…"
+          "Your answer…"
         ),
         openItem(
-          "11",
-          "What parts of the tool were confusing or frustrating?",
-          true,
-          "Write your response…"
-        ),
-        openItem(
-          "12",
-          "What would you change about the tool?",
-          true,
-          "Write your response…"
-        ),
-        openItem(
-          "13",
-          "Any other comments or suggestions?",
+          "comments",
+          "Do you have any other comments or feedback about the activity? (Optional)",
           false,
-          "Optional comments…"
+          "Optional"
         ),
       ],
     },
@@ -236,15 +300,16 @@ const POST_SURVEY: SurveyDefinition = {
 };
 
 const SURVEYS: Record<SurveyId, SurveyDefinition> = {
+  screening: SCREENING_SURVEY,
   pre: PRE_SURVEY,
   post: POST_SURVEY,
 };
 
 export function getSurvey(id: string): SurveyDefinition | null {
-  if (id === "pre" || id === "post") return SURVEYS[id];
+  if (id === "screening" || id === "pre" || id === "post") return SURVEYS[id];
   return null;
 }
 
 export function listSurveys(): SurveyDefinition[] {
-  return [PRE_SURVEY, POST_SURVEY];
+  return [SCREENING_SURVEY, PRE_SURVEY, POST_SURVEY];
 }

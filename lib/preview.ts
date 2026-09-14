@@ -101,6 +101,25 @@ export type PreviewPhase = {
  */
 export const PREVIEW_PHASES: PreviewPhase[] = [
   {
+    id: "screening",
+    label: "Screening",
+    description:
+      "The eligibility questions shown before anything else. Ineligible answers end the run.",
+    path: "/survey/screening",
+  },
+  {
+    id: "consent",
+    label: "Consent form",
+    description: "The IRB consent form, shown to eligible participants only.",
+    path: "/consent",
+  },
+  {
+    id: "not-eligible",
+    label: "Not eligible",
+    description: "The dead end shown to screened-out participants.",
+    path: "/not-eligible",
+  },
+  {
     id: "pre-survey",
     label: "Pre-survey",
     description: "The survey participants complete before anything else.",

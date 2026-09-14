@@ -19,6 +19,7 @@ import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import { setSubjectId } from "@/lib/subject";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
+import { evaluateEligibility } from "@/lib/surveys/eligibility";
 
 function SurveyPageContent() {
   const router = useRouter();
@@ -46,6 +47,15 @@ function SurveyPageContent() {
     // a participant's saved answers or their completed state.
     if (isPreviewActive()) {
       queueMicrotask(() => setScreen("form"));
+      return;
+    }
+
+    // The pre-survey is only reachable once consent has been given.
+    if (
+      survey.id === "pre" &&
+      sessionStorage.getItem("consent:given") !== "true"
+    ) {
+      router.replace(query ? `/consent?${query}` : "/consent");
       return;
     }
 
@@ -91,23 +101,49 @@ function SurveyPageContent() {
   ];
   const progressStep = screen === "complete" ? survey.sections.length : 0;
   const canSubmit = areSurveyAnswersComplete(survey, answers);
+  const withQuery = (path: string) => (query ? `${path}?${query}` : path);
   const nextHref =
-    survey.id === "pre"
-      ? query
-        ? `/test/pretest?${query}`
-        : "/test/pretest"
-      : query
-        ? `/scenarios?${query}`
-        : "/scenarios";
+    survey.id === "pre" ? withQuery("/test/pretest") : withQuery("/scenarios");
 
-  const saveAnswers = (next: SurveyAnswers) => {
-    setAnswers(next);
-    if (!preview) saveSurveyAnswers(survey.id, next);
+  /**
+   * Updates one item. Uses a functional update because two answers changed
+   * before React re-renders would otherwise both build on the same stale
+   * snapshot and the first would be lost — reachable by clicking two options
+   * quickly, and more likely on a multi-select.
+   */
+  const setAnswer = (itemId: string, value: string) => {
+    setAnswers((previous) => {
+      const next = { ...previous, [itemId]: value };
+      if (!preview) saveSurveyAnswers(survey.id, next);
+      return next;
+    });
   };
 
   const handleSubmit = () => {
     if (!canSubmit && !preview) return;
     if (!preview) markSurveyCompleted(survey.id);
+
+    // Screening decides eligibility and leaves the normal flow entirely.
+    if (survey.id === "screening") {
+      const eligibility = evaluateEligibility(answers);
+      logEvent("screening_completed", survey.id, {
+        answers,
+        eligible: eligibility.eligible,
+        failed_items: eligibility.failedItems,
+        reasons: eligibility.reasons,
+      });
+
+      if (preview) {
+        setScreen("complete");
+        return;
+      }
+
+      router.replace(
+        eligibility.eligible ? withQuery("/consent") : withQuery("/not-eligible")
+      );
+      return;
+    }
+
     logEvent("survey_completed", survey.id, { answers });
     setScreen("complete");
   };
@@ -131,7 +167,7 @@ function SurveyPageContent() {
               answers={answers}
               onAnswerChange={(itemId, value) => {
                 if (itemId === "subject-id") setSubjectId(value);
-                saveAnswers({ ...answers, [itemId]: value });
+                setAnswer(itemId, value);
               }}
             />
 

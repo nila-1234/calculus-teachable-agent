@@ -1,7 +1,13 @@
 "use client";
 
 import OptionRow, { OptionRowState } from "@/components/option-row";
-import type { SurveyAnswers, SurveyDefinition, SurveyItem } from "@/lib/surveys/types";
+import {
+  parseMulti,
+  serializeMulti,
+  type SurveyAnswers,
+  type SurveyDefinition,
+  type SurveyItem,
+} from "@/lib/surveys/types";
 
 type SurveyPanelProps = {
   survey: SurveyDefinition;
@@ -119,6 +125,36 @@ function SurveyItemCard({
                   disabled={readOnly}
                   onClick={() => {
                     if (!readOnly) onChange(choice.id);
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
+
+        {item.kind === "multi" && item.choices && (
+          <div className="space-y-2">
+            {item.choices.map((choice, index) => {
+              const chosen = parseMulti(value);
+              const selected = chosen.includes(choice.id);
+
+              return (
+                <OptionRow
+                  key={choice.id}
+                  index={index}
+                  text={choice.text}
+                  state={selected ? "selected" : "default"}
+                  disabled={readOnly}
+                  onClick={() => {
+                    if (readOnly) return;
+                    // Toggle, preserving the option order of the definition.
+                    const next = selected
+                      ? chosen.filter((id) => id !== choice.id)
+                      : [...chosen, choice.id];
+                    const ordered = item.choices!
+                      .map((c) => c.id)
+                      .filter((id) => next.includes(id));
+                    onChange(serializeMulti(ordered));
                   }}
                 />
               );

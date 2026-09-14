@@ -15,6 +15,8 @@ import { isPreviewActive } from "@/lib/preview";
 const EXEMPT = [
   /^\/$/,
   /^\/survey(\/|$)/,
+  /^\/consent(\/|$)/,
+  /^\/not-eligible(\/|$)/,
   /^\/instructor(\/|$)/,
   /^\/scenarios(\/|$)/,
   /^\/[^/]+\/(question|apply-rubric|create-rubric|grade|grade-lines)(\/|$)/,

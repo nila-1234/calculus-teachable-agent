@@ -6,6 +6,8 @@ import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 
 const STEPS = [
+  "Answer a few screening questions",
+  "Review and sign the consent form",
   "Complete the pre-survey",
   "Take the pre-test",
   "Work through the TA scenarios",
@@ -17,8 +19,8 @@ function WelcomePageContent() {
   const router = useRouter();
   const query = useSearchParams().toString();
 
-  const goToPreSurvey = () =>
-    router.push(query ? `/survey/pre?${query}` : "/survey/pre");
+  const goToScreening = () =>
+    router.push(query ? `/survey/screening?${query}` : "/survey/screening");
 
   return (
     <main className="flex min-h-screen flex-col bg-stone-100">
@@ -68,7 +70,7 @@ function WelcomePageContent() {
         </ol>
 
         <div className="mt-8 flex justify-center">
-          <Button onClick={goToPreSurvey}>Next</Button>
+          <Button onClick={goToScreening}>Next</Button>
         </div>
       </div>
     </main>
