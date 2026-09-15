@@ -65,43 +65,16 @@ export function captureProlificIds(): void {
   }
 }
 
-/**
- * Reads a launch parameter from storage, falling back to the URL.
- *
- * The URL fallback matters: capture happens in an effect, and anything that
- * runs earlier — the step timer logging a page view, for instance — would
- * otherwise see no Prolific ID and decide the participant is anonymous. That
- * made the identity of every Prolific participant depend on React effect
- * ordering.
- */
-function readOrCapture(key: string, param: string): string | null {
-  const stored = read(key);
-  if (stored) return stored;
-
-  if (typeof window === "undefined") return null;
-  try {
-    const fromUrl = new URLSearchParams(window.location.search).get(param)?.trim();
-    if (fromUrl) {
-      write(key, fromUrl);
-      return fromUrl;
-    }
-  } catch {
-    /* ignore malformed query strings */
-  }
-
-  return null;
-}
-
 export function getProlificIds(): ProlificIds {
   return {
-    pid: getProlificPid(),
-    studyId: readOrCapture(STUDY_KEY, URL_PARAMS.study),
-    sessionId: readOrCapture(SESSION_KEY, URL_PARAMS.session),
+    pid: read(PID_KEY),
+    studyId: read(STUDY_KEY),
+    sessionId: read(SESSION_KEY),
   };
 }
 
 export function getProlificPid(): string | null {
-  return readOrCapture(PID_KEY, URL_PARAMS.pid);
+  return read(PID_KEY);
 }
 
 /** For resetting between participants on a shared machine. */
@@ -117,26 +90,14 @@ export function clearProlificIds(): void {
 }
 
 /**
- * Completion code for a finished Prolific submission.
+ * Completion code for a finished submission, set per deployment.
  *
- * Kept in code rather than only as an environment variable. It is not a secret
- * — participants read it off the screen — and being NEXT_PUBLIC_ it is baked in
- * at build time regardless, so an env var buys nothing but a dependency on
- * whoever holds the deployment settings. As a constant, anyone who can open a
- * PR can change it.
- *
- * ⚠️ This must match the completion code on the Prolific study. Recreating the
- * study generates a new one. If they disagree, participants submit a code
- * Prolific rejects and are not paid.
- *
- * The environment variable still wins if set, so a deployment can override
- * without a code change.
+ * NEXT_PUBLIC_, so it is baked into the client bundle at build time — changing
+ * it in the deployment requires a redeploy. That is fine here: the code is not
+ * a secret, since participants have to read it.
  *
  * There is deliberately no screen-out code. Screened-out participants are not
  * compensated in this study, so they are simply told they may close the page.
  */
-const PROLIFIC_COMPLETION_CODE = "C5J1GCYW";
-
 export const COMPLETION_CODE =
-  process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() ||
-  PROLIFIC_COMPLETION_CODE;
+  process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() || null;

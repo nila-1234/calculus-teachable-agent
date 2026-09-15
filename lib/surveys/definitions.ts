@@ -43,10 +43,6 @@ function multiItem(
   };
 }
 
-function textItem(id: string, prompt: string, placeholder: string): SurveyItem {
-  return { id, kind: "text", prompt, required: true, placeholder };
-}
-
 function openItem(
   id: string,
   prompt: string,
@@ -143,12 +139,6 @@ const PRE_SURVEY: SurveyDefinition = {
   ],
   sections: [
     {
-      id: "subject",
-      title: "Subject ID",
-      shortTitle: "ID",
-      items: [textItem("subject-id", "Subject ID", "Enter your subject ID")],
-    },
-    {
       id: "about-you",
       title: "About you",
       shortTitle: "About you",
@@ -244,12 +234,6 @@ const POST_SURVEY: SurveyDefinition = {
     "There are no right or wrong answers.",
   ],
   sections: [
-    {
-      id: "subject",
-      title: "Subject ID",
-      shortTitle: "ID",
-      items: [textItem("subject-id", "Subject ID", "Enter your subject ID")],
-    },
     {
       id: "attitudes",
       title:

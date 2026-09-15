@@ -19,7 +19,6 @@ import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import CompletionCode from "@/components/completion-code";
 import { COMPLETION_CODE, getProlificPid } from "@/lib/prolific";
-import { setSubjectId } from "@/lib/subject";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import {
   evaluateEligibility,
@@ -80,17 +79,6 @@ function SurveyPageContent() {
     }
 
     const saved = loadSurveyAnswers(survey.id);
-    if (survey.id === "post" && !saved["subject-id"]) {
-      const preAnswers = loadSurveyAnswers("pre");
-      if (preAnswers["subject-id"]) {
-        saved["subject-id"] = preAnswers["subject-id"];
-        saveSurveyAnswers(survey.id, saved);
-      }
-    }
-
-    if (saved["subject-id"]) {
-      setSubjectId(saved["subject-id"]);
-    }
 
     const nextScreen = isSurveyCompleted(survey.id) ? "complete" : "form";
     queueMicrotask(() => {
@@ -181,10 +169,7 @@ function SurveyPageContent() {
             <SurveyPanel
               survey={survey}
               answers={answers}
-              onAnswerChange={(itemId, value) => {
-                if (itemId === "subject-id") setSubjectId(value);
-                setAnswer(itemId, value);
-              }}
+              onAnswerChange={(itemId, value) => setAnswer(itemId, value)}
             />
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
