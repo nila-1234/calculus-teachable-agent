@@ -154,11 +154,61 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
 
 /**
  * Which phase a path belongs to. Scenario step routes (/1/question and friends)
- * all resolve to the Instructions phase so the bar keeps working inside them.
+ * all resolve to the Instructions phase.
  */
 export function phaseIndexForPath(pathname: string): number {
   if (/^\/\d+(\/|$)/.test(pathname)) {
     return PREVIEW_PHASES.findIndex((phase) => phase.id === "instructions");
   }
   return PREVIEW_PHASES.findIndex((phase) => phase.path === pathname);
+}
+
+/** The scenario a path refers to, so the bar stays on the same one. */
+export function scenarioIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/(\d+)(\/|$)/);
+  return match ? match[1] : null;
+}
+
+/** The scenario's own steps, in the order a participant meets them. */
+const SCENARIO_STEPS: { label: string; segment: string }[] = [
+  { label: "Question", segment: "question" },
+  { label: "Create rubric", segment: "create-rubric" },
+  { label: "Grade lines", segment: "grade-lines" },
+];
+
+export type PreviewStop = { label: string; path: string };
+
+/**
+ * Every page Previous/Next steps through, with the instruction phase expanded
+ * into its individual steps.
+ *
+ * Expanded here rather than by enabling each scenario page's own Next button:
+ * those buttons are gated on finishing the step, the gating differs per page,
+ * and the pages are actively worked on elsewhere. Driving navigation from the
+ * preview bar keeps all of it in one place.
+ */
+export function previewStops(scenarioId: string | number): PreviewStop[] {
+  const stops: PreviewStop[] = [];
+
+  for (const phase of PREVIEW_PHASES) {
+    stops.push({ label: phase.label, path: phase.path });
+
+    if (phase.id === "instructions") {
+      for (const step of SCENARIO_STEPS) {
+        stops.push({
+          label: step.label,
+          path: `/${scenarioId}/${step.segment}`,
+        });
+      }
+    }
+  }
+
+  return stops;
+}
+
+export function stopIndexForPath(
+  pathname: string,
+  scenarioId: string | number
+): number {
+  return previewStops(scenarioId).findIndex((stop) => stop.path === pathname);
 }
