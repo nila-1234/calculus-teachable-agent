@@ -18,7 +18,7 @@ import {
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import CompletionCode from "@/components/completion-code";
-import { COMPLETION_CODE } from "@/lib/prolific";
+import { COMPLETION_CODE, getProlificPid } from "@/lib/prolific";
 import { setSubjectId } from "@/lib/subject";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import {
@@ -114,6 +114,7 @@ function SurveyPageContent() {
   const progressStep = screen === "complete" ? survey.sections.length : 0;
   const canSubmit = areSurveyAnswersComplete(survey, answers);
   const withQuery = (path: string) => (query ? `${path}?${query}` : path);
+  const cameFromProlific = Boolean(getProlificPid());
 
   /**
    * Updates one item. Uses a functional update because two answers changed
@@ -226,7 +227,12 @@ function SurveyPageContent() {
                 instruction. The Prolific code is the last thing a participant
                 needs, so it goes here.
               */}
-              {survey.id === "post" && (
+              {/*
+                Only participants who arrived from Prolific need a code. For
+                anyone recruited directly there is nothing to submit, so showing
+                a code — or warning that one is missing — would only confuse.
+              */}
+              {survey.id === "post" && cameFromProlific && (
                 <CompletionCode
                   code={COMPLETION_CODE}
                   envVar="NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE"
