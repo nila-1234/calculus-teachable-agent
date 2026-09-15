@@ -90,14 +90,26 @@ export function clearProlificIds(): void {
 }
 
 /**
- * Completion code for a finished submission, set per deployment.
+ * Completion code for a finished Prolific submission.
  *
- * NEXT_PUBLIC_, so it is baked into the client bundle at build time — changing
- * it in the deployment requires a redeploy. That is fine here: the code is not
- * a secret, since participants have to read it.
+ * Kept in code rather than only as an environment variable. It is not a secret
+ * — participants read it off the screen — and being NEXT_PUBLIC_ it is baked in
+ * at build time regardless, so an env var buys nothing but a dependency on
+ * whoever holds the deployment settings. As a constant, anyone who can open a
+ * PR can change it.
+ *
+ * ⚠️ This must match the completion code on the Prolific study. Recreating the
+ * study generates a new one. If they disagree, participants submit a code
+ * Prolific rejects and are not paid.
+ *
+ * The environment variable still wins if set, so a deployment can override
+ * without a code change.
  *
  * There is deliberately no screen-out code. Screened-out participants are not
  * compensated in this study, so they are simply told they may close the page.
  */
+const PROLIFIC_COMPLETION_CODE = "C5J1GCYW";
+
 export const COMPLETION_CODE =
-  process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() || null;
+  process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() ||
+  PROLIFIC_COMPLETION_CODE;
