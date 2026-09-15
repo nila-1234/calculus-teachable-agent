@@ -32,14 +32,29 @@ export default function NotEligiblePage() {
           </p>
 
           {/*
-            Prolific issues a separate code for screened-out participants so they
-            can still be paid without counting as completions. Showing it here is
-            the only way they get it.
+            If a screen-out code is configured it is shown here, since this page
+            is the only place a screened-out participant would see it. The study
+            currently runs without one by choice, so the fallback tells them to
+            return the submission instead — otherwise they would be left on a
+            dead end with no idea what to do on Prolific.
           */}
           <CompletionCode
             code={SCREENOUT_CODE}
             label="Your code"
             envVar="NEXT_PUBLIC_PROLIFIC_SCREENOUT_CODE"
+            fallback={
+              <div className="mt-6 rounded-xl border-2 border-stone-200 bg-stone-50 p-5 text-left">
+                <p className="text-sm leading-6 text-stone-700">
+                  If you came here from Prolific, please go back and{" "}
+                  <span className="font-bold">return your submission</span>.
+                  There is no completion code for this study, and returning it
+                  simply releases your place to someone else.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-stone-500">
+                  Returning a submission does not count against you on Prolific.
+                </p>
+              </div>
+            }
           />
         </div>
       </div>

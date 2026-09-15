@@ -14,12 +14,20 @@ export default function CompletionCode({
   code,
   label = "Your completion code",
   envVar,
+  fallback,
 }: {
   code: string | null;
   label?: string;
   envVar: string;
+  /**
+   * What to show when no code is configured *by design* — a screened-out
+   * participant with no screen-out code needs instructions, not a config error.
+   */
+  fallback?: React.ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
+
+  if (!code && fallback) return <>{fallback}</>;
 
   if (!code) {
     return (
