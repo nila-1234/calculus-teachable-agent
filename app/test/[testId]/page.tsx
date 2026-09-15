@@ -198,9 +198,28 @@ function TestPageContent() {
             />
 
             <div className="mx-auto mt-6 flex w-full max-w-3xl items-center justify-between gap-4">
-              <span className="text-xs font-semibold text-stone-400">
-                {screenIndex + 1} of {items.length}
-              </span>
+              <div className="flex items-center gap-3">
+                {/*
+                  Back exists only in preview. The tests are several screens in
+                  one route, so an instructor otherwise has no way to look at an
+                  earlier question without restarting — while a participant must
+                  not be able to revise a committed answer.
+                */}
+                {preview && (
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      setScreenIndex((previous) => Math.max(previous - 1, 0))
+                    }
+                    disabled={screenIndex === 0}
+                  >
+                    Back
+                  </Button>
+                )}
+                <span className="text-xs font-semibold text-stone-400">
+                  {screenIndex + 1} of {items.length}
+                </span>
+              </div>
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {!preview && (
                   <span className="text-xs text-stone-400">
