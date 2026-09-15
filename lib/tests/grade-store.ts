@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import getMongoClient from "@/lib/mongodb";
+import { FieldValue } from "firebase-admin/firestore";
+import getFirestore from "@/lib/firestore";
 import type { GradeResult } from "./grade";
 import type { TestAnswers, TestId } from "./types";
 
@@ -10,21 +11,18 @@ import type { TestAnswers, TestId } from "./types";
  * opened the results: it cost money per view, and open-item verdicts could
  * differ between views, which makes a score a moving target rather than a fact.
  *
- * PORTING NOTE: this is the only piece of grade caching that touches the
- * database directly. On merge with the Firestore migration, replace the two
- * helpers below with a `grades` collection read/write — the cache key and the
- * staleness check are storage-agnostic and should not need to change.
+ * Kept in its own `grades` collection rather than alongside the event log, so a
+ * cached grade can never be mistaken for something the participant did.
  */
 
 const COLLECTION = "grades";
 
 export type StoredGrade = {
-  _id: string;
   subject_id: string;
   test_id: TestId;
   /** Identifies the exact answers graded, so edits force a re-grade. */
   answers_hash: string;
-  graded_at: Date;
+  graded_at: FirebaseFirestore.Timestamp;
   result: GradeResult;
 };
 
@@ -38,15 +36,13 @@ export function hashAnswers(answers: TestAnswers): string {
   return createHash("sha256").update(canonical).digest("hex").slice(0, 16);
 }
 
-function cacheKey(subjectId: string, testId: TestId): string {
-  return `${subjectId}::${testId}`;
-}
-
-async function collection() {
-  const dbName = process.env.MONGODB_DB;
-  if (!dbName) throw new Error("MONGODB_DB is not set");
-  const client = await getMongoClient();
-  return client.db(dbName).collection<StoredGrade>(COLLECTION);
+/**
+ * One document per subject and test, so a re-grade overwrites in place rather
+ * than accumulating. Subject ids are free text, and Firestore document ids
+ * cannot contain "/", so they are encoded.
+ */
+function documentId(subjectId: string, testId: TestId): string {
+  return `${encodeURIComponent(subjectId)}__${testId}`;
 }
 
 /**
@@ -60,12 +56,15 @@ export async function readStoredGrade(
   answers: TestAnswers
 ): Promise<GradeResult | null> {
   try {
-    const stored = await (await collection()).findOne({
-      _id: cacheKey(subjectId, testId),
-    });
+    const snapshot = await getFirestore()
+      .collection(COLLECTION)
+      .doc(documentId(subjectId, testId))
+      .get();
 
-    if (!stored) return null;
-    if (stored.answers_hash !== hashAnswers(answers)) return null;
+    if (!snapshot.exists) return null;
+
+    const stored = snapshot.data() as StoredGrade | undefined;
+    if (!stored || stored.answers_hash !== hashAnswers(answers)) return null;
 
     return stored.result;
   } catch (err) {
@@ -89,19 +88,16 @@ export async function writeStoredGrade(
   if (!result.complete) return;
 
   try {
-    await (await collection()).updateOne(
-      { _id: cacheKey(subjectId, testId) },
-      {
-        $set: {
-          subject_id: subjectId,
-          test_id: testId,
-          answers_hash: hashAnswers(answers),
-          graded_at: new Date(),
-          result,
-        },
-      },
-      { upsert: true }
-    );
+    await getFirestore()
+      .collection(COLLECTION)
+      .doc(documentId(subjectId, testId))
+      .set({
+        subject_id: subjectId,
+        test_id: testId,
+        answers_hash: hashAnswers(answers),
+        graded_at: FieldValue.serverTimestamp(),
+        result,
+      });
   } catch (err) {
     // Failing to cache is not a failure to grade.
     console.error("Could not store grade:", err);
