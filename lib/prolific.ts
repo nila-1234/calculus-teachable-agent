@@ -90,16 +90,14 @@ export function clearProlificIds(): void {
 }
 
 /**
- * Completion codes, set per deployment.
+ * Completion code for a finished submission, set per deployment.
  *
- * Prolific issues a different code for a finished submission than for one
- * screened out, so that excluded participants can still be compensated and are
- * not counted as completions. Both must be set for the study to pay out
- * correctly — a missing code is surfaced in the UI rather than silently showing
- * nothing.
+ * NEXT_PUBLIC_, so it is baked into the client bundle at build time — changing
+ * it in the deployment requires a redeploy. That is fine here: the code is not
+ * a secret, since participants have to read it.
+ *
+ * There is deliberately no screen-out code. Screened-out participants are not
+ * compensated in this study, so they are simply told they may close the page.
  */
 export const COMPLETION_CODE =
   process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() || null;
-
-export const SCREENOUT_CODE =
-  process.env.NEXT_PUBLIC_PROLIFIC_SCREENOUT_CODE?.trim() || null;
