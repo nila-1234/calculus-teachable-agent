@@ -9,6 +9,7 @@ import {
 } from "@/lib/logger";
 import { UNKNOWN_SUBJECT_ID, clearSubjectId, getSubjectId } from "@/lib/subject";
 import { clearScreeningOutcome } from "@/lib/surveys/eligibility";
+import { clearProlificIds } from "@/lib/prolific";
 
 type Health =
   | { state: "checking" }
@@ -147,6 +148,7 @@ export default function LogStatus() {
                 // previous one's screening exclusion.
                 clearSubjectId();
                 clearScreeningOutcome();
+                clearProlificIds();
                 notifySubject();
               }}
               className="shrink-0 rounded border border-stone-300 px-2 py-0.5 font-semibold text-stone-600 hover:bg-stone-100"

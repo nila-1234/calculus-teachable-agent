@@ -1,5 +1,6 @@
 import { UNKNOWN_SUBJECT_ID, getSubjectId } from "@/lib/subject";
 import { isNonParticipantContext } from "@/lib/preview";
+import { getProlificPid } from "@/lib/prolific";
 
 const QUEUE_KEY = "logQueue";
 
@@ -15,6 +16,8 @@ export type LogEntry = {
   subject_id: string;
   /** Groups one uninterrupted run in one tab, independent of subject_id. */
   session_id: string;
+  /** Present when the participant arrived from Prolific. */
+  prolific_pid: string | null;
   timestamp: string;
   event: string;
   scenario_id: string;
@@ -185,6 +188,9 @@ export async function logEvent(
     event_id: newEventId(),
     subject_id: subjectId,
     session_id: getSessionId(),
+    // Recorded from the launch URL, so events are attributable even before the
+    // subject ID is entered in the pre-survey.
+    prolific_pid: getProlificPid(),
     timestamp: new Date().toISOString(),
     event,
     scenario_id: String(scenarioId),

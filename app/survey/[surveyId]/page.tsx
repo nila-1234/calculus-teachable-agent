@@ -17,6 +17,8 @@ import {
 } from "@/lib/surveys/storage";
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
+import CompletionCode from "@/components/completion-code";
+import { COMPLETION_CODE } from "@/lib/prolific";
 import { setSubjectId } from "@/lib/subject";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import {
@@ -221,8 +223,15 @@ function SurveyPageContent() {
               {/*
                 The post-survey ends the study, so there is nothing to continue
                 to. It previously offered "Finish", which navigated back into the
-                instruction.
+                instruction. The Prolific code is the last thing a participant
+                needs, so it goes here.
               */}
+              {survey.id === "post" && (
+                <CompletionCode
+                  code={COMPLETION_CODE}
+                  envVar="NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE"
+                />
+              )}
               {survey.id === "pre" && (
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                   <Button onClick={() => router.push(withQuery("/test/pretest"))}>

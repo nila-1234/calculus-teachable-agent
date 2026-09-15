@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { installAiLogging } from "@/lib/ai-logging";
+import { captureProlificIds } from "@/lib/prolific";
 
 /**
  * Installs the student/AI exchange recorder once, app-wide.
@@ -13,6 +14,10 @@ import { installAiLogging } from "@/lib/ai-logging";
 export default function AiLogger() {
   useEffect(() => {
     installAiLogging();
+    // Captured here because this mounts on every page: Prolific's parameters
+    // only appear on the landing URL, and the scenario pages later rebuild
+    // their query string and would drop them.
+    captureProlificIds();
   }, []);
 
   return null;
