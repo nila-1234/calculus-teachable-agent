@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
+import {
+  GOAL_DESCRIPTIONS,
+  GOAL_LABELS,
+  type Insights,
+} from "@/lib/tests/insights";
 
 /**
  * Instructor analysis view.
@@ -32,7 +37,14 @@ type Summary = {
   }[];
   subjects: Sheet;
   pairs: Sheet;
+  insights: Insights;
 };
+
+const pct = (value: number | null) =>
+  value === null ? "—" : `${Math.round(value * 100)}%`;
+
+const signed = (value: number | null) =>
+  value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)} pts`;
 
 const DOWNLOADS: { format: string; label: string; ext: string }[] = [
   { format: "json", label: "Full results (JSON)", ext: "json" },
@@ -238,6 +250,170 @@ export default function InstructorAnalysisPage() {
                 </tbody>
               </table>
             </div>
+
+            {summary.insights && (
+              <>
+                <h2 className="mt-10 text-xl font-bold text-stone-800">
+                  Which skills moved
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-stone-500">
+                  Items grouped by the study&apos;s three assessment goals, using
+                  the mapping in the answer key. Gain is post minus pre, in
+                  percentage points of the available marks.
+                </p>
+
+                {summary.insights.underpowered && (
+                  <div className="mt-3 rounded-xl border-2 border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                    <p className="font-bold">
+                      Too few participants to read anything into this.
+                    </p>
+                    <p className="mt-1">
+                      {summary.insights.pairedParticipants} participant(s) have
+                      completed both tests. These are descriptions of the data
+                      so far, not findings — any ordering between items or goals
+                      at this size is noise.
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-3 grid gap-4 md:grid-cols-3">
+                  {summary.insights.goals.map((goal) => (
+                    <div
+                      key={goal.goal}
+                      className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
+                    >
+                      <p className="text-sm font-bold text-stone-800">
+                        {GOAL_LABELS[goal.goal]}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-stone-500">
+                        {GOAL_DESCRIPTIONS[goal.goal]}
+                      </p>
+                      <p className="mt-3 text-2xl font-bold text-stone-800">
+                        {signed(goal.gain)}
+                      </p>
+                      <p className="mt-1 text-xs text-stone-500">
+                        pre {pct(goal.preAccuracy)} &rarr; post{" "}
+                        {pct(goal.postAccuracy)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h3 className="text-base font-bold text-stone-800">
+                      Most often missed
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-stone-500">
+                      Lowest share of available marks.
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {summary.insights.hardest.map((item) => (
+                        <li
+                          key={item.itemId}
+                          className="flex items-center justify-between rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm"
+                        >
+                          <span className="font-semibold text-stone-800">
+                            Q{item.itemId}{" "}
+                            <span className="font-normal text-stone-400">
+                              {GOAL_LABELS[item.goal]}
+                            </span>
+                          </span>
+                          <span className="text-stone-600">
+                            {pct(item.accuracy)}{" "}
+                            <span className="text-stone-400">(n={item.n})</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-stone-800">
+                      Longest to answer
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-stone-500">
+                      Median time on the question itself.
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {summary.insights.slowest.length === 0 && (
+                        <li className="rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm text-stone-400">
+                          No timing recorded yet.
+                        </li>
+                      )}
+                      {summary.insights.slowest.map((item) => (
+                        <li
+                          key={item.itemId}
+                          className="flex items-center justify-between rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm"
+                        >
+                          <span className="font-semibold text-stone-800">
+                            Q{item.itemId}{" "}
+                            <span className="font-normal text-stone-400">
+                              {GOAL_LABELS[item.goal]}
+                            </span>
+                          </span>
+                          <span className="text-stone-600">
+                            {Math.round(item.medianSeconds ?? 0)}s{" "}
+                            <span className="text-stone-400">
+                              (n={item.timedN})
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="mt-8 text-base font-bold text-stone-800">
+                  Every item
+                </h3>
+                <div className="mt-2 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        {["item", "goal", "accuracy", "mean points", "median time", "n"].map(
+                          (h) => (
+                            <th
+                              key={h}
+                              className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
+                            >
+                              {h}
+                            </th>
+                          )
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {summary.insights.items.map((item) => (
+                        <tr
+                          key={item.itemId}
+                          className="border-b border-stone-100 last:border-b-0"
+                        >
+                          <td className="px-3 py-2 font-semibold text-stone-800">
+                            Q{item.itemId}
+                          </td>
+                          <td className="px-3 py-2 text-stone-500">
+                            {GOAL_LABELS[item.goal]}
+                          </td>
+                          <td className="px-3 py-2 text-stone-700">
+                            {pct(item.accuracy)}
+                          </td>
+                          <td className="px-3 py-2 text-stone-700">
+                            {item.meanPoints.toFixed(1)} / {item.maxPoints}
+                          </td>
+                          <td className="px-3 py-2 text-stone-700">
+                            {item.medianSeconds === null
+                              ? "—"
+                              : `${Math.round(item.medianSeconds)}s`}
+                          </td>
+                          <td className="px-3 py-2 text-stone-400">{item.n}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
 
             <h2 className="mt-10 text-xl font-bold text-stone-800">Download</h2>
             <div className="mt-3 flex flex-wrap gap-2">

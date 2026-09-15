@@ -11,6 +11,7 @@ import {
   type GradedSubmission,
   type LogDoc,
 } from "@/lib/tests/report";
+import { buildInsights } from "@/lib/tests/insights";
 import {
   buildAnswerSheet,
   buildEventSheet,
@@ -140,6 +141,7 @@ export async function GET(req: NextRequest) {
           })),
           subjects: buildSubjectSheet(docs, graded),
           pairs: buildPairReport(graded),
+          insights: buildInsights(docs, graded),
         },
         { headers: { "Cache-Control": "no-store" } }
       );
