@@ -61,6 +61,17 @@ export function phaseOf(doc: LogDoc): Phase {
 }
 
 /**
+ * A participant who leaves a tab open is not working. Time on task is the gap
+ * between page views, so without a ceiling a lunch break counts as an hour
+ * spent on one question — one real session recorded 3,415 minutes. Anything
+ * longer than this is treated as "walked away" and contributes nothing.
+ *
+ * 30 minutes is longer than any single step should take, short enough to catch
+ * a genuine break.
+ */
+export const MAX_DWELL_MS = 30 * 60 * 1000;
+
+/**
  * Time per phase, derived from the gap between consecutive step_entered events
  * within a session. This needs no exit event, so an abruptly closed tab costs
  * at most the final step rather than the whole session's timings.
@@ -98,7 +109,11 @@ function minutesPerPhase(docs: LogDoc[]): Record<Phase, number> {
         if (typeof reported === "number") span = reported;
       }
 
-      if (span > 0) ms[phase] = (ms[phase] ?? 0) + span;
+      // Discard implausible gaps rather than clamping them: a 6-hour gap is not
+      // evidence of 30 minutes of work, it is evidence of absence.
+      if (span > 0 && span <= MAX_DWELL_MS) {
+        ms[phase] = (ms[phase] ?? 0) + span;
+      }
     });
   }
 

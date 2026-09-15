@@ -6,6 +6,7 @@ dotenv.config({ path: ".env.local" });
 
 import type { Timestamp } from "firebase-admin/firestore";
 import getFirestore from "../lib/firestore";
+import { MAX_DWELL_MS } from "../lib/tests/export";
 
 type LogDoc = {
   event_id?: string;
@@ -48,8 +49,12 @@ function minutesBetween(a: string, b: string): number {
  */
 function dwellPerStep(docs: LogDoc[]): Map<string, number> {
   const dwell = new Map<string, number>();
+  // Gaps beyond the ceiling mean the participant walked away, not that they
+  // spent that long on the step.
   const add = (step: string, ms: number) => {
-    if (ms > 0) dwell.set(step, (dwell.get(step) ?? 0) + ms);
+    if (ms > 0 && ms <= MAX_DWELL_MS) {
+      dwell.set(step, (dwell.get(step) ?? 0) + ms);
+    }
   };
 
   const bySession = new Map<string, LogDoc[]>();
