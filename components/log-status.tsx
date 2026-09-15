@@ -8,6 +8,7 @@ import {
   subscribeLogState,
 } from "@/lib/logger";
 import { UNKNOWN_SUBJECT_ID, clearSubjectId, getSubjectId } from "@/lib/subject";
+import { clearScreeningOutcome } from "@/lib/surveys/eligibility";
 
 type Health =
   | { state: "checking" }
@@ -142,7 +143,10 @@ export default function LogStatus() {
             <button
               type="button"
               onClick={() => {
+                // Both, or the next participant on this machine inherits the
+                // previous one's screening exclusion.
                 clearSubjectId();
+                clearScreeningOutcome();
                 notifySubject();
               }}
               className="shrink-0 rounded border border-stone-300 px-2 py-0.5 font-semibold text-stone-600 hover:bg-stone-100"

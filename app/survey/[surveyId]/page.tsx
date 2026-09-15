@@ -19,7 +19,11 @@ import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import { setSubjectId } from "@/lib/subject";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
-import { evaluateEligibility } from "@/lib/surveys/eligibility";
+import {
+  evaluateEligibility,
+  isScreenedOut,
+  recordScreeningOutcome,
+} from "@/lib/surveys/eligibility";
 
 function SurveyPageContent() {
   const router = useRouter();
@@ -47,6 +51,12 @@ function SurveyPageContent() {
     // a participant's saved answers or their completed state.
     if (isPreviewActive()) {
       queueMicrotask(() => setScreen("form"));
+      return;
+    }
+
+    // A participant who has already been screened out cannot answer again.
+    if (isScreenedOut()) {
+      router.replace(query ? `/not-eligible?${query}` : "/not-eligible");
       return;
     }
 
@@ -126,6 +136,8 @@ function SurveyPageContent() {
     // the questions.
     if (survey.id === "screening") {
       const eligibility = evaluateEligibility(answers);
+      if (!preview) recordScreeningOutcome(eligibility.eligible);
+
       logEvent("screening_completed", survey.id, {
         answers,
         eligible: eligibility.eligible,

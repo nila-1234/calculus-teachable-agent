@@ -59,3 +59,58 @@ export function evaluateEligibility(answers: SurveyAnswers): EligibilityResult {
 
   return { eligible: failedItems.length === 0, failedItems, reasons };
 }
+
+
+/**
+ * Remembering the outcome so a screened-out participant cannot simply answer
+ * again with different answers.
+ *
+ * localStorage rather than sessionStorage: sessionStorage is cleared when the
+ * tab closes, which is exactly the "come back and retry" case this blocks.
+ *
+ * LIMITATION: this is browser-scoped, so a different browser, a private window,
+ * or cleared site data defeats it. Enforcing it properly needs a server-side
+ * record keyed on a participant identifier that exists *before* screening —
+ * the Prolific ID from the launch URL is the natural one, since the subject ID
+ * is not collected until the pre-survey. Every screening attempt is logged with
+ * its answers and outcome, so retries are at least detectable after the fact.
+ */
+const SCREENING_OUTCOME_KEY = "screening:outcome";
+
+export type ScreeningOutcome = "eligible" | "ineligible";
+
+export function recordScreeningOutcome(eligible: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      SCREENING_OUTCOME_KEY,
+      eligible ? "eligible" : "ineligible"
+    );
+  } catch {
+    /* ignore unavailable storage */
+  }
+}
+
+export function getScreeningOutcome(): ScreeningOutcome | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = localStorage.getItem(SCREENING_OUTCOME_KEY);
+    return value === "eligible" || value === "ineligible" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isScreenedOut(): boolean {
+  return getScreeningOutcome() === "ineligible";
+}
+
+/** For resetting between participants on a shared machine. */
+export function clearScreeningOutcome(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(SCREENING_OUTCOME_KEY);
+  } catch {
+    /* ignore unavailable storage */
+  }
+}

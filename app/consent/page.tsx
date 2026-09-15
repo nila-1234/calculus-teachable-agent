@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
@@ -12,6 +12,7 @@ import {
 } from "@/lib/surveys/consent";
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM } from "@/lib/preview";
+import { isScreenedOut } from "@/lib/surveys/eligibility";
 
 type Answer = "yes" | "no" | null;
 
@@ -23,6 +24,15 @@ function ConsentPageContent() {
 
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [fullName, setFullName] = useState("");
+
+  // Defence in depth: the screening page already redirects, but consent is the
+  // gate to the study proper and must not be reachable by URL after exclusion.
+  useEffect(() => {
+    if (preview) return;
+    if (isScreenedOut()) {
+      router.replace(query ? `/not-eligible?${query}` : "/not-eligible");
+    }
+  }, [preview, query, router]);
 
   const allAffirmed = CONSENT_AGREEMENTS.every(
     (item) => answers[item.id] === "yes"
