@@ -53,7 +53,7 @@ const PHASE_PILL: Partial<Record<Phase, { text: string; className: string }>> = 
   place: { text: "Place it on a step", className: "bg-lime-100 text-lime-700" },
   checking: { text: "Checking…", className: "bg-stone-100 text-stone-500" },
   mark: { text: "Mark pass or fail", className: "bg-lime-100 text-lime-700" },
-  "resolve-placement": { text: "Move to the correct step", className: "bg-red-100 text-red-700" },
+  "resolve-placement": { text: "Check step placement", className: "bg-amber-100 text-amber-700" },
   "resolve-status": { text: "Reply to resolve", className: "bg-amber-100 text-amber-700" },
 };
 
@@ -302,17 +302,23 @@ export default function LineRubricPanel({
   const handleStepDrop = (stepIndex: number) => (e: React.DragEvent) => {
     e.preventDefault();
     const criterionId = e.dataTransfer.getData("text/plain") || dragCriterionId;
-    if (criterionId) assignToStep(criterionId, stepIndex);
     setDragOverStep(null);
     setDragCriterionId(null);
+    // Moving a criterion to a different step unmounts its card from one step's list and
+    // mounts a fresh one in another's — different parents, so React can't preserve the
+    // DOM node just via key. Doing that in the same tick as the drop can remove the
+    // dragged element before the browser fires its native "dragend" on it, which leaves
+    // the browser's drag session stuck and breaks the next real drag gesture. Deferring
+    // the mutation one tick lets "dragend" land first.
+    if (criterionId) setTimeout(() => assignToStep(criterionId, stepIndex), 0);
   };
 
   const handleBankDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const criterionId = e.dataTransfer.getData("text/plain") || dragCriterionId;
-    if (criterionId) unassign(criterionId);
     setDragOverBank(false);
     setDragCriterionId(null);
+    if (criterionId) setTimeout(() => unassign(criterionId), 0);
   };
 
   return (
@@ -348,9 +354,8 @@ export default function LineRubricPanel({
                 </span>
               ) : null}
               <span
-                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  isSubmitted ? "bg-lime-50 text-lime-700" : "bg-stone-100 text-stone-500"
-                }`}
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${isSubmitted ? "bg-lime-50 text-lime-700" : "bg-stone-100 text-stone-500"
+                  }`}
               >
                 {gradedCount} of {rubric.length} graded
               </span>
@@ -370,7 +375,7 @@ export default function LineRubricPanel({
             the professor may comment on or challenge either decision.
           </p>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex select-none flex-col gap-2">
             {steps.map((step, stepIndex) => {
               const stepPlacements = placementsByStep(stepIndex);
               const isDragOver = dragOverStep === stepIndex;
@@ -396,11 +401,10 @@ export default function LineRubricPanel({
                   }}
                   onDragLeave={() => setDragOverStep((prev) => (prev === stepIndex ? null : prev))}
                   onDrop={handleStepDrop(stepIndex)}
-                  className={`flex gap-3 rounded-xl border-2 border-dashed p-3 transition-colors transition-opacity ${
-                    isDragOver
+                  className={`flex gap-3 rounded-xl border-2 border-dashed p-3 transition-colors transition-opacity ${isDragOver
                       ? "border-lime-500 bg-lime-50"
                       : "border-transparent hover:border-stone-200"
-                  } ${isStepDimmed ? DIM : ""}`}
+                    } ${isStepDimmed ? DIM : ""}`}
                 >
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-bold text-stone-500">
                     {stepIndex + 1}
@@ -431,6 +435,13 @@ export default function LineRubricPanel({
                             placementChecked && criterionFeedback.status != null;
                           const placementKey = `${criterion.id}::placement`;
                           const statusKey = `${criterion.id}::status`;
+                          // A card only locks into its green/red verdict styling once
+                          // both the placement and status calls are settled — graded
+                          // alone isn't enough while a challenge on either is still open.
+                          const isResolved =
+                            fullyGraded &&
+                            isPhaseSettled(criterionFeedback!.stepCorrect, placementKey) &&
+                            isPhaseSettled(criterionFeedback!.statusCorrect, statusKey);
                           // Only the active criterion is ever interactive — every other
                           // placed card, by construction, is already done.
                           const isActive = criterion.id === activeCriterionId;
@@ -446,13 +457,12 @@ export default function LineRubricPanel({
                               draggable={!isGrading && !lockedByOther}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
-                              className={`flex flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm transition-opacity ${
-                                fullyGraded
+                              className={`flex select-none flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm transition-opacity ${isResolved
                                   ? criterionFeedback!.correct
                                     ? "bg-green-50"
                                     : "bg-red-50"
                                   : "bg-stone-50"
-                              } ${lockedByOther ? DIM : ""}`}
+                                } ${lockedByOther ? DIM : ""}`}
                             >
                               <div className="flex items-center gap-2">
                                 {isGrading ? (
@@ -476,11 +486,10 @@ export default function LineRubricPanel({
                                 ) : null}
                                 {fullyGraded ? (
                                   <span
-                                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                                      criterionFeedback!.correct
+                                    className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${criterionFeedback!.correct
                                         ? "bg-green-100 text-green-700"
                                         : "bg-red-100 text-red-700"
-                                    }`}
+                                      }`}
                                   >
                                     AI Student {placement?.status === "fail" ? "Fail" : "Pass"}
                                   </span>
@@ -608,9 +617,8 @@ export default function LineRubricPanel({
             }}
             onDragLeave={() => setDragOverBank(false)}
             onDrop={handleBankDrop}
-            className={`h-fit rounded-xl border-2 border-dashed p-4 shadow-sm transition-colors ${
-              dragOverBank ? "border-lime-500 bg-lime-50" : "border-stone-200 bg-white"
-            }`}
+            className={`h-fit select-none rounded-xl border-2 border-dashed p-4 shadow-sm transition-colors ${dragOverBank ? "border-lime-500 bg-lime-50" : "border-stone-200 bg-white"
+              }`}
           >
             <span className="mb-3 block text-xs font-bold uppercase tracking-wider text-stone-400">
               Drag rubrics to the appropriate step
@@ -636,11 +644,10 @@ export default function LineRubricPanel({
                           ? undefined
                           : "Finish the criterion in progress before starting another"
                       }
-                      className={`flex flex-col gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-stone-700 transition-colors transition-opacity ${
-                        isActive
+                      className={`flex select-none flex-col gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-stone-700 transition-colors transition-opacity ${isActive
                           ? "cursor-grab border-lime-500 bg-lime-50 active:cursor-grabbing animate-pulse-ring"
                           : `cursor-not-allowed border-stone-200 bg-stone-50 ${DIM}`
-                      } ${dragCriterionId === criterion.id ? "opacity-40" : ""}`}
+                        } ${dragCriterionId === criterion.id ? "opacity-40" : ""}`}
                     >
                       <div className="flex items-start gap-2">
                         <DragHandleDots2Icon className="mt-0.5 shrink-0 text-stone-400" />

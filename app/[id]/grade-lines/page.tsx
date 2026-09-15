@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
   DiscussionMessage,
@@ -91,6 +91,12 @@ function GradeLinesPageContent() {
   const [resolvedThreads, setResolvedThreads] = useState<Record<string, Record<string, boolean>>>(
     {}
   );
+  // Bumped every time a criterion is (re-)graded, keyed by `${answerId}::${criterionId}`.
+  // Dragging the same criterion again before its in-flight grade request resolves can
+  // leave two requests racing — this lets a response tell whether it's still the latest
+  // one for its criterion before touching state, so a stale reply can't clobber a fresher
+  // result (or get the criterion mistakenly stuck as ungraded/undraggable).
+  const gradeGenerationRef = useRef<Record<string, number>>({});
 
   // Patches one speaker's bubble on a thread, leaving any other speaker's bubble alone.
   const patchComment = (
@@ -308,6 +314,10 @@ function GradeLinesPageContent() {
     if (!answer || !criterion) return;
 
     const phase: CommentKind = placement.status == null ? "placement" : "status";
+    const generationKey = `${answerId}::${criterionId}`;
+    const generation = (gradeGenerationRef.current[generationKey] ?? 0) + 1;
+    gradeGenerationRef.current[generationKey] = generation;
+    const isLatest = () => gradeGenerationRef.current[generationKey] === generation;
 
     logEvent("grade_lines_criterion_graded", scenarioId, {
       answer_id: answerId,
@@ -339,7 +349,10 @@ function GradeLinesPageContent() {
       const item: StepCriterionFeedback | undefined = Array.isArray(data.feedback)
         ? data.feedback[0]
         : undefined;
-      if (!item) return;
+      // A newer drag for this same criterion fired its own grade request while this one
+      // was in flight — that request owns the criterion's state now, so let this stale
+      // reply fall on the floor instead of overwriting it.
+      if (!item || !isLatest()) return;
 
       setReviewStates((prev) => {
         const prevAnswer = prev[answerId] ?? { submitted: false, feedback: {} };
@@ -358,10 +371,12 @@ function GradeLinesPageContent() {
       // Silently drop: the placement/status the TA chose is still reflected locally,
       // only the automatic feedback for it is missing on a request failure.
     } finally {
-      setGradingCriteria((prev) => ({
-        ...prev,
-        [answerId]: { ...prev[answerId], [criterionId]: false },
-      }));
+      if (isLatest()) {
+        setGradingCriteria((prev) => ({
+          ...prev,
+          [answerId]: { ...prev[answerId], [criterionId]: false },
+        }));
+      }
     }
   };
 
