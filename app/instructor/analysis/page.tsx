@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
+import MathDisplay from "@/components/math-display";
 import {
   GOAL_DESCRIPTIONS,
   GOAL_LABELS,
@@ -155,9 +156,10 @@ function ItemDetailPanel({
           <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
             {testId === "pretest" ? "Pre-test" : "Post-test"} wording
           </p>
-          <p className="mt-1 whitespace-pre-line text-sm leading-6 text-stone-700">
-            {prompt}
-          </p>
+          <MathDisplay
+            text={prompt ?? ""}
+            className="mt-1 text-sm leading-6 text-stone-700"
+          />
         </div>
       ))}
 
@@ -239,9 +241,10 @@ function ItemDetailPanel({
                 {r.points ?? "—"}/{r.maxPoints}
               </span>
             </div>
-            <p className="mt-2 whitespace-pre-line text-sm leading-6 text-stone-700">
-              {r.answer}
-            </p>
+            <MathDisplay
+              text={r.answer}
+              className="mt-2 text-sm leading-6 text-stone-700"
+            />
             {r.verdicts.length > 0 && (
               <div className="mt-3 space-y-1">
                 {r.verdicts.map((v) => (
@@ -501,7 +504,7 @@ export default function InstructorAnalysisPage() {
                   ))}
                 </div>
 
-                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                <div className="mt-6 grid items-start gap-6 md:grid-cols-2">
                   <div>
                     <h3 className="text-base font-bold text-stone-800">
                       Most often missed
@@ -549,10 +552,10 @@ export default function InstructorAnalysisPage() {
                   </div>
                 </div>
 
-                <h3 className="mt-8 text-base font-bold text-stone-800">
+                <h3 className="mt-12 text-base font-bold text-stone-800">
                   Every item
                 </h3>
-                <div className="mt-2 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+                <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
                   <table className="w-full border-collapse text-left text-sm">
                     <thead className="bg-stone-50">
                       <tr>
