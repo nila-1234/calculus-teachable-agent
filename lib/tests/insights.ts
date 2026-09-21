@@ -1,3 +1,5 @@
+import { getTest } from "./definitions";
+import { findItem, formatAnswer } from "./format";
 import type { GradedSubmission, LogDoc } from "./report";
 import type { TestId } from "./types";
 
@@ -36,6 +38,39 @@ export function goalForItem(itemId: string): Goal {
   return "communication";
 }
 
+/** How often each rubric criterion was met — why an open item is missed. */
+export type CriterionStat = {
+  id: string;
+  metRate: number;
+  notMet: number;
+  unverifiable: number;
+  n: number;
+};
+
+/** Which option people actually chose on a closed-form item. */
+export type ChoiceStat = {
+  choiceId: string;
+  label: string;
+  count: number;
+  correct: boolean;
+};
+
+export type ItemResponse = {
+  subjectId: string;
+  testId: TestId;
+  points: number | null;
+  maxPoints: number;
+  answer: string;
+  verdicts: { id: string; verdict: string; comment: string }[];
+};
+
+export type ItemDetail = {
+  prompts: Partial<Record<TestId, string>>;
+  criteria: CriterionStat[];
+  choices: ChoiceStat[];
+  responses: ItemResponse[];
+};
+
 export type ItemStat = {
   itemId: string;
   goal: Goal;
@@ -48,6 +83,8 @@ export type ItemStat = {
   /** Median seconds spent, or null when it could not be measured. */
   medianSeconds: number | null;
   timedN: number;
+  /** Everything needed to answer "why is this one missed?" */
+  detail: ItemDetail;
 };
 
 export type GoalStat = {
@@ -148,6 +185,109 @@ function accuracyByItem(graded: GradedSubmission[], testId?: TestId) {
   return points;
 }
 
+/**
+ * Everything behind a single item: what was asked, how each criterion fared,
+ * which options people picked, and every individual answer.
+ *
+ * The criterion breakdown is the point of this — an aggregate says Q2.2 is
+ * missed, but only the per-criterion rates say *which part* people fail.
+ */
+/**
+ * Generous enough not to truncate a real answer, but bounded: the detail for
+ * every item ships with the summary, so payload grows with participants times
+ * items times tests.
+ */
+const MAX_ANSWER_CHARS = 2000;
+
+function buildItemDetail(
+  itemId: string,
+  graded: GradedSubmission[]
+): ItemDetail {
+  const prompts: Partial<Record<TestId, string>> = {};
+  for (const testId of ["pretest", "posttest"] as TestId[]) {
+    const test = getTest(testId);
+    const found = test ? findItem(test, itemId) : null;
+    if (found) prompts[testId] = found.item.prompt;
+  }
+
+  const criterionTally = new Map<
+    string,
+    { met: number; notMet: number; unverifiable: number }
+  >();
+  const choiceTally = new Map<string, { count: number; correct: boolean }>();
+  const responses: ItemResponse[] = [];
+
+  for (const { submission, result } of graded) {
+    const scored = result.items.find((i) => i.itemId === itemId);
+    if (!scored) continue;
+
+    const open = result.openItems.find((i) => i.itemId === itemId);
+    for (const criterion of open?.criteria ?? []) {
+      const entry =
+        criterionTally.get(criterion.id) ?? { met: 0, notMet: 0, unverifiable: 0 };
+      if (criterion.verdict === "met") entry.met += 1;
+      else if (criterion.verdict === "not_met") entry.notMet += 1;
+      else entry.unverifiable += 1;
+      criterionTally.set(criterion.id, entry);
+    }
+
+    if (scored.kind === "choice" && scored.given) {
+      const entry = choiceTally.get(scored.given) ?? {
+        count: 0,
+        correct: scored.given === scored.expected,
+      };
+      entry.count += 1;
+      choiceTally.set(scored.given, entry);
+    }
+
+    const test = getTest(submission.testId);
+    const found = test ? findItem(test, itemId) : null;
+
+    responses.push({
+      subjectId: submission.subjectId,
+      testId: submission.testId,
+      points: scored.points,
+      maxPoints: scored.maxPoints,
+      answer: (found
+        ? formatAnswer(found.item, submission.answers[itemId])
+        : JSON.stringify(submission.answers[itemId] ?? null)
+      ).slice(0, MAX_ANSWER_CHARS),
+      verdicts:
+        open?.criteria.map((c) => ({
+          id: c.id,
+          verdict: c.verdict,
+          comment: c.comment,
+        })) ?? [],
+    });
+  }
+
+  const criteria: CriterionStat[] = [...criterionTally.entries()].map(
+    ([id, t]) => {
+      const n = t.met + t.notMet + t.unverifiable;
+      return {
+        id,
+        metRate: n > 0 ? t.met / n : 0,
+        notMet: t.notMet,
+        unverifiable: t.unverifiable,
+        n,
+      };
+    }
+  );
+
+  const choices: ChoiceStat[] = [...choiceTally.entries()]
+    .map(([choiceId, t]) => {
+      // Show the option text rather than a bare letter.
+      const test = getTest("pretest");
+      const found = test ? findItem(test, itemId) : null;
+      const label =
+        found?.item.choices?.find((c) => c.id === choiceId)?.text ?? choiceId;
+      return { choiceId, label, count: t.count, correct: t.correct };
+    })
+    .sort((a, b) => b.count - a.count);
+
+  return { prompts, criteria, choices, responses };
+}
+
 export function buildInsights(
   docs: LogDoc[],
   graded: GradedSubmission[]
@@ -167,6 +307,7 @@ export function buildInsights(
         n,
         medianSeconds: median(seconds),
         timedN: seconds.length,
+        detail: buildItemDetail(itemId, graded),
       };
     })
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));
