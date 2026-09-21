@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "node:crypto";
 import getFirestore from "@/lib/firestore";
+import { authorizeInstructor } from "@/lib/instructor-auth";
 import { gradeTest } from "@/lib/tests/grade";
 import { readStoredGrade, writeStoredGrade } from "@/lib/tests/grade-store";
 import {
@@ -32,41 +32,9 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function tokenMatches(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided);
-  const b = Buffer.from(expected);
-  // timingSafeEqual throws on length mismatch, which would itself leak length.
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-function authorize(req: NextRequest): NextResponse | null {
-  const expected = process.env.GRADING_EXPORT_TOKEN?.trim();
-
-  if (!expected) {
-    return NextResponse.json(
-      {
-        error:
-          "Grading export is disabled. Set GRADING_EXPORT_TOKEN in the environment to enable it.",
-      },
-      { status: 503 }
-    );
-  }
-
-  const provided =
-    req.headers.get("x-grading-token")?.trim() ||
-    req.nextUrl.searchParams.get("token")?.trim() ||
-    "";
-
-  if (!provided || !tokenMatches(provided, expected)) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 401 });
-  }
-
-  return null;
-}
 
 export async function GET(req: NextRequest) {
-  const denied = authorize(req);
+  const denied = authorizeInstructor(req);
   if (denied) return denied;
 
   try {
