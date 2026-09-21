@@ -13,6 +13,8 @@ import {
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM } from "@/lib/preview";
 import { isScreenedOut } from "@/lib/surveys/eligibility";
+import { getSubjectId } from "@/lib/subject";
+import { getProlificPid } from "@/lib/prolific";
 
 type Answer = "yes" | "no" | null;
 
@@ -43,11 +45,25 @@ function ConsentPageContent() {
   const handleContinue = () => {
     if (!canContinue) return;
 
-    // Deliberately no name: the consent text states that data and consent form
-    // are kept separate, and that study data is recorded by subject ID rather
-    // than by name. Logging it here would put a direct identifier into the same
-    // collection as every other study event.
-    if (!preview) sessionStorage.setItem("consent:given", "true");
+    if (!preview) {
+      sessionStorage.setItem("consent:given", "true");
+
+      // The name goes to /api/consent, which writes a separate `consents`
+      // collection. It is deliberately NOT in this event: the consent text says
+      // data and consent form are kept separate, and every analysis reads the
+      // log. Failing to record it must not block a participant, so this is
+      // fire-and-forget — the console carries the error.
+      void fetch("/api/consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject_id: getSubjectId(),
+          name: fullName.trim(),
+          agreements: CONSENT_AGREEMENTS.map((item) => item.id),
+          prolific_pid: getProlificPid(),
+        }),
+      }).catch((err) => console.error("Could not record consent:", err));
+    }
 
     logEvent("consent_given", "consent", {
       agreements: CONSENT_AGREEMENTS.map((item) => item.id),
