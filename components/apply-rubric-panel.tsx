@@ -46,8 +46,6 @@ type ApplyRubricPanelProps = {
   loadingAnswerId?: string | null;
   onToggleResult: (answerId: string, criterionId: string, value: "pass" | "fail") => void;
   onSubmitAnswer: (answerId: string) => void;
-  mode?: number;
-  onModeChange?: (mode: number) => void;
   explanations?: Record<string, Record<string, string>>;
   onExplanationChange?: (answerId: string, criterionId: string, value: string) => void;
   onExplanationBlur?: (answerId: string, criterionId: string, value: string) => void;
@@ -63,15 +61,12 @@ export default function ApplyRubricPanel({
   loadingAnswerId,
   onToggleResult,
   onSubmitAnswer,
-  mode = 1,
-  onModeChange,
   explanations = {},
   onExplanationChange,
   onExplanationBlur,
   onComplete,
   correctSample,
 }: ApplyRubricPanelProps) {
-  const isMode2 = mode === 2;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hintOpen, setHintOpen] = useState(false);
   const feedbackRef = useRef<HTMLDivElement | null>(null);
@@ -105,33 +100,12 @@ export default function ApplyRubricPanel({
     }
   }, [currentAnswer.id, currentState?.submitted]);
 
-  const templateColumns = isMode2
-    ? "minmax(160px,1.1fr) auto minmax(160px,1fr) minmax(160px,1.3fr)"
-    : "minmax(160px,1.4fr) auto minmax(160px,1.6fr)";
+  const templateColumns =
+    "minmax(160px,1.1fr) auto minmax(160px,1fr) minmax(160px,1.3fr)";
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex gap-1 rounded-lg bg-stone-100 p-1">
-          <button
-            type="button"
-            onClick={() => onModeChange?.(1)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              mode === 1 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            Standard
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange?.(2)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              mode === 2 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            Self-Explanation
-          </button>
-        </div>
 
         <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
           Answer {currentIndex + 1} of {answers.length} · {completedCount} submitted
@@ -206,8 +180,7 @@ export default function ApplyRubricPanel({
                   negative={{ value: "fail", label: "Fail" }}
                 />
 
-                {isMode2 ? (
-                  <textarea
+                <textarea
                     placeholder="Explain your reasoning…"
                     value={explanations[currentAnswer.id]?.[criterion.id] || ""}
                     onChange={(e) =>
@@ -217,9 +190,8 @@ export default function ApplyRubricPanel({
                       onExplanationBlur?.(currentAnswer.id, criterion.id, e.target.value)
                     }
                     disabled={isLoading}
-                    className="min-h-[44px] w-full resize-none rounded-lg border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"
-                  />
-                ) : null}
+                  className="min-h-[44px] w-full resize-none rounded-lg border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"
+                />
 
                 {currentState?.submitted ? (
                   <div
