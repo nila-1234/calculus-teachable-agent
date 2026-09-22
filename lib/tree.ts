@@ -4,6 +4,7 @@ import { getTest } from "@/lib/tests/definitions";
 import { findItem, formatAnswer } from "@/lib/tests/format";
 import type { TestItemAnswer } from "@/lib/tests/types";
 import { getSurvey } from "@/lib/surveys/definitions";
+import { getLesson } from "@/lib/lessons/definitions";
 import { parseMulti, type SurveyItem } from "@/lib/surveys/types";
 
 /**
@@ -41,7 +42,13 @@ const PHASE_BY_SCENARIO: Record<string, Phase> = {
 
 const UNSORTED: Phase = { key: "9-unsorted", label: "Unsorted" };
 
-/** Scenario ids are numeric for the instruction, named for everything else. */
+/**
+ * Scenario ids identify the phase: named for the surveys and tests, a bare
+ * number for the teachable-agent scenario, a dotted unit number for a lesson.
+ *
+ * Both instruction arms sort into slot 5, since a participant only ever sees
+ * one of them and they occupy the same position in the flow.
+ */
 function phaseFor(scenarioId: unknown): Phase {
   const id = typeof scenarioId === "string" ? scenarioId.trim() : "";
   if (!id) return UNSORTED;
@@ -49,8 +56,22 @@ function phaseFor(scenarioId: unknown): Phase {
   const known = PHASE_BY_SCENARIO[id];
   if (known) return known;
 
+  if (id === "instruction") {
+    return { key: "5-instruction", label: "Instruction (arm assignment)" };
+  }
+
   if (/^\d+$/.test(id)) {
-    return { key: "5-instruction", label: `Optimization instruction (scenario ${id})` };
+    return { key: "5-instruction", label: `Teachable-agent scenario ${id}` };
+  }
+
+  // Comparison arm. Named by unit here because nothing a participant sees
+  // reaches this collection.
+  if (/^\d+(\.\d+)+$/.test(id)) {
+    const lesson = getLesson(id);
+    return {
+      key: `5-lesson-${id}`,
+      label: lesson ? `Lesson ${id} — ${lesson.title}` : `Lesson ${id}`,
+    };
   }
 
   return UNSORTED;
@@ -198,6 +219,51 @@ function surveyItemDocs(
   return docs;
 }
 
+/* -------------------------------------------------------------- lessons --- */
+
+/**
+ * One document per lesson question, carrying the prompt alongside what was
+ * typed or chosen.
+ *
+ * Merged on the question id, so repeated attempts converge onto one document
+ * showing the latest response — the full attempt history stays in the events
+ * folder, where first-try correctness can still be read off.
+ */
+function lessonItemDoc(
+  lessonId: string,
+  data: Record<string, unknown>
+): TreeItem | null {
+  const lesson = getLesson(lessonId);
+  const itemId = typeof data.item_id === "string" ? data.item_id : "";
+  if (!lesson || !itemId) return null;
+
+  const questions = lesson.sections.flatMap((s) => s.questions ?? []);
+  const index = questions.findIndex((q) => q.id === itemId);
+  if (index < 0) return null;
+
+  const question = questions[index];
+  const order = index + 1;
+
+  // A choice id means nothing in the console; show the option that id refers to.
+  const response = String(data.response ?? "");
+  const answer =
+    question.kind === "choice"
+      ? question.choices?.find((c) => c.id === response)?.label ||
+        (question.choices?.find((c) => c.id === response)?.labelImage
+          ? "(diagram option)"
+          : response)
+      : response;
+
+  return {
+    id: `${pad(order)}-Q${order}`,
+    item_id: itemId,
+    order,
+    section: question.kind === "choice" ? "Multiple choice" : "Short answer",
+    question: question.prompt,
+    answer: `${answer}${data.is_correct ? "  ✓" : "  ✗"} (attempt ${data.attempt ?? 1})`,
+  };
+}
+
 /* --------------------------------------------------------- conversation --- */
 
 /**
@@ -320,6 +386,11 @@ export function opsFor(db: Firestore, entry: LogEntry): Op[] {
       const doc = testItemDoc(scenarioId, itemId, answers[itemId]);
       if (doc) items.push(doc);
     }
+  }
+
+  if (event === "lesson_item_attempted" && typeof scenarioId === "string") {
+    const doc = lessonItemDoc(scenarioId, data);
+    if (doc) items.push(doc);
   }
 
   if (

@@ -1,0 +1,399 @@
+{
+ "id": "10.2.2",
+ "title": "Applied optimization with bounded domains",
+ "durationMin": 13,
+ "sections": [
+  {
+   "kind": "text",
+   "body": [
+    {
+     "type": "p",
+     "text": "After setting up an applied optimization problem, the next step is to solve. To solve the applied optimization problem, find the global maximum or minimum of the objective function."
+    },
+    {
+     "type": "p",
+     "text": "In many cases, the domain is a closed interval. To find global extrema on a closed interval:"
+    },
+    {
+     "type": "list",
+     "items": [
+      "Identify critical numbers by finding where the derivative is \\(0\\) or undefined.",
+      "Evaluate the function at the critical numbers and the endpoints of the interval.",
+      "Compare the function values to determine the global maximum or minimum."
+     ]
+    },
+    {
+     "type": "p",
+     "text": "In an earlier example, an architect wanted to maximize the area of a rectangular window enclosed by \\(16\\text{ feet}\\) of framing using an objective function \\(A(x) = x(8-x)\\) on the domain \\([0, 8].\\) This optimization problem can now be solved by finding the global maximum on this closed interval."
+    },
+    {
+     "type": "p",
+     "text": "This lesson will demonstrate how to solve applied optimization problems."
+    }
+   ],
+   "questions": []
+  },
+  {
+   "kind": "video",
+   "identifier": "10.2.2.1",
+   "durationMin": 2,
+   "transcript": "We want to find the maximum area of a rectangular window using 16 feet of window frame. We have already completed the first five steps as part of the setup in the previous lesson. We found an objective function A of x with a domain from 0 to 8. To solve, we now find the global maximum using the process for finding global extrema of a differentiable function on a closed interval. We start with the derivative of A of x, which is A prime of x equals 8 minus 2 x. Now we set the derivative equal to 0 to find any critical numbers. The only critical number is x equals 4. To find the maximum on a closed interval, we compare the function values at the endpoints of the interval and the critical numbers. Substituting the first endpoint 0 into the factored form of the area function gives A of 0 equals 0 times open paren 8 minus 0 close paren, which is 0. Substituting the other endpoint 8 into A of x also gives 0. Substituting the critical number into the area function gives A of 4 equals 16. Comparing the three function values, we find that the largest is 16 when x equals 4. So the maximum area of the window is 16 square feet. This maximum occurs when one side of the window frame is 4 feet long, and the other side is 8 minus 4 feet long.",
+   "questions": [
+    {
+     "id": "e59a4f9b-a07a-41d3-8ee6-3e4cd846b8b0",
+     "kind": "short",
+     "prompt": "When setting the derivative \\(A^\\prime(x) = 8 - 2x\\) equal to \\(0,\\) the only critical number is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Solve \\(8 - 2x = 0\\) for \\(x.\\)",
+      "Add \\(2x\\) to both sides of the equation, then divide by \\(2.\\)"
+     ],
+     "correctExplanation": "Setting \\(A^\\prime(x)\\) equal to \\(0\\) and solving for \\(x,\\) \\[\\begin{align*} A^\\prime(x) = 8 - 2x &= 0 \\\\ 8 &= 2x && \\text{Add} \\\\ 4 &= x && \\text{Divide} \\end{align*}\\] \\(x = 4.\\)",
+     "answers": [
+      "4"
+     ]
+    },
+    {
+     "id": "6d736f44-e627-4226-b260-8d3c368abe0c",
+     "kind": "short",
+     "prompt": "Substituting the critical number \\(x = 4\\) into \\(A(x) = x(8 - x)\\) gives \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Substituting \\(x = 4\\) gives \\(A(4) = 4(8 - 4).\\)",
+      "Simplify \\(4(8 - 4).\\)"
+     ],
+     "correctExplanation": "\\(x = 4,\\) \\[\\begin{align*} A(x) &= x(8 - x) \\\\ A(4) &= 4(8 - 4) && \\text{Substitute} \\\\ &= 4(4) && \\text{Simplify} \\\\ &= 16 && \\text{Multiply} \\end{align*}\\]",
+     "answers": [
+      "16"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "The objective function, \\(f(x)\\text{,}\\) in an applied optimization problem has the domain \\([0, 10]\\) and critical numbers \\(x = 2\\) and \\(x = 7.\\) Function values at the endpoints of the domain and critical numbers are given in the table."
+    },
+    {
+     "type": "p",
+     "text": "\\(x\\) \\(f(x)\\) \\(0\\) \\(15\\) \\(2\\) \\(-3\\) \\(7\\) \\(4\\) \\(10\\) \\(1\\)"
+    }
+   ],
+   "questions": [
+    {
+     "id": "ed3117e5-ce11-4dbf-a990-55d7963fd3a9",
+     "kind": "choice",
+     "prompt": "The global maximum of \\(f(x)\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "d955f0c9-267e-4a9d-af38-e8f075956313",
+       "label": "\\(0\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "While the global maximum occurs at \\(x = 0, 0\\) is not the global maximum. The global maximum is the largest function value."
+      },
+      {
+       "id": "b967cc11-a53f-412c-ae63-fe635079e034",
+       "label": "\\(10\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The global maximum is the largest function value. The number \\(10\\) is not the largest."
+      },
+      {
+       "id": "99a0a027-3ab9-4d09-9f82-7fdd67ac7efe",
+       "label": "\\(15\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The global maximum is the largest function value. The number \\(15\\) is the largest."
+      }
+     ]
+    },
+    {
+     "id": "877ef8fb-0c1e-4405-8278-80ec54bd5521",
+     "kind": "choice",
+     "prompt": "The global maximum occurs when \\(x = \\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "ab91195e-73c1-4803-922d-a6806bb666c2",
+       "label": "\\(0\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The global maximum is \\(f(0) = 15,\\) which corresponds to \\(x = 0.\\)"
+      },
+      {
+       "id": "20bb76dc-c4c6-43c5-8d56-ef2775a885e8",
+       "label": "\\(10\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The global maximum is \\(f(0) = 15\\) which does not correspond to \\(x = 10.\\)"
+      },
+      {
+       "id": "41ffeb17-5f9d-4f0d-94d1-88eeb36b52da",
+       "label": "\\(15\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The global maximum is \\(f(0) = 15,\\) which does not correspond to \\(x = 15.\\) The number \\(15\\) is the global maximum itself, not the value of \\(x\\) where the maximum occurs."
+      }
+     ]
+    },
+    {
+     "id": "c4f3cdcf-9f1b-40c3-ac10-ca79c63c9a6f",
+     "kind": "short",
+     "prompt": "The global minimum of \\(f(x)\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Compare the function values in the table.",
+      "The global minimum is the smallest function value."
+     ],
+     "correctExplanation": "The global minimum is the smallest function value. The number \\(-3\\) is the smallest.",
+     "answers": [
+      "-3"
+     ]
+    },
+    {
+     "id": "cb1dad33-55cb-4d3f-bc44-bfa4a8e35806",
+     "kind": "short",
+     "prompt": "The global minimum occurs when \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Find the \\(x\\text{-}\\) value corresponding to the minimum.",
+      "Find the \\(x\\text{-}\\) value in the first column of the table corresponding to the function value \\(-3.\\)"
+     ],
+     "correctExplanation": "The global minimum is \\(f(2) = -3,\\) which corresponds to \\(x = 2.\\)",
+     "answers": [
+      "2"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "In the autumn, salmon swim upstream to spawn on gravel beds in small creeks. For one population of salmon, the number \\(S\\) of salmon swimming upstream is approximated by the function"
+    },
+    {
+     "type": "p",
+     "text": "\\[S(T) = -T^2 + 20T + 1000\\]"
+    },
+    {
+     "type": "p",
+     "text": "where \\(T\\) is the temperature of the water in degrees Celsius and \\(5 \\leq T \\leq 20.\\)"
+    },
+    {
+     "type": "p",
+     "text": "Find the water temperature that produces the maximum number of salmon swimming upstream."
+    }
+   ],
+   "questions": [
+    {
+     "id": "c89336ea-8ce0-4485-98e1-ba848a38c428",
+     "kind": "short",
+     "prompt": "The only critical number of \\(S(T)\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Take the derivative of \\(S(T),\\) then set \\(S^\\prime(T)\\) equal to \\(0.\\)",
+      "Solve \\(S^\\prime(T) = -2T + 20 = 0\\) for \\(T.\\)"
+     ],
+     "correctExplanation": "Taking the derivative of \\(S(T) = -T^2 + 20T + 1000\\) gives \\(S^\\prime(T) = -2T + 20.\\) Setting the derivative equal to zero and solving, \\[\\begin{align*}S^\\prime(T) = -2T + 20 & = 0 \\\\20 & = 2T \\\\10 & = T \\end{align*}\\] So the only critical number is \\(T = 10.\\)",
+     "answers": [
+      "10"
+     ]
+    },
+    {
+     "id": "5e1059b0-4193-4ead-8784-35688c66f65a",
+     "kind": "short",
+     "prompt": "Values of the objective function \\(S(T)\\) computed at the endpoints of the domain and the critical number are given in the table. \\(T\\) \\(S(T)\\) \\(5\\) \\(-(5)^2+20(5) + 1000 = 1075 \\) \\(20\\) \\(-(20)^2 + 20(20) + 1000= 1000\\) \\(10\\) \\(-(10)^2+20(10)+1000=1100\\) The water temperature that produces the maximum number of salmon swimming upstream is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Compare the three function values in the table, and find the \\(T\\text{-}\\) value corresponding to the largest function value.",
+      "The maximum number of salmon is \\(1100.\\) Find the \\(T\\text{-}\\) value in the table corresponding to \\(1100\\) salmon."
+     ],
+     "correctExplanation": "Comparing the function values \\(S(5) = 1075,\\) \\(S(20) = 1000,\\) and \\(S(10) = 1100,\\) reveals that \\(1100\\) is the largest. So the maximum number of salmon swimming upstream is \\(1100,\\) and this maximum occurs when the temperature of the water is \\(T = 10 ^{\\circ} \\text{C}.\\)",
+     "answers": [
+      "10"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "Solve the area problem with a rectangular window and \\(3\\) window panes, which was set up in the previous lesson. An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with \\(3\\) parallel window panes separated by framing as in the figure."
+    },
+    {
+     "type": "img",
+     "src": "/lessons/10.2.2/rectangular-window-with-3-window-panes.png"
+    },
+    {
+     "type": "p",
+     "text": "The area is given by \\(A(x) = x(20 -2x)= 20x - 2x^2,\\) where \\(x\\) is the length of the of each of the \\(4\\) parallel pieces of window framing. Find the maximum area of the window on the interval \\([0, 10].\\)"
+    }
+   ],
+   "questions": [
+    {
+     "id": "b0616d81-1d0c-4730-9d6c-4131f8ed4df8",
+     "kind": "choice",
+     "prompt": "Find the global maximum of the objective function \\(A(x) = 20x - 2x^2\\) on the closed interval \\([0, 10].\\) The first step is to find the critical numbers of the objective function. The only critical number of \\(A(x) = 20x - 2x^2\\) is \\(x=\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "111b9d7e-b596-4293-8936-18fc97e12306",
+       "label": "\\(0\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The derivative of \\(A(x)\\) is \\(A^\\prime(x) = 20 - 4x.\\) Substituting \\(0\\) into \\(A^\\prime(x)\\) gives \\(A^\\prime(0) = 20 - 4(0) =20.\\) The derivative is defined and is not \\(0\\) at \\(x = 0,\\) so \\(x = 0\\) is not a critical number."
+      },
+      {
+       "id": "d36c6be6-667b-48d9-862a-72221ffbfb55",
+       "label": "\\(5\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "To find critical numbers, use the derivative equal to \\(0.\\) The derivative of \\(A(x)\\) is \\(A^\\prime(x) = 20 - 4x\\) by the constant multiple and power rules. Setting \\(A^\\prime(x)\\) equal to \\(0\\) and solving, \\[\\begin{align*}A^\\prime(x) = 20 - 4x & = 0 \\\\20 & = 4x \\\\ 5 & = x\\end{align*}\\] So the only critical number is \\(x =5.\\)"
+      },
+      {
+       "id": "20042672-6de5-47f3-9348-48c5d16344db",
+       "label": "\\(10\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The derivative of \\(A(x)\\) is \\(A^\\prime(x) = 20 - 4x.\\) Substituting \\(10\\) into \\(A^\\prime(x)\\) gives \\(A^\\prime(10) = 20 - 4(10) =-20.\\) The derivative is defined and is not \\(0\\) at \\(x = 10,\\) so \\(x = 10\\) is not a critical number."
+      }
+     ]
+    },
+    {
+     "id": "1ca0c59d-87d4-4626-acc8-3982bfad30b2",
+     "kind": "short",
+     "prompt": "Values of the objective function computed at the endpoints of the domain and the critical number are given in the table. \\(x\\) \\(A(x)\\) \\(0\\) \\(0(20 - 2(0)) = 0\\) \\(10\\) \\(10(20 -2(10)) = 0\\) \\(5\\) \\(5(20 - 2(5))=50\\) The maximum area of the window is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Compare the \\(3\\) function values in the table.",
+      "The maximum area is the largest function value from the table."
+     ],
+     "correctExplanation": "Comparing the function values \\(A(0) = 0,\\) \\(A(10) = 0,\\) and \\(A(5) = 50,\\) reveals that \\(50\\) is the largest. So the maximum area of the window is \\(50 \\text{ sq. ft.}\\)",
+     "answers": [
+      "50"
+     ]
+    },
+    {
+     "id": "7578fb3d-1d9f-418a-9ab6-27e2836c0925",
+     "kind": "short",
+     "prompt": "Values of the objective function computed at the endpoints of the domain and the critical number are given in the table. \\(x\\) \\(A(x)\\) \\(0\\) \\(0(20 - 2(0)) = 0\\) \\(10\\) \\(10(20 -2(10)) = 0\\) \\(5\\) \\(5(20 - 2(5))=50\\) The maximum area of the window is \\(50 \\text{ sq. ft.},\\) which corresponds to where the \\(4\\) parallel pieces of window frame each have a length of \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Find the \\(x\\text{-}\\) value corresponding to the maximum.",
+      "Find the \\(x\\text{-}\\) value in the first column of the table corresponding to the function value \\(50.\\)"
+     ],
+     "correctExplanation": "The maximum area is \\(A(5) = 50,\\) which corresponds to \\(x = 5.\\) So the length of each the \\(4\\) parallel pieces of window framing that gives the maximum area is \\(5 \\text{ ft.}\\)",
+     "answers": [
+      "5"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "Solve the area problem with a rectangular backyard, which was set up in the previous lesson. A farmer has \\(80\\text{ feet}\\) of material to fence \\(3\\) sides of a rectangular backyard."
+    },
+    {
+     "type": "img",
+     "src": "/lessons/10.2.2/backyard-and-wall.png"
+    },
+    {
+     "type": "p",
+     "text": "The area is given by \\(A(x) = 80x - 2x^2 = x(80 -2x)\\text{,}\\) where \\(x\\) is the length of the backyard. Find the maximum area of the backyard on the interval \\([0, 40].\\)"
+    }
+   ],
+   "questions": [
+    {
+     "id": "02699855-e4e1-48be-892a-7679a92b5934",
+     "kind": "short",
+     "prompt": "Find the global maximum of the objective function \\(A(x) = 80x - 2x^2\\) on the closed interval \\([0, 40]\\text{.}\\) The first step is to find the critical numbers of the objective function. The only critical number of \\(A(x) = 80x - 2x^2\\) is \\( \\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Find the derivative \\(A^\\prime(x),\\) then solve \\(A'(x) = 0\\) to find the critical numbers.",
+      "The derivative is \\(A'(x) = 80 - 4x.\\)"
+     ],
+     "correctExplanation": "Taking the derivative of \\(A(x) = 80x - 2x^2\\) using the constant multiple and power rules, \\(A^\\prime(x)= 80 - 4x.\\) Setting this derivative equal to \\(0\\) and solving, \\[\\begin{align*} A'(x) = 80 - 4x & = 0 \\\\ -4x &= -80 \\\\ x &= 20 \\end{align*}\\] \\(x = 20.\\)",
+     "answers": [
+      "20"
+     ]
+    },
+    {
+     "id": "afc2b1d3-d844-4231-8523-fbcc2b86d977",
+     "kind": "short",
+     "prompt": "The only critical number, \\(x = 20,\\) lies inside the domain \\([0, 40].\\) Next, evaluate the objective function at the endpoints of the domain and the critical number. The results of evaluating the function at the endpoints of the interval \\([0,40]\\) are given in the table. \\(x\\) \\(A(x)\\) \\(0\\) \\(0(80 - 2(0)) = 0\\) \\(40\\) \\(40(80 -2(40)) = 0\\) \\(20\\) \\(?\\) Substituting the critical number \\(x = 20\\) into \\(A(x) = 80x - 2x^2 = x(80-2x)\\) gives \\( \\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Substitute \\(x = 20\\) into \\(A(x) = x(80-2x).\\)",
+      "Substituting gives \\(A(20) = 20(80 - 2(20)).\\)"
+     ],
+     "correctExplanation": "Substituting \\(20\\) into \\(A(x) = x(80 -2x)\\) and simplifying, \\[\\begin{align*} A(x) &= x(80-2x) \\\\ A(20) &= 20(80 - 2(20)) \\\\ & = 20(40) \\\\ &= 800 & \\\\ \\end{align*}\\]",
+     "answers": [
+      "800"
+     ]
+    },
+    {
+     "id": "3b1ba2cb-f94d-4594-a0d5-ee549156cd58",
+     "kind": "short",
+     "prompt": "Find the solution of this optimization problem based on the values of the objective function computed at the endpoints of the domain and the critical number. \\(x\\) \\(A(x)\\) \\(0\\) \\(0(80 - 2(0)) = 0\\) \\(40\\) \\(40(80 -2(40)) = 0\\) \\(20\\) \\(20(80 - 2(20))=800\\) The maximum area of the backyard is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Compare the \\(3\\) function values in the table.",
+      "The maximum area is the largest function value in the table."
+     ],
+     "correctExplanation": "Comparing the function values \\(A(0) = 0,\\) \\(A(40) = 0,\\) and \\(A(20) = 800\\) reveals that \\(800\\) is the largest. So the maximum area of the backyard is \\(800 \\text{ sq. ft.}\\)",
+     "answers": [
+      "800"
+     ]
+    },
+    {
+     "id": "0a9b7ed8-81ee-4f69-838f-a82d4e0bd540",
+     "kind": "short",
+     "prompt": "Find the solution of this optimization problem based on the values of the objective function computed at the endpoints of the domain and the critical number. \\(x\\) \\(A(x)\\) \\(0\\) \\(0(80 - 2(0)) = 0\\) \\(40\\) \\(40(80 -2(40)) = 0\\) \\(20\\) \\(40(80 - 2(20)) = 800\\) The maximum area of the backyard is \\(800 \\text{ sq. ft.},\\) which corresponds to a backyard with a length of \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Find the \\(x\\text{-}\\) value corresponding to the maximum.",
+      "Find the \\(x\\text{-}\\) value in the first column of the table corresponding to the function value \\(800.\\)"
+     ],
+     "correctExplanation": "The maximum area is \\(A(20) = 800,\\) which corresponds to \\(x = 20.\\) So the backyard length that gives the maximum area is \\(20 \\text{ ft.}\\)",
+     "answers": [
+      "20"
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "text",
+   "body": [
+    {
+     "type": "p",
+     "text": "Lesson summary"
+    },
+    {
+     "type": "list",
+     "items": [
+      "After setting up an optimization problem, solve the problem by finding the global extrema of the objective function.",
+      "To find global extrema on a closed interval, find the critical points, evaluate the function at the critical points and endpoints of the interval, and compare the values."
+     ]
+    }
+   ],
+   "questions": []
+  }
+ ]
+}

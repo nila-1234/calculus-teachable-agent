@@ -1,3 +1,5 @@
+import { LESSON_SEQUENCE } from "@/lib/lessons/definitions";
+
 export const PREVIEW_PARAM = "preview";
 
 /**
@@ -15,9 +17,13 @@ export const PREVIEW_PARAM = "preview";
  */
 const PREVIEW_SESSION_KEY = "previewMode";
 
-/** /scenarios and the scenario step routes. */
-function isScenarioRoute(pathname: string): boolean {
-  return pathname === "/scenarios" || /^\/\d+(\/|$)/.test(pathname);
+/** /scenarios, the scenario step routes, and the lesson routes. */
+function isInstructionRoute(pathname: string): boolean {
+  return (
+    pathname === "/scenarios" ||
+    /^\/\d+(\/|$)/.test(pathname) ||
+    pathname.startsWith("/lesson/")
+  );
 }
 
 export function isPreviewActive(): boolean {
@@ -37,13 +43,13 @@ export function isPreviewActive(): boolean {
       return false;
     }
 
-    // The scenario pages rebuild their query string from scratch
-    // (`?questionMode=…&applyRubricMode=…`) and drop the flag, so preview has to
-    // survive that — but only within the instructions phase, so every other
-    // route still requires the flag explicitly.
+    // The instruction pages rebuild their query string as they navigate and can
+    // drop the flag, so preview has to survive that — but only within the
+    // instruction phase, so every other route still requires the flag
+    // explicitly.
     return (
       sessionStorage.getItem(PREVIEW_SESSION_KEY) === "1" &&
-      isScenarioRoute(window.location.pathname)
+      isInstructionRoute(window.location.pathname)
     );
   } catch {
     return false;
@@ -133,10 +139,17 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
   },
   {
     id: "instructions",
-    label: "Instructions",
+    label: "Instructions · agent",
     description:
-      "The TA scenarios. Fully interactive here, including the AI conversation.",
+      "One of the two instruction arms: the teachable-agent scenario. Fully interactive here, including the AI conversation.",
     path: "/scenarios",
+  },
+  {
+    id: "lessons",
+    label: "Instructions · lessons",
+    description:
+      "The other instruction arm: course units 10.2.1 and 10.2.2, ported with their own questions, hints, and feedback. Participants are assigned to one arm or the other automatically.",
+    path: "/lesson/10.2.1",
   },
   {
     id: "post-test",
@@ -159,6 +172,9 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
 export function phaseIndexForPath(pathname: string): number {
   if (/^\/\d+(\/|$)/.test(pathname)) {
     return PREVIEW_PHASES.findIndex((phase) => phase.id === "instructions");
+  }
+  if (pathname.startsWith("/lesson/")) {
+    return PREVIEW_PHASES.findIndex((phase) => phase.id === "lessons");
   }
   return PREVIEW_PHASES.findIndex((phase) => phase.path === pathname);
 }
@@ -199,6 +215,14 @@ export function previewStops(scenarioId: string | number): PreviewStop[] {
           label: step.label,
           path: `/${scenarioId}/${step.segment}`,
         });
+      }
+    }
+
+    // The lesson phase's own entry is the first lesson, so only the rest are
+    // added here — otherwise Next would visit 10.2.1 twice.
+    if (phase.id === "lessons") {
+      for (const lessonId of LESSON_SEQUENCE.slice(1)) {
+        stops.push({ label: `Lesson ${lessonId}`, path: `/lesson/${lessonId}` });
       }
     }
   }

@@ -1,0 +1,666 @@
+{
+ "id": "10.2.1",
+ "title": "Setting up an applied optimization problem",
+ "durationMin": 16,
+ "sections": [
+  {
+   "kind": "text",
+   "body": [
+    {
+     "type": "p",
+     "text": "Optimization means finding the best solution to a problem. Calculus can be used to find the best solution by finding a global maximum or minimum."
+    },
+    {
+     "type": "p",
+     "text": "To solve an optimization problem, begin by reading the problem carefully to identify any important information and quantities. Then set up the problem by choosing clear notation and appropriate functions. This setup includes identifying:"
+    },
+    {
+     "type": "list",
+     "items": [
+      "The objective function: the function to maximize or minimize.",
+      "Constraints: any limitations or restrictions on the variables."
+     ]
+    },
+    {
+     "type": "p",
+     "text": "\\(16\\) feet of window framing to build a rectangular window and wants to maximize the area of the window. In this case,"
+    },
+    {
+     "type": "list",
+     "items": [
+      "Objective function: the area of the window.",
+      "Constraint: total framing is exactly 16 feet."
+     ]
+    },
+    {
+     "type": "p",
+     "text": "This lesson will outline the steps to set up optimization problems."
+    }
+   ],
+   "questions": []
+  },
+  {
+   "kind": "video",
+   "identifier": "10.2.1.1",
+   "durationMin": 2,
+   "transcript": "An architect has 16 feet of window framing and wants to build a rectangular window with the largest possible area. We will set up an optimization problem to find the maximum area. First, we introduce notation. Let's name the area of the window A and the side lengths x and y. The objective function is the function that we want to maximize or minimize. Our goal is to maximize the area, so our objective function will give the area of a rectangle. The objective function is A equals x times y. The next step is to identify any constraints or restrictions. The architect only has 16 feet of framing, so the perimeter of the rectangle is equal to 16. That is, 2 x plus 2 y equals 16. To simplify, we will solve this constraint equation for one variable. Solving for y gives y equals 8 minus x. We want the objective function to be written as a function of a single variable. So we rewrite by replacing y with 8 minus x to get the area as a function of just x. Last, we identify a domain by considering realistic bounds on x. Since lengths cannot be negative, x and y are both greater than or equal to 0. y is equal to 8 minus x, so x must be less than or equal to 8 for y to be non-negative. The domain is the closed interval from 0 to 8. The optimization problem is now fully set up.",
+   "questions": [
+    {
+     "id": "7d167047-33bf-4fff-84ac-3a8441efecfd",
+     "kind": "choice",
+     "prompt": "The area of the rectangular window is described using the objective function \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "6a78e42c-e5b7-4e63-b631-89aeba5d1fc8",
+       "label": "\\(A = 2x + 2y\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The formula \\(2x + 2y\\) gives the perimeter of a rectangle, not the area."
+      },
+      {
+       "id": "3eba03de-73a3-43ec-aa49-829e76273c49",
+       "label": "\\(A = xy\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The area of a rectangle with sides \\(x\\) and \\(y\\) is \\(A = xy.\\)"
+      },
+      {
+       "id": "626ff550-4f38-4e7b-aae5-dc2c2427b6e9",
+       "label": "\\(A = x^2\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The formula \\(x^2\\) gives the area of a square, not the area of a rectangle."
+      }
+     ]
+    },
+    {
+     "id": "f87cc85a-96fa-449c-bbae-c429a0d18562",
+     "kind": "short",
+     "prompt": "Solving \\(2x + 2y = 16\\) for \\(y\\) gives \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Subtract \\(2x\\) from both sides of the equation.",
+      "After subtracting, divide both sides by \\(2.\\)"
+     ],
+     "correctExplanation": "Solving for \\(y\\text{,}\\) \\[\\begin{align*} 2x + 2y &= 16 \\\\ 2y &= 16 - 2x && \\text{Subtract} \\\\ y &= \\frac{16 - 2x}{2} && \\text{Divide} \\\\ y &= 8 - x && \\text{Simplify} \\end{align*}\\]",
+     "answers": [
+      "8 - x"
+     ]
+    },
+    {
+     "id": "29c76f37-5a64-45dd-891e-a483190ef8ce",
+     "kind": "choice",
+     "prompt": "The previous steps revealed that \\(x \\geq 0\\) and \\(x \\leq 8.\\) So the domain can be written as the interval \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "d68de099-fb5e-443b-a6a0-17d1b5042dde",
+       "label": "\\([0, 8]\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The interval containing all values of \\(x\\) that are greater than or equal to \\(0\\) and less than or equal to \\(8\\) is the closed interval \\([0, 8].\\)"
+      },
+      {
+       "id": "190f7b0d-0290-4091-9cde-ed486c38d9af",
+       "label": "\\((0, 8)\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The open interval \\((0, 8)\\) does not include the endpoints \\(0\\) and \\(8.\\) Since \\(x\\) can be equal to \\(0\\) or \\(8,\\) use the closed interval \\([0, 8].\\)"
+      },
+      {
+       "id": "6f2447b0-10c6-4625-8db9-1b434e750f4b",
+       "label": "\\([8, 0]\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "In interval notation, the smaller number always appears first. Since \\(0\\) is smaller than \\(8,\\) this interval should be written as \\([0, 8],\\) not \\([8, 0].\\)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "text",
+   "body": [
+    {
+     "type": "p",
+     "text": "To set up an applied optimization problem:"
+    },
+    {
+     "type": "list",
+     "items": [
+      "Introduce notation. Draw a diagram if possible.",
+      "Find the objective function.",
+      "Identify the constraints.",
+      "Rewrite the objective function as a function of a single variable using the constraints.",
+      "Identify the domain."
+     ]
+    }
+   ],
+   "questions": []
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "The given problem \\(\\underline{\\phantom{XXXXXX}}\\) in order to solve."
+    }
+   ],
+   "questions": [
+    {
+     "id": "dc3b890c-7ce7-4674-910e-ab464c9e5a35",
+     "kind": "choice",
+     "prompt": "Find the area of a rectangular garden with a length of \\(12\\text{ feet}\\) and a width of \\(8\\text{ feet.}\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "36acde6d-33a1-4959-9f34-9674c64110b6",
+       "label": "does require optimization",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "This problem asks for the area of a rectangular garden given side lengths, not the maximum or minimum area of the garden. So optimization is not required."
+      },
+      {
+       "id": "126316e2-e541-46f9-8b8d-bdab1b1f40bb",
+       "label": "does not require optimization",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "This problem asks for the area of a rectangular garden given side lengths, not the maximum or minimum area of the garden. So optimization is not required."
+      }
+     ]
+    },
+    {
+     "id": "055fc8be-e6ad-43fa-8371-5a6a86b64e89",
+     "kind": "choice",
+     "prompt": "Find the maximum area of a circular playground that can be fenced in with \\(45\\text{ feet}\\) of fencing material.",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "5e3a0a52-95d4-4c69-aecc-305796c1972c",
+       "label": "does require optimization",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "An optimization problem involves finding the maximum or minimum value of a function given a constraint. Finding the maximum area of a circular playground with \\(45\\text{ feet}\\) of fencing is an optimization problem."
+      },
+      {
+       "id": "2350bf00-49da-403a-b19d-47d389ef7606",
+       "label": "does not require optimization",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "An optimization problem involves finding the maximum or minimum value of a function given a constraint. Finding the maximum area of a circular playground with \\(45\\text{ feet}\\) of fencing is an optimization problem."
+      }
+     ]
+    },
+    {
+     "id": "789da689-a162-4c4b-ac29-35152204d639",
+     "kind": "choice",
+     "prompt": "Find the minimum cost of producing \\(10\\) thousand bicycles.",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "ff471f62-bfad-42ca-aac8-53558a567345",
+       "label": "does require optimization",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "An optimization problem involves finding the maximum or minimum value of a function given a constraint. Finding the minimum cost of producing \\(10\\) thousand bicycles is an optimization problem."
+      },
+      {
+       "id": "8cbdbfef-2b57-452a-923f-bc64f30ce22b",
+       "label": "does not require optimization",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "An optimization problem involves finding the maximum or minimum value of a function given a constraint. Finding the minimum cost of producing \\(10\\) thousand bicycles is an optimization problem."
+      }
+     ]
+    },
+    {
+     "id": "5e6a6fe7-0453-4688-973f-352a094d94c7",
+     "kind": "choice",
+     "prompt": "Calculate the annual salary given the employee's monthly salary.",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "5a0b8888-fb42-4544-be8f-2e3ff08c1636",
+       "label": "does require optimization",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "This problem asks for an annual salary given a monthly salary, not the maximum or minimum salary. So optimization is not required."
+      },
+      {
+       "id": "fba74073-3bd9-42d4-ba1f-a08cb767e4a3",
+       "label": "does not require optimization",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "This problem asks for an annual salary given a monthly salary, not the maximum or minimum salary. So optimization is not required."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "Find objective functions."
+    }
+   ],
+   "questions": [
+    {
+     "id": "5927e5ca-af60-4286-a309-8744fc4c16e5",
+     "kind": "choice",
+     "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing, as demonstrated in the figure. \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y\\) for the length of the window. The architect wants to build a window with the maximum area \\(A.\\) The objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "0df75dd0-f021-4526-8551-17728d55e624",
+       "label": "\\(A = 2y + 4x\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The goal is to maximize the area \\(A.\\) The sum \\(2y + 4x\\) gives the total amount of window frame required, not the area of the window."
+      },
+      {
+       "id": "6c7fd508-5efe-4956-8337-d0c673e59acf",
+       "label": "\\(A = y \\cdot x\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The goal is to maximize the area \\(A.\\) The area of a rectangle is given by \\(\\text{Area} = \\text{length} \\cdot \\text{width}.\\) Using \\(y\\) for the length and \\(x\\) for the width of the window gives \\(A = y \\cdot x.\\)"
+      },
+      {
+       "id": "17cc981b-6dcc-453a-a31f-9b103fd1653b",
+       "label": "\\(A = (2y) \\cdot (4x)\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The goal is to maximize the area \\(A.\\) The area of a rectangle is given by \\(\\text{Area} = \\text{length} \\cdot \\text{width}.\\) The length of the window is just \\(y,\\) not \\(2y.\\) Similarly, the width of the window is just \\(x,\\) not \\(4x.\\)"
+      }
+     ]
+    },
+    {
+     "id": "ddc8f418-4260-406f-b2c2-5356ab11f44e",
+     "kind": "choice",
+     "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing, as demonstrated in the figure. Use \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y\\) for the length of the window. The architect wants to build a window with the maximum area \\(A,\\) where \\(A = y \\cdot x.\\) The architect only has \\(40\\text{ feet}\\) of framing, so the constraint equation is \\(2y + 4x = 40.\\) Solving the constraint equation for \\(y\\) gives \\(y = 20 - 2x.\\) Substitute \\(y = 20 - 2x\\) into \\(A = y \\cdot x,\\) then write the objective function using one variable. The objective function, written as a function of just \\(x,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "c641a31f-dd41-4e73-be37-f971928e690a",
+       "label": "\\(A(x) = (20 - 2x)x\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "Substituting \\((20 - 2x)\\) for \\(y\\) in \\(A = y \\cdot x\\) gives \\(A(x) = (20 - 2x) \\cdot x.\\)"
+      },
+      {
+       "id": "2f66fb09-8f88-41cb-98dc-28cb24dff05b",
+       "label": "\\(A(x) = (20 - 2x)^2\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "Only substitute \\((20 - 2x)\\) for \\(y\\) in \\(A = y \\cdot x.\\) Do not also replace \\(x\\) with \\((20 - 2x).\\)"
+      },
+      {
+       "id": "51d4d29a-6330-4d9a-b21f-775590af3d7c",
+       "label": "\\(A(x) = y \\cdot x\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "We want to write \\(A\\) as a function of just one variable. The objective function is still written as a function of both \\(y\\) and \\(x.\\) Substitute \\((20 - 2x)\\) for \\(y\\) to rewrite \\(A\\) as a function of just \\(x.\\)"
+      }
+     ]
+    },
+    {
+     "id": "09fbbf0c-d257-4897-9a76-d84c22eabe89",
+     "kind": "choice",
+     "prompt": "The margins of a poster are 2 inches on each side. A student has material that will fill a fixed area of 400 square inches. Use \\(x\\) for the length of the poster and \\(y\\) for the width. The student wants to choose poster dimensions that minimize the poster area \\(A.\\) The objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/poster-board.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "88ea30c3-253b-4978-8711-760f7f636294",
+       "label": "\\(A = 2x + 2y\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The goal is to minimize the area \\(A.\\) The sum \\(2x + 2y\\) gives the perimeter of the poster, not the area of the poster."
+      },
+      {
+       "id": "c8c96757-e477-40b9-9da8-406856d8bd63",
+       "label": "\\(A = x^2\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The goal is to minimize the area \\(A.\\) Using \\(A = x^2\\) assumes the poster is square. However, the problem does not state that the poster is a square."
+      },
+      {
+       "id": "99ac0ff4-0e0b-47b5-9485-27d68490848c",
+       "label": "\\(A = x \\cdot y\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The goal is to minimize the area \\(A.\\) The area of a rectangle is given by \\(\\text{Area} = \\text{length} \\cdot \\text{width}.\\) Using \\(x\\) for the length and \\(y\\) for the width of the poster gives \\(A = x \\cdot y.\\)"
+      }
+     ]
+    },
+    {
+     "id": "359956e5-526e-404d-8142-933f2fe24792",
+     "kind": "choice",
+     "prompt": "The margins of a poster are 2 inches on each side. A student has material that will fill a fixed area of 400 square inches. Use \\(x\\) for the length of the poster and \\(y\\) for the width. The student wants to choose poster dimensions that minimize the poster area \\(A,\\) where \\(A = x \\cdot y.\\) The margins are \\(2\\text{ inches}\\) on each side, and the printed area is \\(400\\text{ square inches,}\\) so the constraint equation is \\((x-4)(y-4)= 400.\\) Solving the constraint equation for \\(y\\) gives \\(y = \\frac{400}{x-4} + 4.\\) Substitute \\(y = \\frac{400}{x-4} + 4 \\) into \\(A = x \\cdot y,\\) then write the objective function using one variable. The objective function, written as a function of just \\(x,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/poster-board.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "53bbc5bb-a71c-44d4-8b8f-3b40518979cb",
+       "label": "\\(A(x) = x \\left( \\frac{400}{x-4} \\right) + 4\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The variable \\(x\\) multiplies \\(y\\) in \\(A = x\\cdot y.\\) So at the substitute step, \\(x\\) will multiply the quantity \\(\\left( \\frac{400}{x-4} + 4 \\right),\\) not just \\(\\frac{400}{x-4}.\\)"
+      },
+      {
+       "id": "83bccd19-89e7-4998-9026-afcf85c199e9",
+       "label": "\\(A(x) = x \\left( \\frac{400}{x-4} + 4 \\right)\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "Substituting \\(\\left( \\frac{400}{x-4} +4 \\right)\\) for \\(y\\) in \\(A = x \\cdot y\\) gives \\(A(x) = x \\cdot \\left( \\frac{400}{x-4} + 4 \\right).\\)"
+      },
+      {
+       "id": "66254aa4-962b-46c7-a59b-565c1626ac4e",
+       "label": "\\(A(x) = x \\cdot y\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The objective function is still written as a function of both \\(x\\) and \\(y.\\) Substitute \\(\\left( \\frac{400}{x-4} + 4\\right)\\) for \\(y\\) to rewrite \\(A\\) as a function of just \\(x.\\)"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "We will find domains using the problem context."
+    }
+   ],
+   "questions": [
+    {
+     "id": "4df7092c-cd19-4ec0-b164-15b56a1a9deb",
+     "kind": "choice",
+     "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing. Use \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y= 20 - 2x\\) for the length of the window. The architect wants to build a window with the maximum area \\(A,\\) where \\(A = y \\cdot x = (20 -2x) \\cdot x.\\) Lengths cannot be negative, so the domain of \\(A(x)\\) is the interval \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "7d1e75f9-0e94-49f5-b2a0-e68d58f55845",
+       "label": "\\([0, 10]\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "Lengths cannot be negative, so \\(x \\geq 0,\\) and \\(y = 20 - 2x \\geq 0.\\) Rewriting the second inequality, \\[\\begin{align*}y = 20 - 2x & \\geq 0 \\\\20 & \\geq 2x \\\\10 & \\geq x\\end{align*}\\] The interval that corresponds to both \\(x \\geq 0\\) and \\(10 \\geq x\\) is the closed interval \\([0, 10].\\)"
+      },
+      {
+       "id": "deba0ca4-647a-424d-b4e8-31645e848b87",
+       "label": "\\([0, 20]\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "Substituting \\(x = 20\\) into \\(y = 20 - 2x\\) gives \\(y = -20.\\) The side lengths cannot be negative, so \\(x = 20\\) is not in the domain. If \\(20\\) is not in the domain, then the domain cannot be the interval \\([0, 20].\\)"
+      },
+      {
+       "id": "4b7a8bd2-1b98-4f47-bdd5-26dc0b323fa1",
+       "label": "\\((0, \\infty)\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The architect has a fixed amount of window framing. So the domain for this problem is bounded and must have finite endpoints. Additionally, substituting an \\(x-\\) value like \\(x = 40\\) into \\(y = 40 - 2x\\) gives \\(y = -40.\\) The side lengths cannot be negative, so \\(x = 40\\) is not in the domain and the domain cannot be \\(\\text{(}0, \\infty).\\)"
+      }
+     ]
+    },
+    {
+     "id": "3eff8fe4-78dc-43b1-856c-e3d5d1168913",
+     "kind": "choice",
+     "prompt": "A mathematician wants to find two non-negative numbers \\(x\\) and \\(y = 8 - x\\) so that the sum of squares \\(S(x) = x^2 + y^2 = x^2 + (8 -x)^2\\) is minimized. Since \\(x\\) and \\(y\\) cannot be negative, the domain of \\(S(x)\\) is the interval \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "ddba5889-ab66-4e08-a64b-38192f47f24f",
+       "label": "\\([0, 4]\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "While the domain of \\(S(x)\\) includes \\([0, 4],\\) additional values of \\(x\\) are included in the domain. For example, if \\(x = 8,\\) then \\(x = 8 \\geq 0,\\) and \\(y = 8 - 8 \\geq 0.\\) So \\(8\\) should be in the domain."
+      },
+      {
+       "id": "079901f0-ae2d-43d4-9504-e85696723ba9",
+       "label": "\\([0, 8]\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The numbers \\(x\\) and \\(y\\) cannot be negative, so \\(x \\geq 0,\\) and \\(y = 8 -x \\geq 0.\\) Rewriting the second inequality, \\[\\begin{align*}y = 8 -x & \\geq 0 \\\\8 & \\geq x \\end{align*}\\] The interval that corresponds to both \\(x \\geq 0\\) and \\( 8 \\geq x\\) is the closed interval \\([0, 8].\\)"
+      },
+      {
+       "id": "8d59c14f-6e33-4d7a-9a85-57ac0c4e0fc5",
+       "label": "\\([-4, 8]\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The interval \\([-4, 8]\\) includes negative values of \\(x,\\) such as \\(x = -4.\\) However, \\(x\\) must be non-negative."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "practice",
+   "body": [
+    {
+     "type": "p",
+     "text": "A farmer has \\(80\\text{ feet}\\) of material to build a fence with three sides and create a rectangular backyard. A figure of the backyard is given."
+    },
+    {
+     "type": "img",
+     "src": "/lessons/10.2.1/040901_fu_p2_intro_v2.png"
+    },
+    {
+     "type": "p",
+     "text": "The farmer wants to find the maximum area that can be enclosed by the fence. Set up the optimization problem by finding the objective function, constraints, and domain."
+    }
+   ],
+   "questions": [
+    {
+     "id": "01845bf4-9424-4ff1-be3d-dd437ffbdb15",
+     "kind": "choice",
+     "prompt": "Let \\(x\\) and \\(y\\) be the length and width of the backyard, respectively. An appropriate labeling of the side lengths is:",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "cc71deba-c99d-4d65-bf5b-bc8e52fd1896",
+       "label": "",
+       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_b_v2.png",
+       "correct": false,
+       "explanation": "To form a rectangle with the house wall, the \\(2\\) sides touching the wall should have equal lengths."
+      },
+      {
+       "id": "5c3ea5c4-4295-423c-8e76-5733f0a1d1f5",
+       "label": "",
+       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png",
+       "correct": true,
+       "explanation": "The rectangular fence has \\(2\\) sides with equal lengths \\(x\\) touching the house wall. The remaining side is parallel to the house wall and has length \\(y.\\)"
+      },
+      {
+       "id": "da691316-5e31-4131-8677-0ee1af716fe7",
+       "label": "",
+       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_c_v2.png",
+       "correct": false,
+       "explanation": "The \\(2\\) sides touching the house wall have the same length. So only two variables are required, and the \\(z\\) can be replaced with \\(x.\\)"
+      }
+     ]
+    },
+    {
+     "id": "49f64ff7-4415-4627-a689-6dea850dd159",
+     "kind": "short",
+     "prompt": "A diagram of the rectangular backyard is given, where: \\(x\\) is the length of each of the two sides touching the house wall. \\(y\\) is the length of the side parallel to the house wall. The goal is to maximize the area \\(A\\) of the backyard. So the objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png"
+     ],
+     "hints": [
+      "The backyard is rectangular.",
+      "The area of a rectangle is \\(\\text{Area} = \\text{length} \\cdot \\text{width}.\\)"
+     ],
+     "correctExplanation": "The area of the rectangular backyard is given by \\(\\text{Area} = \\text{length} \\cdot \\text{width}.\\) Using \\(x\\) for the length and \\(y\\) for the width of the backyard gives \\(A = x \\cdot y.\\)",
+     "answers": [
+      "xy"
+     ]
+    },
+    {
+     "id": "856c1578-42d0-455d-b08f-9b5b45d33896",
+     "kind": "choice",
+     "prompt": "A diagram of the rectangular backyard is given, where: \\(x\\) is the length of each of the \\(2\\) sides touching the house wall. \\(y\\) is the length of the side parallel to the house wall. Next, identify the constraints. Constraints are limitations or restrictions on the variables based on the problem context. The farmer only has \\(80\\text{ feet}\\) of fencing material. This constraint can be written using the equation \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [
+      "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png"
+     ],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "8fc29967-69ec-4e94-b008-cbc381ae5266",
+       "label": "\\(2x + y = 80\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "The farmer needs a fence with \\(3\\) sides with lengths \\(x,\\) \\(x,\\) and \\(y\\) of the backyard and only has \\(80\\) feet of material. So \\(x + x + y = 2x + y = 80.\\)"
+      },
+      {
+       "id": "a41129f6-4823-48da-bf9f-ac2e970c5e40",
+       "label": "\\(2x + 2y = 80\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The equation \\(2x + 2y = 80\\) represents a rectangle with \\(4\\) sides and a perimeter of \\(80\\text{ feet}\\text{.}\\) However, the farmer only needs to fence \\(3\\) sides."
+      },
+      {
+       "id": "45595d36-e875-41a5-8c67-87e0889ed414",
+       "label": "\\(x \\cdot y = 80\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The equation \\(x \\cdot y = 80\\) represents the area of a rectangular backyard. The \\(80\\text{ feet}\\) of fencing material is only used for the \\(3\\) sides of the backyard. So the total length of the fence, not the area of the rectangle, is used to find the constraint equation."
+      }
+     ]
+    },
+    {
+     "id": "b9a690d9-b286-485c-ae84-164aa61521fc",
+     "kind": "short",
+     "prompt": "The objective function \\(A = x \\cdot y\\) is written in terms of the variables \\(x\\) and \\(y.\\) To express \\(A = x \\cdot y\\) in terms of just the variable \\(x\\text{,}\\) solve the constraint equation \\(2x + y = 80\\) for \\(y\\) to get \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [
+      "Isolate \\(y\\) in \\(2x + y = 80.\\)",
+      "Subtract \\(2x\\) from both sides of the equation to isolate \\(y.\\)"
+     ],
+     "correctExplanation": "Subtracting \\(2x\\) from both sides of the equation \\(2x + y = 80\\) gives \\(y = 80 - 2x. \\)",
+     "answers": [
+      "80 - 2x"
+     ]
+    },
+    {
+     "id": "9fb02874-d2cb-4b93-91d0-1d8bc8af3e04",
+     "kind": "choice",
+     "prompt": "Solving for \\(y\\) in the constraint equation gives \\(y = 80 - 2x.\\) Substituting \\(y = 80 - 2x\\) into the objective function \\(A = x \\cdot y\\) rewrites the objective function in terms of just \\(x \\) as \\(A(x) = \\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "c4fe0cf5-41bb-4d97-81ba-57d1e0b37360",
+       "label": "\\(80x - 2x^2\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "Substituting \\(y = 80 - 2x\\) into \\(A = x \\cdot y\\) then distributing, \\[\\begin{align*} A &= x \\cdot y \\\\ &= x(80 - 2x) \\\\ &= 80x - 2x^2 \\end{align*}\\] \\(A(x) = 80x - 2x^2.\\)"
+      },
+      {
+       "id": "b75fbdaf-b7cf-4129-b436-ba8bc1685259",
+       "label": "\\(80x - 2x\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "After substituting \\(y = 80 -2x\\) to get \\(A(x) = x(80-2x),\\) both terms in \\(80 - 2x\\) must be multiplied by \\(x\\) when distributing."
+      },
+      {
+       "id": "07970655-5014-4ad5-9096-8f77309fb2e8",
+       "label": "\\(80 - 2x^2\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "After substituting \\(y = 80 -2x\\) to get \\(A(x) = x(80-2x),\\) both terms in \\(80 - 2x\\) must be multiplied by \\(x\\) when distributing."
+      }
+     ]
+    },
+    {
+     "id": "51288856-7446-4663-afd9-24b8bd931b4d",
+     "kind": "choice",
+     "prompt": "Substituting \\(y=80-2x\\) into the area function \\(A=xy\\) gives \\(A(x) = 80x - 2x^2.\\) Last, find the domain of \\(A\\) in terms of \\(x.\\) The side lengths cannot be negative, so \\(x \\geq 0.\\) Then the left endpoint of the domain is \\(0.\\) Similarly, \\(y \\geq 0\\) so \\(80 - 2x \\geq 0.\\) Using this inequality, the right endpoint of the domain is \\(\\underline{\\phantom{XXXXXX}}.\\)",
+     "promptImages": [],
+     "hints": [],
+     "correctExplanation": "",
+     "choices": [
+      {
+       "id": "4648764e-9dae-4b51-ae7e-635c3e7079f8",
+       "label": "\\(80\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "Substituting \\(x = 80\\) into the constraint equation \\(y = 80 - 2x\\) gives \\(y = -80.\\) The side lengths cannot be negative, so \\(x = 80\\) is not in the domain."
+      },
+      {
+       "id": "488abac1-5883-4272-9286-d1bcab09929f",
+       "label": "\\(40\\)",
+       "labelImage": null,
+       "correct": true,
+       "explanation": "Rewriting the inequality \\(y = 80 -2x \\geq 0\\) gives \\[\\begin{align*} 80 - 2x &\\geq 0 \\\\ 80 &\\geq 2x \\\\ 40 &\\geq x \\end{align*}\\] \\(40,\\) and the domain is the closed interval \\([0, 40].\\)"
+      },
+      {
+       "id": "b108c583-e330-40e1-a9f9-7b937992813f",
+       "label": "\\(\\infty\\)",
+       "labelImage": null,
+       "correct": false,
+       "explanation": "The fencing material has a fixed length of \\(80\\text{ feet}.\\) So the domain for this problem is bounded and must have finite endpoints."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "kind": "text",
+   "body": [
+    {
+     "type": "p",
+     "text": "Lesson summary"
+    },
+    {
+     "type": "list",
+     "items": [
+      "Applied optimization is the process of finding a global maximum or minimum to get the best solution to a real world problem.",
+      "The function being optimized (maximized or minimized) in the problem is called the objective function.",
+      "The problem may include constraints, or restrictions, that must be satisfied.",
+      "To set up an applied optimization problem, (1) introduce notation, (2) find the objective function, (3) identify constraints, (4) rewrite the objective function, and (5) identify the domain."
+     ]
+    }
+   ],
+   "questions": []
+  }
+ ]
+}
