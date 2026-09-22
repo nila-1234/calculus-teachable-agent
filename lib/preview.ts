@@ -139,17 +139,17 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
   },
   {
     id: "instructions",
-    label: "Instructions · agent",
+    label: "Instructions",
     description:
       "One of the two instruction arms: the teachable-agent scenario. Fully interactive here, including the AI conversation.",
     path: "/scenarios",
   },
   {
     id: "lessons",
-    label: "Instructions · lessons",
+    label: "Lesson",
     description:
-      "The other instruction arm: course units 10.2.1 and 10.2.2, ported with their own questions, hints, and feedback. Participants are assigned to one arm or the other automatically.",
-    path: "/lesson/10.2.1",
+      "The other instruction arm: two ported course lessons with their own questions, hints, and feedback. Participants are assigned to one arm or the other automatically.",
+    path: "/lesson/1",
   },
   {
     id: "post-test",
@@ -219,10 +219,10 @@ export function previewStops(scenarioId: string | number): PreviewStop[] {
     }
 
     // The lesson phase's own entry is the first lesson, so only the rest are
-    // added here — otherwise Next would visit 10.2.1 twice.
+    // added here — otherwise Next would visit the first lesson twice.
     if (phase.id === "lessons") {
-      for (const lessonId of LESSON_SEQUENCE.slice(1)) {
-        stops.push({ label: `Lesson ${lessonId}`, path: `/lesson/${lessonId}` });
+      for (let i = 1; i < LESSON_SEQUENCE.length; i += 1) {
+        stops.push({ label: `Lesson ${i + 1}`, path: `/lesson/${i + 1}` });
       }
     }
   }

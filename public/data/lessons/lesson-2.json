@@ -1,5 +1,6 @@
 {
- "id": "10.2.2",
+ "id": "lesson-2",
+ "sourceUnit": "10.2.2",
  "title": "Applied optimization with bounded domains",
  "durationMin": 13,
  "sections": [
@@ -35,7 +36,6 @@
   },
   {
    "kind": "video",
-   "identifier": "10.2.2.1",
    "durationMin": 2,
    "transcript": "We want to find the maximum area of a rectangular window using 16 feet of window frame. We have already completed the first five steps as part of the setup in the previous lesson. We found an objective function A of x with a domain from 0 to 8. To solve, we now find the global maximum using the process for finding global extrema of a differentiable function on a closed interval. We start with the derivative of A of x, which is A prime of x equals 8 minus 2 x. Now we set the derivative equal to 0 to find any critical numbers. The only critical number is x equals 4. To find the maximum on a closed interval, we compare the function values at the endpoints of the interval and the critical numbers. Substituting the first endpoint 0 into the factored form of the area function gives A of 0 equals 0 times open paren 8 minus 0 close paren, which is 0. Substituting the other endpoint 8 into A of x also gives 0. Substituting the critical number into the area function gives A of 4 equals 16. Comparing the three function values, we find that the largest is 16 when x equals 4. So the maximum area of the window is 16 square feet. This maximum occurs when one side of the window frame is 4 feet long, and the other side is 8 minus 4 feet long.",
    "questions": [
@@ -67,7 +67,8 @@
       "16"
      ]
     }
-   ]
+   ],
+   "sourceIdentifier": "10.2.2.1"
   },
   {
    "kind": "practice",
@@ -234,7 +235,7 @@
     },
     {
      "type": "img",
-     "src": "/lessons/10.2.2/rectangular-window-with-3-window-panes.png"
+     "src": "/lessons/lesson-2/rectangular-window-with-3-window-panes.png"
     },
     {
      "type": "p",
@@ -312,7 +313,7 @@
     },
     {
      "type": "img",
-     "src": "/lessons/10.2.2/backyard-and-wall.png"
+     "src": "/lessons/lesson-2/backyard-and-wall.png"
     },
     {
      "type": "p",

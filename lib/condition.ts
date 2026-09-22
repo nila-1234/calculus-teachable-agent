@@ -11,10 +11,14 @@ import { LESSON_SEQUENCE, lessonPath } from "@/lib/lessons/definitions";
  * engage with it. These say what the activity *is*, not what it is for:
  *
  *   "agent"  — the teachable-agent scenario   (/5/question …)
- *   "lesson" — the guided lesson sequence     (/lesson/10.2.1, /lesson/10.2.2)
+ *   "lesson" — the ported lesson sequence     (/lesson/1, /lesson/2)
+ *
+ * The lesson routes are numbered by position rather than by the course units
+ * they were ported from, for the same reason: the unit number is a pointer to
+ * the source module.
  *
  * For analysis, "lesson" is the comparison condition. That mapping lives here
- * and in the exports, never in anything a participant sees.
+ * and in the Firestore labels, never in anything a participant sees.
  */
 
 export const CONDITIONS = ["agent", "lesson"] as const;
@@ -37,35 +41,122 @@ function hash(value: string): number {
 }
 
 /**
- * The participant's arm, derived from their subject id rather than drawn at
- * random and stored.
+ * Keyed by subject, not a bare "condition".
  *
- * Deriving it means the assignment survives cleared storage, a different tab,
- * or a mid-study browser restart — a participant always lands back in the arm
- * they started in. A coin flip written to localStorage would silently re-flip
- * any of those, which is how someone ends up having done half of each
- * condition. The cost is that balance is only probabilistic; with a pilot-sized
- * sample, check the split rather than assuming it.
+ * Resetting between participants clears the subject id but not everything else
+ * in localStorage, so a shared key would hand the next person on that machine
+ * the previous participant's arm — silently, with nothing looking wrong. Tying
+ * the cache to the subject means a new subject simply has no cached assignment.
+ */
+function cacheKey(): string {
+  return `condition:${getSubjectId()}`;
+}
+
+function readCache(): Condition | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(cacheKey());
+    return (CONDITIONS as readonly string[]).includes(stored ?? "")
+      ? (stored as Condition)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(condition: Condition): void {
+  try {
+    localStorage.setItem(cacheKey(), condition);
+  } catch {
+    /* ignore unavailable storage */
+  }
+}
+
+/**
+ * The arm to use if the server cannot be reached.
+ *
+ * A hash of the subject id, so the same participant always falls back the same
+ * way rather than flipping between arms across reloads.
+ */
+function fallbackCondition(): Condition {
+  return CONDITIONS[hash(getSubjectId()) % CONDITIONS.length];
+}
+
+/**
+ * The participant's arm, resolved against the server so the split is balanced
+ * by construction rather than by luck.
+ *
+ * Cached locally after the first call: assignment is decided once, and every
+ * later read is a local lookup. If the server cannot be reached the hash
+ * fallback is used *and cached*, because a participant flipping arms partway
+ * through would contaminate their data — a rare one-off imbalance is the
+ * cheaper failure. The fallback is reported on the next successful call so the
+ * running count stays honest, and is recorded server-side as "client-fallback"
+ * so it is visible when the split is audited.
+ */
+export async function resolveCondition(): Promise<Condition> {
+  const cached = readCache();
+  if (cached) return cached;
+
+  const fallback = fallbackCondition();
+
+  try {
+    const res = await fetch("/api/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_id: getSubjectId() }),
+    });
+    const data = await res.json();
+    if (res.ok && (CONDITIONS as readonly string[]).includes(data?.condition)) {
+      writeCache(data.condition as Condition);
+      return data.condition as Condition;
+    }
+  } catch (err) {
+    console.error("Condition assignment unreachable, falling back:", err);
+  }
+
+  writeCache(fallback);
+  // Best effort: tell the server what we used, so its count is not short by one.
+  void fetch("/api/assign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subject_id: getSubjectId(), preferred: fallback }),
+  }).catch(() => {});
+
+  return fallback;
+}
+
+/**
+ * The arm an instructor is previewing: ?cond=lesson, defaulting to the agent
+ * scenario. Never contacts the server, so browsing the preview cannot consume
+ * an assignment or skew the running count.
+ */
+export function previewCondition(): Condition {
+  if (typeof window === "undefined") return "agent";
+
+  try {
+    const forced = new URLSearchParams(window.location.search).get(
+      CONDITION_PARAM
+    );
+    if (forced && (CONDITIONS as readonly string[]).includes(forced)) {
+      return forced as Condition;
+    }
+  } catch {
+    /* ignore malformed query strings */
+  }
+
+  return "agent";
+}
+
+/**
+ * The already-decided arm, for callers that cannot await. Returns the cached
+ * assignment; before one exists it returns the fallback, so this must not be
+ * used to make the assignment itself — resolveCondition() does that.
  */
 export function getCondition(): Condition {
   if (typeof window === "undefined") return "agent";
-
-  // Only honoured in preview: otherwise a participant who found the parameter
-  // could pick their own arm.
-  if (isPreviewActive()) {
-    try {
-      const forced = new URLSearchParams(window.location.search).get(
-        CONDITION_PARAM
-      );
-      if (forced && (CONDITIONS as readonly string[]).includes(forced)) {
-        return forced as Condition;
-      }
-    } catch {
-      /* ignore malformed query strings */
-    }
-  }
-
-  return CONDITIONS[hash(getSubjectId()) % CONDITIONS.length];
+  if (isPreviewActive()) return previewCondition();
+  return readCache() ?? fallbackCondition();
 }
 
 export { LESSON_SEQUENCE, lessonPath };

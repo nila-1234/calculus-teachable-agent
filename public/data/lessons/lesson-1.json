@@ -1,5 +1,6 @@
 {
- "id": "10.2.1",
+ "id": "lesson-1",
+ "sourceUnit": "10.2.1",
  "title": "Setting up an applied optimization problem",
  "durationMin": 16,
  "sections": [
@@ -41,7 +42,6 @@
   },
   {
    "kind": "video",
-   "identifier": "10.2.1.1",
    "durationMin": 2,
    "transcript": "An architect has 16 feet of window framing and wants to build a rectangular window with the largest possible area. We will set up an optimization problem to find the maximum area. First, we introduce notation. Let's name the area of the window A and the side lengths x and y. The objective function is the function that we want to maximize or minimize. Our goal is to maximize the area, so our objective function will give the area of a rectangle. The objective function is A equals x times y. The next step is to identify any constraints or restrictions. The architect only has 16 feet of framing, so the perimeter of the rectangle is equal to 16. That is, 2 x plus 2 y equals 16. To simplify, we will solve this constraint equation for one variable. Solving for y gives y equals 8 minus x. We want the objective function to be written as a function of a single variable. So we rewrite by replacing y with 8 minus x to get the area as a function of just x. Last, we identify a domain by considering realistic bounds on x. Since lengths cannot be negative, x and y are both greater than or equal to 0. y is equal to 8 minus x, so x must be less than or equal to 8 for y to be non-negative. The domain is the closed interval from 0 to 8. The optimization problem is now fully set up.",
    "questions": [
@@ -121,7 +121,8 @@
       }
      ]
     }
-   ]
+   ],
+   "sourceIdentifier": "10.2.1.1"
   },
   {
    "kind": "text",
@@ -264,7 +265,7 @@
      "kind": "choice",
      "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing, as demonstrated in the figure. \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y\\) for the length of the window. The architect wants to build a window with the maximum area \\(A.\\) The objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+      "/lessons/lesson-1/rectangular-window-with-3-window-panes.png"
      ],
      "hints": [],
      "correctExplanation": "",
@@ -297,7 +298,7 @@
      "kind": "choice",
      "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing, as demonstrated in the figure. Use \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y\\) for the length of the window. The architect wants to build a window with the maximum area \\(A,\\) where \\(A = y \\cdot x.\\) The architect only has \\(40\\text{ feet}\\) of framing, so the constraint equation is \\(2y + 4x = 40.\\) Solving the constraint equation for \\(y\\) gives \\(y = 20 - 2x.\\) Substitute \\(y = 20 - 2x\\) into \\(A = y \\cdot x,\\) then write the objective function using one variable. The objective function, written as a function of just \\(x,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+      "/lessons/lesson-1/rectangular-window-with-3-window-panes.png"
      ],
      "hints": [],
      "correctExplanation": "",
@@ -330,7 +331,7 @@
      "kind": "choice",
      "prompt": "The margins of a poster are 2 inches on each side. A student has material that will fill a fixed area of 400 square inches. Use \\(x\\) for the length of the poster and \\(y\\) for the width. The student wants to choose poster dimensions that minimize the poster area \\(A.\\) The objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/poster-board.png"
+      "/lessons/lesson-1/poster-board.png"
      ],
      "hints": [],
      "correctExplanation": "",
@@ -363,7 +364,7 @@
      "kind": "choice",
      "prompt": "The margins of a poster are 2 inches on each side. A student has material that will fill a fixed area of 400 square inches. Use \\(x\\) for the length of the poster and \\(y\\) for the width. The student wants to choose poster dimensions that minimize the poster area \\(A,\\) where \\(A = x \\cdot y.\\) The margins are \\(2\\text{ inches}\\) on each side, and the printed area is \\(400\\text{ square inches,}\\) so the constraint equation is \\((x-4)(y-4)= 400.\\) Solving the constraint equation for \\(y\\) gives \\(y = \\frac{400}{x-4} + 4.\\) Substitute \\(y = \\frac{400}{x-4} + 4 \\) into \\(A = x \\cdot y,\\) then write the objective function using one variable. The objective function, written as a function of just \\(x,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/poster-board.png"
+      "/lessons/lesson-1/poster-board.png"
      ],
      "hints": [],
      "correctExplanation": "",
@@ -407,7 +408,7 @@
      "kind": "choice",
      "prompt": "An architect has \\(40\\text{ feet}\\) of window framing and wants to build a rectangular window with three parallel window panes separated by framing. Use \\(x\\) for the length of each of the four parallel pieces of window framing and \\(y= 20 - 2x\\) for the length of the window. The architect wants to build a window with the maximum area \\(A,\\) where \\(A = y \\cdot x = (20 -2x) \\cdot x.\\) Lengths cannot be negative, so the domain of \\(A(x)\\) is the interval \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/rectangular-window-with-3-window-panes.png"
+      "/lessons/lesson-1/rectangular-window-with-3-window-panes.png"
      ],
      "hints": [],
      "correctExplanation": "",
@@ -477,7 +478,7 @@
     },
     {
      "type": "img",
-     "src": "/lessons/10.2.1/040901_fu_p2_intro_v2.png"
+     "src": "/lessons/lesson-1/040901_fu_p2_intro_v2.png"
     },
     {
      "type": "p",
@@ -496,21 +497,21 @@
       {
        "id": "cc71deba-c99d-4d65-bf5b-bc8e52fd1896",
        "label": "",
-       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_b_v2.png",
+       "labelImage": "/lessons/lesson-1/040901_fu_p2_q1_b_v2.png",
        "correct": false,
        "explanation": "To form a rectangle with the house wall, the \\(2\\) sides touching the wall should have equal lengths."
       },
       {
        "id": "5c3ea5c4-4295-423c-8e76-5733f0a1d1f5",
        "label": "",
-       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png",
+       "labelImage": "/lessons/lesson-1/040901_fu_p2_q1_a_v2.png",
        "correct": true,
        "explanation": "The rectangular fence has \\(2\\) sides with equal lengths \\(x\\) touching the house wall. The remaining side is parallel to the house wall and has length \\(y.\\)"
       },
       {
        "id": "da691316-5e31-4131-8677-0ee1af716fe7",
        "label": "",
-       "labelImage": "/lessons/10.2.1/040901_fu_p2_q1_c_v2.png",
+       "labelImage": "/lessons/lesson-1/040901_fu_p2_q1_c_v2.png",
        "correct": false,
        "explanation": "The \\(2\\) sides touching the house wall have the same length. So only two variables are required, and the \\(z\\) can be replaced with \\(x.\\)"
       }
@@ -521,7 +522,7 @@
      "kind": "short",
      "prompt": "A diagram of the rectangular backyard is given, where: \\(x\\) is the length of each of the two sides touching the house wall. \\(y\\) is the length of the side parallel to the house wall. The goal is to maximize the area \\(A\\) of the backyard. So the objective function, written as a function of \\(x\\) and \\(y,\\) is \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png"
+      "/lessons/lesson-1/040901_fu_p2_q1_a_v2.png"
      ],
      "hints": [
       "The backyard is rectangular.",
@@ -537,7 +538,7 @@
      "kind": "choice",
      "prompt": "A diagram of the rectangular backyard is given, where: \\(x\\) is the length of each of the \\(2\\) sides touching the house wall. \\(y\\) is the length of the side parallel to the house wall. Next, identify the constraints. Constraints are limitations or restrictions on the variables based on the problem context. The farmer only has \\(80\\text{ feet}\\) of fencing material. This constraint can be written using the equation \\(\\underline{\\phantom{XXXXXX}}.\\)",
      "promptImages": [
-      "/lessons/10.2.1/040901_fu_p2_q1_a_v2.png"
+      "/lessons/lesson-1/040901_fu_p2_q1_a_v2.png"
      ],
      "hints": [],
      "correctExplanation": "",

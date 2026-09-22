@@ -29,7 +29,8 @@ export type LessonBodyItem =
 export type LessonSection =
   | {
       kind: "video";
-      identifier: string;
+      /** Provenance only — never rendered. */
+      sourceIdentifier: string;
       durationMin: number;
       /** Narration captions, joined. The video itself is not reproducible. */
       transcript: string;
@@ -42,7 +43,9 @@ export type LessonSection =
     };
 
 export type LessonDefinition = {
+  /** Neutral slug. The unit it came from is sourceUnit, and stays unshown. */
   id: string;
+  sourceUnit: string;
   title: string;
   durationMin: number;
   sections: LessonSection[];

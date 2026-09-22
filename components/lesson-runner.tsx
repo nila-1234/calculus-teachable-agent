@@ -49,6 +49,50 @@ const EMPTY: QuestionState = {
  * a correct answer wrong teaches nothing and is exactly the failure mode that
  * pushed the screener to multiple choice.
  */
+/**
+ * Rewrites a sum into a canonical order, so "80 - 2x" and "-2x + 80" compare
+ * equal. Splits only at the top level: the "-" inside 400/(x-4) is part of a
+ * term, not a separator.
+ */
+/**
+ * Orders the factors of a plain product, so "xy" and "yx" agree.
+ *
+ * Deliberately narrow: only a run of letters with an optional leading number.
+ * Anything with an exponent, a slash, or a bracket is left alone, because
+ * reordering those would change what they mean.
+ */
+function sortedFactors(term: string): string {
+  const match = term.match(/^([+-]?)(\d*)([a-z]{2,})$/);
+  if (!match) return term;
+  const [, sign, coefficient, letters] = match;
+  return sign + coefficient + [...letters].sort().join("");
+}
+
+function sortedTerms(expr: string): string {
+  const terms: string[] = [];
+  let depth = 0;
+  let current = "";
+  let sign = "+";
+
+  for (const ch of expr) {
+    if (ch === "(") depth += 1;
+    if (ch === ")") depth -= 1;
+
+    if ((ch === "+" || ch === "-") && depth === 0) {
+      if (current) {
+        terms.push(sign + current);
+        current = "";
+      }
+      sign = ch;
+      continue;
+    }
+    current += ch;
+  }
+  if (current) terms.push(sign + current);
+
+  return terms.map(sortedFactors).sort().join("");
+}
+
 function normalizeAnswer(raw: string): string[] {
   const base = raw
     .trim()
@@ -64,7 +108,15 @@ function normalizeAnswer(raw: string): string[] {
   const withoutLhs = base.replace(/^[a-z]+(\([a-z]\))?=/, "");
   const alnum = base.replace(/[^a-z0-9]/g, "");
 
-  return [...new Set([base, withoutLhs, alnum])].filter(Boolean);
+  return [
+    ...new Set([
+      base,
+      withoutLhs,
+      alnum,
+      sortedTerms(base),
+      sortedTerms(withoutLhs),
+    ]),
+  ].filter(Boolean);
 }
 
 function matchesAnswer(given: string, accepted: string[]): boolean {

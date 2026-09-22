@@ -64,13 +64,15 @@ function phaseFor(scenarioId: unknown): Phase {
     return { key: "5-instruction", label: `Teachable-agent scenario ${id}` };
   }
 
-  // Comparison arm. Named by unit here because nothing a participant sees
-  // reaches this collection.
-  if (/^\d+(\.\d+)+$/.test(id)) {
+  // Comparison arm. The source unit is spelled out here because nothing a
+  // participant sees reaches this collection.
+  if (/^lesson-\d+$/.test(id)) {
     const lesson = getLesson(id);
     return {
-      key: `5-lesson-${id}`,
-      label: lesson ? `Lesson ${id} — ${lesson.title}` : `Lesson ${id}`,
+      key: `5-${id}`,
+      label: lesson
+        ? `Lesson ${lesson.sourceUnit} — ${lesson.title}`
+        : `Lesson ${id}`,
     };
   }
 

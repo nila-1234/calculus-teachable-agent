@@ -4,7 +4,12 @@ import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
 import { STUDY_SCENARIO_ID } from "@/lib/scenarios/utils";
-import { getCondition, lessonPath, nextLesson } from "@/lib/condition";
+import {
+  lessonPath,
+  nextLesson,
+  previewCondition,
+  resolveCondition,
+} from "@/lib/condition";
 import { logEvent } from "@/lib/logger";
 import { isPreviewActive } from "@/lib/preview";
 
@@ -30,28 +35,37 @@ function ScenariosRouterContent() {
   const query = useSearchParams().toString();
 
   useEffect(() => {
-    const condition = getCondition();
+    let cancelled = false;
 
-    // Recorded on the way past rather than at assignment time: the condition is
-    // derived from the subject id, so there is no separate moment at which it
-    // is "decided" that could be logged instead.
-    if (!isPreviewActive()) {
-      logEvent("condition_assigned", "instruction", { condition });
-    }
+    // Preview must not consume an assignment or touch the running count.
+    const decide = async () =>
+      isPreviewActive() ? previewCondition() : resolveCondition();
 
-    let target: string;
-    if (condition === "lesson") {
-      const pending = nextLesson();
-      target = pending ? lessonPath(pending) : "/test/posttest";
-    } else {
-      const done =
-        sessionStorage.getItem(
-          `scenario:${STUDY_SCENARIO_ID}:rubricCompleted`
-        ) === "true";
-      target = done ? "/test/posttest" : `/${STUDY_SCENARIO_ID}/question`;
-    }
+    void decide().then((condition) => {
+      if (cancelled) return;
 
-    router.replace(query ? `${target}?${query}` : target);
+      if (!isPreviewActive()) {
+        logEvent("condition_assigned", "instruction", { condition });
+      }
+
+      let target: string;
+      if (condition === "lesson") {
+        const pending = nextLesson();
+        target = pending ? lessonPath(pending) : "/test/posttest";
+      } else {
+        const done =
+          sessionStorage.getItem(
+            `scenario:${STUDY_SCENARIO_ID}:rubricCompleted`
+          ) === "true";
+        target = done ? "/test/posttest" : `/${STUDY_SCENARIO_ID}/question`;
+      }
+
+      router.replace(query ? `${target}?${query}` : target);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, query]);
 
   return (

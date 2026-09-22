@@ -4,20 +4,17 @@ import { Suspense, useEffect } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
 import LessonRunner from "@/components/lesson-runner";
-import { getLesson } from "@/lib/lessons/definitions";
+import { LESSON_SEQUENCE, lessonFromSlug, lessonPath } from "@/lib/lessons/definitions";
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
-import {
-  LESSON_SEQUENCE,
-  lessonPath,
-  markLessonComplete,
-} from "@/lib/condition";
+import { markLessonComplete } from "@/lib/condition";
 
 /**
- * A lesson in the guided-lesson arm.
+ * One lesson of the lesson arm.
  *
- * The route is deliberately just /lesson/<unit> — it names the activity, not
- * the study arm. See lib/condition.ts.
+ * Routed by position (/lesson/1) rather than by the unit it was ported from —
+ * the unit number would point straight at the source module. See
+ * lib/condition.ts.
  */
 function LessonPageContent() {
   const router = useRouter();
@@ -26,8 +23,8 @@ function LessonPageContent() {
   const query = searchParams.toString();
   const preview = searchParams.has(PREVIEW_PARAM);
 
-  const lessonId = typeof params.lessonId === "string" ? params.lessonId : "";
-  const lesson = getLesson(lessonId);
+  const slug = typeof params.lessonId === "string" ? params.lessonId : "";
+  const lesson = lessonFromSlug(slug);
 
   useEffect(() => {
     if (!lesson) return;
@@ -65,7 +62,7 @@ function LessonPageContent() {
       <AppHeader />
       <div className="mx-auto max-w-4xl overflow-y-auto p-3 py-6 sm:px-6">
         <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-400">
-          Lesson {position + 1} of {LESSON_SEQUENCE.length} · {lesson.id}
+          Lesson {position + 1} of {LESSON_SEQUENCE.length}
         </p>
         <LessonRunner
           lesson={lesson}
