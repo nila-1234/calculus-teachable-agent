@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "To check whether \\(t=4\\) is a critical point, we examine the function.\n\n\\(R(4)=70+\\frac{8}{(4-4)^2}\\)",
         "The denominator becomes zero, so \\(R(4)\\) is undefined.",
@@ -146,7 +146,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "The graph gets very high near \\(t=4\\), which means the machine risk is highest there.",
         "Since the graph changes direction around \\(t=4\\), that must be a critical point.",

@@ -109,7 +109,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "Since \\(R(t)\\) is a rate, I should integrate it from 0 to 4.",
         "\\(\\int_{0}^{4}\\left(20+5t-\\frac{1}{2}t^2\\right)dt\\)",
@@ -136,7 +136,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "To find the amount of water added, I will use the rate at 4 hours.",
         "\\(R(4)=20+5(4)-\\frac{1}{2}(4)^2\\)\n\n\\(R(4)=32\\)",

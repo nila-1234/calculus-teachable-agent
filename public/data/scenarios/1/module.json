@@ -109,7 +109,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(f'(x)=-0.03x^2+0.9x-4\\)",
         "\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\(x=\\frac{90\\pm\\sqrt{3300}}{6}\\)\n\n\\(x\\approx 24.57\\)",
@@ -140,7 +140,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(f'(x)=-0.03x^2+0.9x-4\\)",
         "\\(-0.03x^2+0.9x-4=0\\)\n\n\\(3x^2-90x+400=0\\)\n\n\\((3x-30)(x-20)=0\\)",

@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(R(p)=1200p-20p^2\\)",
         "\\(R'(p)=1200-40p\\)",
@@ -148,7 +148,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(R(p)=1200p-20p^2\\)",
         "\\(R'(p)=1200-40p\\)",

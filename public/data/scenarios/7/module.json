@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\)",
         "inflow \\([0,6]\\): 108\noutflow \\([6,8]\\): 44",
@@ -147,7 +147,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(\\int_0^{6}(-t^3+12t^2-48t+72)\\,dt\\)",
         "\\(\\left[-\\dfrac{t^4}{4}+4t^3-24t^2+72t\\right]_0^{6}=108\\)",

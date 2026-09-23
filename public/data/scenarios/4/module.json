@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-25",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(C(x)=1.5|x-6|+18\\)",
         "\\(C(6)=1.5|6-6|+18=18\\)",
@@ -147,7 +147,7 @@
     },
     {
       "id": "answer-50",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(C(x)=1.5|x-6|+18\\)",
         "\\(C(6)=18\\)",

@@ -24,6 +24,8 @@ export type GradeComment = {
   pending: boolean;
 };
 
+const PROFESSOR_NAME = "Professor Alex";
+
 const SPEAKER_STYLES: Record<
   CommentSpeaker,
   { bubble: string; avatar: string; initial: string }
@@ -234,7 +236,7 @@ export default function LineRubricPanel({
     ? rubric.find((c) => c.id === activeDiscussion.key.split("::")[0])
     : undefined;
   const activeCounterpartLabel =
-    activeDiscussion?.speaker === "professor" ? "Professor" : currentAnswer.label;
+    activeDiscussion?.speaker === "professor" ? PROFESSOR_NAME : currentAnswer.label;
 
   const gradedCount = rubric.filter(
     (criterion) => currentReview?.feedback?.[criterion.id]?.status != null
@@ -542,7 +544,7 @@ export default function LineRubricPanel({
                                     const style = SPEAKER_STYLES[comment.speaker];
                                     const name =
                                       comment.speaker === "professor"
-                                        ? "Professor"
+                                        ? PROFESSOR_NAME
                                         : currentAnswer.label;
 
                                     return (

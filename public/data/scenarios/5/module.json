@@ -68,7 +68,7 @@
   "rubricOptions": [
     {
       "id": "derivative",
-      "label": "Correctly computes the derivative \\(A'(x)\\)",
+      "label": "Correctly computes the derivative",
       "correct": true,
       "feedback": "This is an essential criterion because the derivative is required to locate the maximum area."
     },
@@ -118,7 +118,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-a",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(A(x)=100x-2x^{2}\\)",
         "\\(A'(x)=100-4x\\)",
@@ -157,7 +157,7 @@
     },
     {
       "id": "answer-b",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(A(x)=100x-2x^{2}\\)",
         "\\(A'(x)=100-4x\\)",
@@ -194,7 +194,7 @@
     },
     {
       "id": "answer-c",
-      "label": "AI Student 3",
+      "label": "Charlie",
       "steps": [
         "\\(A(x)=100x-2x^{2}\\)",
         "\\(A'(x)=100-2x\\)",

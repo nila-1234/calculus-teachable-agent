@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(\\int_0^{10}(-t^3+12t^2-20t+30)\\,dt\\)",
         "antiderivative: \\(-\\dfrac{t^4}{4}+4t^3-10t^2+30t\\)",
@@ -146,7 +146,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(\\int_0^{10}(-t^3+12t^2-20t)\\,dt\\)",
         "\\(\\left[-\\dfrac{t^4}{4}+4t^3-10t^2\\right]_0^{10}=500\\)",

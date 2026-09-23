@@ -115,7 +115,7 @@
   "finalAiAnswers": [
     {
       "id": "answer-50",
-      "label": "AI Student 1",
+      "label": "Alex",
       "steps": [
         "\\(\\int_0^{12}(-t^3+21t^2-120t+300)\\,dt=1872\\)",
         "So the average power is 1872 watts."
@@ -145,7 +145,7 @@
     },
     {
       "id": "answer-25",
-      "label": "AI Student 2",
+      "label": "Bea",
       "steps": [
         "\\(\\dfrac{1}{12}\\int_0^{12}(-t^3+21t^2-120t)\\,dt\\)",
         "\\(\\left[-\\dfrac{t^4}{4}+7t^3-60t^2\\right]_0^{12}=-1728,\\ -1728/12=-144\\)",
