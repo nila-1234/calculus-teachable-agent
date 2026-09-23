@@ -240,13 +240,15 @@ ${answerText || "(solution not provided)"}
 Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this placement is actually correct.
 "${feedback || "(no additional context)"}"
 
-The TA is now defending their placement. Stay in character as the professor:
-- If the TA's justification actually engages with the student's work and matches the ground truth reasoning, accept it and let it go — don't keep pressing once they've made their case.
-- If the TA's justification is vague or doesn't really engage with the work, keep pressing for specifics.
+This placement was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
+- Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer ("yes", "sure", "it is"), or factually wrong about the student's work (e.g. misquotes a number, sign, or step). That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
+- In particular: once the TA has referenced the actual step content or computation (${stepText ? `e.g. "${stepText}"` : "the step's content"}) in any way, that alone clears the bar — do not ask them to additionally show it "follows from" another step, "is shown" a particular way, or any other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
 - Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
+
+// guide user to right step, 
 
 function buildStudentChallengeDiscussionPrompt(
   body: GradeLinesDiscussionRequestBody,
@@ -276,9 +278,9 @@ ${answerText || "(solution not provided)"}
 Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this FAIL is actually correct.
 "${feedback || "(no additional context)"}"
 
-The TA is now responding to your doubt. Stay in character as the student:
-- If the TA's explanation actually engages with your work and matches the ground truth reasoning, let your doubt go and genuinely agree — you were, in fact, failed correctly. Don't keep arguing once they've made their case.
-- If the TA's response is vague, hand-wavy, or doesn't really address your work, stay unconvinced and press for a real answer.
+This FAIL was correct, so your job is not to find a flaw in the TA's explanation — there isn't one. You were only ever a little unsure, not building a case.
+- Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer, or factually wrong about your own work (e.g. misquotes a number, sign, or step you actually wrote). That's the entire bar — do not stay unconvinced because the explanation seems thin, generic, informal, or "could be more rigorous."
+- In particular: once the TA has referenced the actual step content or computation in any way, that alone clears the bar — do not press for it to additionally connect to another step or satisfy some other refinement not in your opening question. That is goalpost-moving, not genuine uncertainty, and you must not do it.
 - Keep responses short (1-2 sentences), conversational, and a little tentative — you were never sure you were right to begin with.
 - Never break character or mention that you are an AI/LLM.`;
 }
@@ -311,9 +313,9 @@ ${answerText || "(solution not provided)"}
 Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this PASS is actually correct.
 "${feedback || "(no additional context)"}"
 
-The TA is now defending their call. Stay in character as the professor:
-- If the TA's justification actually engages with the student's work and matches the ground truth reasoning, accept it and let it go — don't keep pressing once they've made their case.
-- If the TA's justification is vague or doesn't really engage with the work, keep pressing for specifics.
+This PASS was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
+- Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer ("yes", "sure", "it is"), or factually wrong about the student's work (e.g. misquotes a number, sign, or step). That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
+- In particular: once the TA has referenced the actual step content or computation in any way, that alone clears the bar — do not press for it to additionally satisfy some other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
@@ -382,6 +384,15 @@ export async function POST(req: Request) {
       }
       // If the reply field couldn't be recovered at all, `reply` stays empty and the
       // canned fallback below covers it — never show the raw model output verbatim.
+    }
+
+    // Backstop for challenge threads: the prompt asks the model to concede on the TA's very
+    // next reply, but nothing guarantees it actually does. A challenge only exists to make the
+    // TA defend an already-correct call once, so once they've had a first reply plus one more
+    // chance to address a legitimate objection, force it closed rather than let a
+    // non-compliant model keep moving the goalposts indefinitely.
+    if (challenge && messages.length >= 2) {
+      resolved = true;
     }
 
     return NextResponse.json({
