@@ -8,6 +8,7 @@ import CreateRubricPanel, {
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
 import AppHeader from "@/components/app-header";
+import { toPlotEquation } from "@/components/scenario-card";
 import { getScenario } from "@/lib/scenarios/registry";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
@@ -25,7 +26,18 @@ function CreateRubricPageContent() {
     return <main className="p-6">Scenario not found.</main>;
   }
 
-  const { RUBRIC_OPTIONS, SAMPLE_ANSWERS } = scenario.schema;
+  const {
+    RUBRIC_OPTIONS,
+    SAMPLE_ANSWERS,
+    SCENARIO_PLACEHOLDER,
+    PLOT_DATA_SRC,
+    SCENARIO_IMAGE_SRC,
+    QUESTION_PARTS,
+  } = scenario.schema;
+
+  // The model was settled in step 1, so plot the correct choice's curve.
+  const correctModel = QUESTION_PARTS[0]?.options.find((choice) => choice.correct);
+  const plotEquation = correctModel ? toPlotEquation(correctModel.text) : "";
 
   const [question, setQuestion] = useState("");
   const [rubricDecisions, setRubricDecisions] = useState<
@@ -130,6 +142,10 @@ function CreateRubricPageContent() {
           ]}
         />
         <CreateRubricPanel
+          scenario={SCENARIO_PLACEHOLDER}
+          scatterPlotSrc={PLOT_DATA_SRC}
+          scenarioImageSrc={SCENARIO_IMAGE_SRC}
+          plotEquation={plotEquation}
           question={question}
           correctSample={SAMPLE_ANSWERS.correct}
           incorrectSample={SAMPLE_ANSWERS.incorrect}

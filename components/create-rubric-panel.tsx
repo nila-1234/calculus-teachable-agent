@@ -1,6 +1,7 @@
 "use client";
 
 import MathDisplay from "@/components/math-display";
+import ScenarioCard from "@/components/scenario-card";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
@@ -17,6 +18,10 @@ type SampleAnswer = {
 };
 
 type CreateRubricPanelProps = {
+  scenario: string;
+  scatterPlotSrc?: string;
+  scenarioImageSrc?: string;
+  plotEquation?: string;
   question: string;
   correctSample: SampleAnswer;
   incorrectSample?: SampleAnswer;
@@ -32,6 +37,10 @@ type CreateRubricPanelProps = {
 };
 
 export default function CreateRubricPanel({
+  scenario,
+  scatterPlotSrc,
+  scenarioImageSrc,
+  plotEquation,
   question,
   correctSample,
   rubricOptions,
@@ -55,6 +64,13 @@ export default function CreateRubricPanel({
 
   return (
     <div className="flex flex-col gap-5">
+      <ScenarioCard
+        scenario={scenario}
+        scatterPlotSrc={scatterPlotSrc}
+        scenarioImageSrc={scenarioImageSrc}
+        equation={plotEquation}
+      />
+
       <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
         <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
           Question

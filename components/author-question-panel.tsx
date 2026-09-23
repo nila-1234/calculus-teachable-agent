@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import { Flex, Text } from "@radix-ui/themes";
-import ScatterPlot from "@/components/scatter-plot";
+import { Flex } from "@radix-ui/themes";
 import QuestionPartCardDeck from "@/components/question-part-card-deck";
-import MathDisplay from "@/components/math-display";
+import ScenarioCard, { toPlotEquation } from "@/components/scenario-card";
 
 type Choice = {
   id: string;
@@ -75,16 +74,7 @@ export default function AuthorQuestionPanel({
 
     if (!selectedChoice) return "";
 
-    return selectedChoice.text
-      .replace(/^\\\(/, "")
-      .replace(/\\\)$/, "")
-      .replace(/^f\(x\)\s*=\s*/, "y=")
-      .replace(/\\(sin|cos)/g, "$1")
-      .replace(/\^\{(\d+)\}/g, "^$1")
-      .replace(/e\^\{([^}]+)\}/g, "exp($1)")
-      .replace(/(\d)(x)/g, "$1*$2")
-      .replace(/(\d)((sin|cos)\()/g, "$1*$2")
-      .replace(/\s+/g, "");
+    return toPlotEquation(selectedChoice.text);
   }, [parts, selectedParts]);
 
   return (
@@ -112,40 +102,12 @@ export default function AuthorQuestionPanel({
         </div>
       </Flex>
 
-      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <div
-          className={
-            scatterPlotSrc || scenarioImageSrc
-              ? "grid grid-cols-1 gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center"
-              : "grid grid-cols-1"
-          }
-        >
-          <div>
-            <Text size="1" weight="bold" className="mb-2 block uppercase tracking-wider text-stone-400">
-              Scenario
-            </Text>
-            <MathDisplay text={scenario} className="text-base leading-7 text-stone-700" />
-          </div>
-
-          {scatterPlotSrc ? (
-            <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-stone-50">
-              <ScatterPlot
-                filePath={scatterPlotSrc}
-                equation={selectedEquation}
-              />
-            </div>
-          ) : scenarioImageSrc ? (
-            <div className="flex min-h-[320px] items-center justify-center rounded-xl bg-stone-50 p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={scenarioImageSrc}
-                alt="Scenario diagram"
-                className="max-h-[320px] w-full rounded-lg object-contain"
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <ScenarioCard
+        scenario={scenario}
+        scatterPlotSrc={scatterPlotSrc}
+        scenarioImageSrc={scenarioImageSrc}
+        equation={selectedEquation}
+      />
 
       <QuestionPartCardDeck
         parts={parts}
