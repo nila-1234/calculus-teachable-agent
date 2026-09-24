@@ -32,8 +32,6 @@ type AuthorQuestionPanelProps = {
   onTryAgainPart: (partId: string) => void;
   onNextPart: () => void;
   onContinue?: () => void;
-  mode?: number;
-  onModeChange?: (mode: number) => void;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
   onExplanationBlur?: (partId: string, value: string) => void;
@@ -55,8 +53,6 @@ export default function AuthorQuestionPanel({
   onTryAgainPart,
   onNextPart,
   onContinue,
-  mode = 1,
-  onModeChange,
   explanations,
   onExplanationChange,
   onExplanationBlur,
@@ -79,28 +75,6 @@ export default function AuthorQuestionPanel({
 
   return (
     <Flex direction="column" gap="5">
-      <Flex align="center" justify="end">
-        <div className="inline-flex gap-1 rounded-lg bg-stone-100 p-1">
-          <button
-            type="button"
-            onClick={() => onModeChange?.(1)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              mode === 1 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            Standard
-          </button>
-          <button
-            type="button"
-            onClick={() => onModeChange?.(2)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              mode === 2 ? "bg-white text-stone-800 shadow-sm" : "text-stone-500 hover:text-stone-700"
-            }`}
-          >
-            Self-Explanation
-          </button>
-        </div>
-      </Flex>
 
       <ScenarioCard
         scenario={scenario}
@@ -119,7 +93,6 @@ export default function AuthorQuestionPanel({
         onTryAgainPart={onTryAgainPart}
         onNextPart={onNextPart}
         onContinue={onContinue}
-        mode={mode}
         explanations={explanations}
         onExplanationChange={onExplanationChange}
         onExplanationBlur={onExplanationBlur}

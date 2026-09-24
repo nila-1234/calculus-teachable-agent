@@ -1,3 +1,5 @@
+import { LESSON_SEQUENCE } from "@/lib/lessons/definitions";
+
 export const PREVIEW_PARAM = "preview";
 
 /**
@@ -15,9 +17,13 @@ export const PREVIEW_PARAM = "preview";
  */
 const PREVIEW_SESSION_KEY = "previewMode";
 
-/** /scenarios and the scenario step routes. */
-function isScenarioRoute(pathname: string): boolean {
-  return pathname === "/scenarios" || /^\/\d+(\/|$)/.test(pathname);
+/** /scenarios, the scenario step routes, and the lesson routes. */
+function isInstructionRoute(pathname: string): boolean {
+  return (
+    pathname === "/scenarios" ||
+    /^\/\d+(\/|$)/.test(pathname) ||
+    pathname.startsWith("/lesson/")
+  );
 }
 
 export function isPreviewActive(): boolean {
@@ -37,13 +43,13 @@ export function isPreviewActive(): boolean {
       return false;
     }
 
-    // The scenario pages rebuild their query string from scratch
-    // (`?questionMode=…&applyRubricMode=…`) and drop the flag, so preview has to
-    // survive that — but only within the instructions phase, so every other
-    // route still requires the flag explicitly.
+    // The instruction pages rebuild their query string as they navigate and can
+    // drop the flag, so preview has to survive that — but only within the
+    // instruction phase, so every other route still requires the flag
+    // explicitly.
     return (
       sessionStorage.getItem(PREVIEW_SESSION_KEY) === "1" &&
-      isScenarioRoute(window.location.pathname)
+      isInstructionRoute(window.location.pathname)
     );
   } catch {
     return false;
@@ -135,8 +141,15 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
     id: "instructions",
     label: "Instructions",
     description:
-      "The TA scenarios. Fully interactive here, including the AI conversation.",
+      "One of the two instruction arms: the teachable-agent scenario. Fully interactive here, including the AI conversation.",
     path: "/scenarios",
+  },
+  {
+    id: "lessons",
+    label: "Lesson",
+    description:
+      "The other instruction arm: two ported course lessons with their own questions, hints, and feedback. Participants are assigned to one arm or the other automatically.",
+    path: "/lesson/1",
   },
   {
     id: "post-test",
@@ -154,11 +167,72 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
 
 /**
  * Which phase a path belongs to. Scenario step routes (/1/question and friends)
- * all resolve to the Instructions phase so the bar keeps working inside them.
+ * all resolve to the Instructions phase.
  */
 export function phaseIndexForPath(pathname: string): number {
   if (/^\/\d+(\/|$)/.test(pathname)) {
     return PREVIEW_PHASES.findIndex((phase) => phase.id === "instructions");
   }
+  if (pathname.startsWith("/lesson/")) {
+    return PREVIEW_PHASES.findIndex((phase) => phase.id === "lessons");
+  }
   return PREVIEW_PHASES.findIndex((phase) => phase.path === pathname);
+}
+
+/** The scenario a path refers to, so the bar stays on the same one. */
+export function scenarioIdFromPath(pathname: string): string | null {
+  const match = pathname.match(/^\/(\d+)(\/|$)/);
+  return match ? match[1] : null;
+}
+
+/** The scenario's own steps, in the order a participant meets them. */
+const SCENARIO_STEPS: { label: string; segment: string }[] = [
+  { label: "Question", segment: "question" },
+  { label: "Create rubric", segment: "create-rubric" },
+  { label: "Grade lines", segment: "grade-lines" },
+];
+
+export type PreviewStop = { label: string; path: string };
+
+/**
+ * Every page Previous/Next steps through, with the instruction phase expanded
+ * into its individual steps.
+ *
+ * Expanded here rather than by enabling each scenario page's own Next button:
+ * those buttons are gated on finishing the step, the gating differs per page,
+ * and the pages are actively worked on elsewhere. Driving navigation from the
+ * preview bar keeps all of it in one place.
+ */
+export function previewStops(scenarioId: string | number): PreviewStop[] {
+  const stops: PreviewStop[] = [];
+
+  for (const phase of PREVIEW_PHASES) {
+    stops.push({ label: phase.label, path: phase.path });
+
+    if (phase.id === "instructions") {
+      for (const step of SCENARIO_STEPS) {
+        stops.push({
+          label: step.label,
+          path: `/${scenarioId}/${step.segment}`,
+        });
+      }
+    }
+
+    // The lesson phase's own entry is the first lesson, so only the rest are
+    // added here — otherwise Next would visit the first lesson twice.
+    if (phase.id === "lessons") {
+      for (let i = 1; i < LESSON_SEQUENCE.length; i += 1) {
+        stops.push({ label: `Lesson ${i + 1}`, path: `/lesson/${i + 1}` });
+      }
+    }
+  }
+
+  return stops;
+}
+
+export function stopIndexForPath(
+  pathname: string,
+  scenarioId: string | number
+): number {
+  return previewStops(scenarioId).findIndex((stop) => stop.path === pathname);
 }

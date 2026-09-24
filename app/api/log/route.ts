@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import getFirestore from "@/lib/firestore";
+import { mirrorEvents, type LogEntry } from "@/lib/tree";
 
 const ALREADY_EXISTS = 6;
 
@@ -53,6 +54,16 @@ export async function POST(req: NextRequest) {
     // A batch that is purely retries is a success, not a failure — only a
     // genuine write error fails the request.
     if (nonDuplicateErrors.length) throw nonDuplicateErrors[0];
+
+    // Mirror into the browsable subjects/ tree. Deliberately after the write
+    // above and deliberately swallowed: the tree is a convenience projection,
+    // and losing a participant's data because a display copy failed would be
+    // an absurd trade. /api/rebuild-tree repairs anything missed.
+    try {
+      await mirrorEvents(entries as LogEntry[]);
+    } catch (err) {
+      console.error("Tree mirror failed (logs are unaffected):", err);
+    }
 
     return NextResponse.json({ ok: true, inserted });
   } catch (err) {

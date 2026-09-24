@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import CreateRubricPanel, {
   RubricDecision,
 } from "@/components/create-rubric-panel";
@@ -16,8 +16,6 @@ import { logEvent } from "@/lib/logger";
 function CreateRubricPageContent() {
   const router = useRouter();
   const params = useParams();
-  const searchParams = useSearchParams();
-  const applyRubricMode = searchParams.get("applyRubricMode") || "1";
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -90,7 +88,7 @@ function CreateRubricPageContent() {
       JSON.stringify(selectedRubricIds)
     );
 
-    router.push(`/${scenarioId}/grade-lines?applyRubricMode=${applyRubricMode}`);
+    router.push(`/${scenarioId}/grade-lines`);
   };
 
   const handleTryAgain = () => {

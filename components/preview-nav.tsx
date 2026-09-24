@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import {
   PREVIEW_PARAM,
-  PREVIEW_PHASES,
-  phaseIndexForPath,
   previewHref,
+  previewStops,
+  scenarioIdFromPath,
+  stopIndexForPath,
 } from "@/lib/preview";
+import { STUDY_SCENARIO_ID } from "@/lib/scenarios/utils";
 
 /**
  * Minimal phase stepper, shown only while ?preview is in the URL.
@@ -24,12 +26,13 @@ function PreviewNavContent() {
 
   if (!active || !pathname) return null;
 
-  const index = phaseIndexForPath(pathname);
-  const prev = index > 0 ? PREVIEW_PHASES[index - 1] : null;
-  const next =
-    index > -1 && index < PREVIEW_PHASES.length - 1
-      ? PREVIEW_PHASES[index + 1]
-      : null;
+  // Stay on whichever scenario the instructor is actually looking at.
+  const scenarioId = scenarioIdFromPath(pathname) ?? STUDY_SCENARIO_ID;
+  const stops = previewStops(scenarioId);
+  const index = stopIndexForPath(pathname, scenarioId);
+
+  const prev = index > 0 ? stops[index - 1] : null;
+  const next = index > -1 && index < stops.length - 1 ? stops[index + 1] : null;
 
   return (
     <div className="sticky bottom-0 z-40 border-t border-stone-200 bg-white/95 px-4 py-2 backdrop-blur">

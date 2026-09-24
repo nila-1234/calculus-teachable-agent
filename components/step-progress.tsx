@@ -1,7 +1,8 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { CheckIcon } from "@radix-ui/react-icons";
+import { isPreviewActive, previewHref } from "@/lib/preview";
 
 const STEPS = [
   "Question",
@@ -10,7 +11,19 @@ const STEPS = [
   "Complete",
 ];
 
-const STEP_PATHS = ["question", "create-rubric", "grade-lines", "complete"];
+/**
+ * null where a step has no route of its own — "Complete" is a state reached at
+ * the end of grade-lines, not a page, so it must never be linked.
+ */
+const STEP_PATHS: (string | null)[] = [
+  "question",
+  "create-rubric",
+  "grade-lines",
+  null,
+];
+
+/** Preview never changes for the life of the page. */
+const subscribeNothing = () => () => {};
 
 type StepProgressProps = {
   currentStep: number; // 0-indexed: 0=question, 1=create-rubric, 2=apply-rubric, 3=complete
@@ -18,6 +31,14 @@ type StepProgressProps = {
 };
 
 export default function StepProgress({ currentStep, scenarioId }: StepProgressProps) {
+  // Instructors need to reach any step without working through the ones before
+  // it. Participants still only get the steps they have actually reached.
+  const preview = useSyncExternalStore(
+    subscribeNothing,
+    isPreviewActive,
+    () => false
+  );
+
   const columns = STEPS.map((_, index) =>
     index < STEPS.length - 1 ? "28px 1fr" : "28px"
   ).join(" ");
@@ -42,7 +63,11 @@ export default function StepProgress({ currentStep, scenarioId }: StepProgressPr
         {STEPS.map((label, index) => {
           const isCompleted = index < currentStep;
           const isActive = index === currentStep;
-          const isClickable = scenarioId != null && (isCompleted || isActive);
+          const path = STEP_PATHS[index];
+          const isClickable =
+            scenarioId != null &&
+            path != null &&
+            (preview || isCompleted || isActive);
 
           const circle = isCompleted ? (
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-lime-600 text-white font-bold">
@@ -54,7 +79,13 @@ export default function StepProgress({ currentStep, scenarioId }: StepProgressPr
               {index + 1}
             </div>
           ) : (
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-stone-200 text-xs font-bold text-stone-400">
+            <div
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
+                preview && STEP_PATHS[index] != null
+                  ? "border-stone-300 text-stone-500 hover:border-lime-600 hover:text-lime-700"
+                  : "border-stone-200 text-stone-400"
+              }`}
+            >
               {index + 1}
             </div>
           );
@@ -66,7 +97,16 @@ export default function StepProgress({ currentStep, scenarioId }: StepProgressPr
               style={{ gridRow: 1, gridColumn: index * 2 + 1 }}
             >
               {isClickable ? (
-                <Link href={`/${scenarioId}/${STEP_PATHS[index]}`}>{circle}</Link>
+                <Link
+                  href={
+                    preview
+                      ? previewHref(`/${scenarioId}/${path}`)
+                      : `/${scenarioId}/${path}`
+                  }
+                  aria-label={`Go to ${label}`}
+                >
+                  {circle}
+                </Link>
               ) : (
                 circle
               )}
