@@ -66,7 +66,7 @@ function buildFallbackReply(
     }
 
     if (coversStep) {
-      return `${opener}"${label}" applies to step ${expectedStep ?? "?"}, not step ${placedStep ?? "?"} — that's where the student's work is actually addressing it.${reasoning}`;
+      return `Are you sure "${label}" belongs on step ${placedStep ?? "?"}? Take another look at the work for where it actually applies.`;
     }
 
     if (coversStatus) {
@@ -130,6 +130,7 @@ Ground truth reasoning for this criterion, for your own understanding only — n
 Write a short, skeptical-but-fair rebuttal to the TA:
 - Directly challenge the placement with a pointed question — literally ask something like "Are you sure this belongs on step ${placedStep ?? "?"}?" or "Why does this apply here?" Don't hedge into a vague request like "can you explain why..." — put them on the spot.
 - Reference step ${placedStep ?? "?"} specifically, not a generic "this step."
+- Never suggest, guess, or imply a different step number as the "real" answer (e.g. "shouldn't this be on step 3?") — you don't have an alternative in mind, because there isn't one. You're only testing whether the TA can justify keeping it where it is.
 - You expect them to be able to defend it, and if they do, you'll accept it — but the opening line itself should read as doubt, not curiosity.
 - Keep it to 1 sentence, brief and matter-of-fact, not accusatory.
 - Do not greet or sign off. Open with the question itself.
@@ -233,6 +234,38 @@ Write this as a short self-assessment from the student, like you just re-read yo
 - Never break character or mention that you are an AI/LLM.`;
 }
 
+// A genuinely misplaced criterion. Always the professor (a student wouldn't second-guess
+// where the TA attached a criterion) — but unlike a status mistake, this doesn't just
+// state the fix: the TA has to actually find and drag it to the right step themselves, so
+// handing them the step number outright would let them "fix" it without ever looking.
+function buildProfessorPlacementMistakePrompt(
+  body: GradeLinesCommentRequestBody,
+  studentName: string
+): string {
+  const { answerText, question, criterionLabel, stepText, feedback, placedStep } = body;
+
+  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
+
+The student named "${studentName}" submitted the following solution. The TA just attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"), and that placement is wrong.
+
+Question:
+${question || "(question not provided)"}
+
+The student's submitted solution:
+${answerText || "(solution not provided)"}
+
+Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim and never state or imply the step number it actually belongs on:
+"${feedback || "(no additional context)"}"
+
+Write a short correction addressed directly to the TA:
+- Open by questioning the placement, not asserting it's wrong — literally something like "Are you sure this belongs on step ${placedStep ?? "?"}?" Make them reconsider it themselves rather than just being told. Do NOT say or imply which step it actually belongs on instead — no step number, and nothing specific enough to make it obvious by elimination. That's for the TA to find themselves.
+- Follow with a pointer toward what to look for — reference what the criterion is actually checking for (grounded in the context above, without inventing new math facts) so they know what to search the work for, without handing them the location.
+- Collegial and matter-of-fact — a mentor prompting them to look again, not scolding, and not hedging.
+- Do not greet or sign off ("Hi there", "Quick note", "Just so you know") — open with the correction itself.
+- Keep it to 1-2 sentences.
+- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
+}
+
 function buildProfessorPrompt(
   body: GradeLinesCommentRequestBody,
   studentName: string,
@@ -306,6 +339,10 @@ export async function POST(req: Request) {
         : speaker === "professor"
           ? buildProfessorChallengePrompt(body, studentName)
           : buildStudentChallengePrompt(body, studentName);
+    } else if (coversStep && !coversStatus) {
+      // A pure placement mistake is fixed by the TA re-dragging the card, not by being
+      // told the answer, so it gets its own prompt that leads instead of revealing.
+      systemPrompt = buildProfessorPlacementMistakePrompt(body, studentName);
     } else {
       const mistakes: string[] = [];
       if (coversStatus) {

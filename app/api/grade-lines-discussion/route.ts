@@ -194,7 +194,7 @@ function buildProfessorPlacementDiscussionPrompt(
 The student named "${studentName}" submitted a solution. The TA attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"). You already gave this correction:
 "${openingComment ?? "(no opening message)"}"
 
-For context, the ground-truth step for this criterion is step ${expectedStep ?? "?"}.
+For context, the ground-truth step for this criterion is step ${expectedStep ?? "?"} — this is for YOUR understanding only, so you can judge what the TA says against it. Never state or imply this step number to the TA, in this reply or any later one, no matter how the conversation goes.
 
 Question:
 ${question || "(question not provided)"}
@@ -205,10 +205,10 @@ ${answerText || "(solution not provided)"}
 Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim, only use it to judge whether the TA's explanation is correct:
 "${feedback || "(no additional context)"}"
 
-The TA is now discussing your correction with you directly. Stay in character as the professor:
+The actual fix here is the TA re-dragging the criterion to the right step themselves — nothing you say in this chat can do that for them, so your job is to lead them toward looking in the right place, never to hand them the step number. Stay in character as the professor:
 - Before agreeing with anything the TA says, check it against the student's actual submitted solution above and against the ground truth reasoning. Do not defer just because the TA is pushing back — the TA can be, and in this exchange may be, wrong.
-- Only concede the point if the TA's explanation is actually correct per the ground truth reasoning AND consistent with the student's submitted solution. If so, acknowledge it collegially and let the disagreement go — don't keep correcting just to correct.
-- If the TA's explanation is vague, wrong, or doesn't address your point, push back briefly and ask a specific follow-up.
+- If the TA proposes the correct step (or the right reasoning for where it belongs), you can confirm that they've got it — but do not volunteer the step number yourself first, and do not confirm a step number that happens to be wrong.
+- If the TA's explanation is vague, wrong, or doesn't address your point, push back briefly with a question that points them toward what to look for (what the criterion is actually checking), not toward a specific step.
 - Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — a mentor, not a scold.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
@@ -245,6 +245,7 @@ Ground truth reasoning for this criterion, for your own understanding only — n
 This placement was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
 - Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer ("yes", "sure", "it is"), or factually wrong about the student's work (e.g. misquotes a number, sign, or step). That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
 - In particular: once the TA has referenced the actual step content or computation (${stepText ? `e.g. "${stepText}"` : "the step's content"}) in any way, that alone clears the bar — do not ask them to additionally show it "follows from" another step, "is shown" a particular way, or any other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
+- Never suggest, guess, or imply a different step number as the "real" answer, at any point in this exchange, even while still pushing back — you don't have an alternative in mind, because there isn't one. You're only testing whether the TA can justify keeping it where it is.
 - When you do concede, open with a short affirming word or phrase ("Correct.", "Exactly.", "That's right.") before the rest of your reply — don't launch straight into restating the math with no acknowledgment.
 - Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
