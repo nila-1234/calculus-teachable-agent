@@ -90,6 +90,8 @@ function extractDiscussionReply(raw: string): { reply: string; resolved: boolean
 // challenge thread until it's either fixed at the source or resolved this way.
 const RESOLUTION_INSTRUCTIONS = `
 
+You never touch the placement, the pass/fail mark, or the student's submitted work yourself — only the TA does that, outside this chat, by actually redoing the call. If you concede a point, just acknowledge it in your own words. Never say or imply that you (or anything on your end) will update, fix, move, re-grade, or correct the placement or the mark — that is not something you can do, and claiming otherwise is a factual error in character.
+
 Respond with ONLY a JSON object of the form {"reply": "<your in-character message>", "resolved": true or false}. Set "resolved" to true ONLY if this reply genuinely concedes the point and the disagreement is over — you now agree the TA's call was right, per the rules above. Set it to false if you are still pushing back, asking a follow-up, or otherwise unconvinced. Do not set "resolved" to true just to be agreeable — only when the TA's explanation actually earned it.`;
 
 function buildStudentDiscussionPrompt(
@@ -243,6 +245,7 @@ Ground truth reasoning for this criterion, for your own understanding only — n
 This placement was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
 - Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer ("yes", "sure", "it is"), or factually wrong about the student's work (e.g. misquotes a number, sign, or step). That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
 - In particular: once the TA has referenced the actual step content or computation (${stepText ? `e.g. "${stepText}"` : "the step's content"}) in any way, that alone clears the bar — do not ask them to additionally show it "follows from" another step, "is shown" a particular way, or any other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
+- When you do concede, open with a short affirming word or phrase ("Correct.", "Exactly.", "That's right.") before the rest of your reply — don't launch straight into restating the math with no acknowledgment.
 - Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
@@ -281,6 +284,7 @@ Ground truth reasoning for this criterion, for your own understanding only — n
 This FAIL was correct, so your job is not to find a flaw in the TA's explanation — there isn't one. You were only ever a little unsure, not building a case.
 - Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer, or factually wrong about your own work (e.g. misquotes a number, sign, or step you actually wrote). That's the entire bar — do not stay unconvinced because the explanation seems thin, generic, informal, or "could be more rigorous."
 - In particular: once the TA has referenced the actual step content or computation in any way, that alone clears the bar — do not press for it to additionally connect to another step or satisfy some other refinement not in your opening question. That is goalpost-moving, not genuine uncertainty, and you must not do it.
+- When you do concede, open with a short affirming word or phrase ("Oh okay.", "Got it.", "That makes sense.") before the rest of your reply — don't launch straight into restating the math with no acknowledgment.
 - Keep responses short (1-2 sentences), conversational, and a little tentative — you were never sure you were right to begin with.
 - Never break character or mention that you are an AI/LLM.`;
 }
@@ -316,6 +320,7 @@ Ground truth reasoning for this criterion, for your own understanding only — n
 This PASS was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
 - Concede ("resolved": true) on the TA's very next reply unless it is EMPTY, a one-word non-answer ("yes", "sure", "it is"), or factually wrong about the student's work (e.g. misquotes a number, sign, or step). That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
 - In particular: once the TA has referenced the actual step content or computation in any way, that alone clears the bar — do not press for it to additionally satisfy some other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
+- When you do concede, open with a short affirming word or phrase ("Correct.", "Exactly.", "That's right.") before the rest of your reply — don't launch straight into restating the math with no acknowledgment.
 - Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }

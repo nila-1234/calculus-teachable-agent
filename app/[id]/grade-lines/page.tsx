@@ -28,8 +28,11 @@ import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
 // Chance that a correctly-graded criterion still gets challenged in discussion, so the
-// TA sometimes has to defend a right call instead of only ever fixing wrong ones.
-const CHALLENGE_RATE = 0.2;
+// TA sometimes has to defend a right call instead of only ever fixing wrong ones. Split
+// by persona since the professor (rigor-checking a Pass, or a placement) and the student
+// (second-guessing their own Fail) shouldn't necessarily challenge equally often.
+const PROFESSOR_CHALLENGE_RATE = 1;
+const STUDENT_CHALLENGE_RATE = 1;
 
 type CommentKind = "placement" | "status";
 
@@ -277,7 +280,8 @@ function GradeLinesPageContent() {
     item: StepCriterionFeedback
   ) => {
     const needsCorrection = !item.stepCorrect;
-    const challenge = !needsCorrection && Math.random() < CHALLENGE_RATE;
+    // Placement challenges are always raised by the professor (see pickPlacementChallengeSpeaker).
+    const challenge = !needsCorrection && Math.random() < PROFESSOR_CHALLENGE_RATE;
     if (!needsCorrection && !challenge) return;
 
     const speaker = needsCorrection ? pickPlacementSpeaker() : pickPlacementChallengeSpeaker();
@@ -294,8 +298,13 @@ function GradeLinesPageContent() {
     item: StepCriterionFeedback
   ) => {
     const mistakeSpeaker = pickStatusSpeaker(item);
-    const challenge = !mistakeSpeaker && Math.random() < CHALLENGE_RATE;
-    const speaker = mistakeSpeaker ?? (challenge ? pickChallengeSpeaker(item.status) : null);
+    // Status challenges go to the professor for a correct Pass, or the student for a
+    // correct Fail (see pickChallengeSpeaker) — roll against that persona's own rate.
+    const challengeSpeaker = mistakeSpeaker ? null : pickChallengeSpeaker(item.status);
+    const challengeRate =
+      challengeSpeaker === "student" ? STUDENT_CHALLENGE_RATE : PROFESSOR_CHALLENGE_RATE;
+    const challenge = !mistakeSpeaker && Math.random() < challengeRate;
+    const speaker = mistakeSpeaker ?? (challenge ? challengeSpeaker : null);
     if (!speaker) return;
 
     openThread(answerId, answer, criterionId, "status", speaker, item, challenge);
@@ -508,7 +517,12 @@ function GradeLinesPageContent() {
         },
       }));
 
-      if (data.resolved === true) {
+      // A challenge thread (the call was already correct) can be resolved by conceding in
+      // chat — there's nothing to fix. A real mistake thread never can: it only clears by
+      // actually redoing the call (drag to re-place, re-mark pass/fail), which drops this
+      // whole thread via resetCriterionThreads anyway. Conceding in chat isn't a substitute
+      // for that, so a non-challenge thread's "resolved" from the model is ignored here.
+      if (data.resolved === true && challenge) {
         setResolvedThreads((prev) => ({
           ...prev,
           [answerId]: { ...prev[answerId], [key]: true },

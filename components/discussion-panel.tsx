@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Cross1Icon, PaperPlaneIcon, UpdateIcon } from "@radix-ui/react-icons";
+import { CheckCircledIcon, Cross1Icon, PaperPlaneIcon, UpdateIcon } from "@radix-ui/react-icons";
 import MathDisplay from "@/components/math-display";
 
 export type DiscussionMessage = {
@@ -22,6 +22,9 @@ type DiscussionPanelProps = {
   openingComment: string;
   messages: DiscussionMessage[];
   pending: boolean;
+  // True once the counterpart has conceded the point — shows a closing note instead of
+  // implying there's still something to settle.
+  resolved?: boolean;
   onSend: (text: string) => void;
   // When true, the panel can't be dismissed until the TA has sent at least one reply —
   // used so a challenge or correction can't just be closed away unanswered.
@@ -36,6 +39,7 @@ export default function DiscussionPanel({
   openingComment,
   messages,
   pending,
+  resolved = false,
   onSend,
   forceReply = false,
 }: DiscussionPanelProps) {
@@ -124,6 +128,13 @@ export default function DiscussionPanel({
                 <UpdateIcon className="shrink-0 animate-spin" />
                 Checking...
               </div>
+            </div>
+          ) : null}
+
+          {resolved && !pending ? (
+            <div className="flex items-center gap-1.5 px-1 pt-1 text-xs font-medium text-green-700">
+              <CheckCircledIcon className="shrink-0" />
+              This conversation is resolved. You can proceed to the next step.
             </div>
           ) : null}
         </div>

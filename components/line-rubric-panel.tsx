@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
-  ChatBubbleIcon,
   CheckIcon,
   Cross2Icon,
   DragHandleDots2Icon,
@@ -180,10 +179,12 @@ export default function LineRubricPanel({
 
   // One phase (placement or status) is settled — and only then does it lock — once it's
   // actually right AND, if the professor or student challenged it anyway, that challenge
-  // has been resolved. Being right isn't enough on its own to wave away an open
-  // challenge; being wrong always needs either a fix or a resolution, discussion or not.
+  // has been resolved. Being right isn't enough on its own to wave away an open challenge.
+  // Being wrong is never settled by discussion alone — conceding in chat isn't the same
+  // as fixing the call, so a mistake only clears once the TA actually redoes it (which
+  // re-checks it, and re-checking a genuinely fixed call comes back correct).
   const isPhaseSettled = (correct: boolean, key: string): boolean =>
-    correct ? !canDiscuss || !isThreadOpenAndUnresolved(key) : !isThreadOpenAndUnresolved(key);
+    correct ? !canDiscuss || !isThreadOpenAndUnresolved(key) : false;
 
   // A criterion is "done" — and only then does the TA get to touch a different one —
   // once its placement is settled and, in turn, its pass/fail call is settled too.
@@ -448,10 +449,15 @@ export default function LineRubricPanel({
                           // placed card, by construction, is already done.
                           const isActive = criterion.id === activeCriterionId;
                           const lockedByOther = !isActive;
-                          // The mark block only shows for the active card, once its
-                          // placement is settled (actually right, and any challenge to it
-                          // resolved) and it hasn't been marked yet.
-                          const showMarkBlock = isActive && phase === "mark";
+                          // The mark block shows for the active card once its placement is
+                          // settled and it hasn't been marked yet — or, if the pass/fail call
+                          // itself was actually wrong, so the TA can redo it. A wrong call
+                          // can only be fixed by re-marking, never by conceding in discussion
+                          // alone, and a correct call under an open challenge doesn't get the
+                          // buttons back since there's nothing to redo.
+                          const isStatusMistake =
+                            phase === "resolve-status" && criterionFeedback?.statusCorrect === false;
+                          const showMarkBlock = isActive && (phase === "mark" || isStatusMistake);
 
                           return (
                             <div
@@ -510,9 +516,15 @@ export default function LineRubricPanel({
                               {showMarkBlock ? (
                                 <div className="animate-fade-in-slide flex flex-col gap-2 border-t border-stone-200 pt-2.5">
                                   <div className="flex items-center gap-1.5 text-xs text-stone-600">
-                                    <CheckIcon className="shrink-0 text-green-700" />
+                                    {isStatusMistake ? (
+                                      <Cross2Icon className="shrink-0 text-red-700" />
+                                    ) : (
+                                      <CheckIcon className="shrink-0 text-green-700" />
+                                    )}
                                     <span>
-                                      <span className="font-semibold">Placement confirmed.</span>{" "}
+                                      <span className="font-semibold">
+                                        {isStatusMistake ? "That call was wrong." : "Placement confirmed."}
+                                      </span>{" "}
                                       Does this step meet the criterion?
                                     </span>
                                   </div>
@@ -583,14 +595,14 @@ export default function LineRubricPanel({
                                                     speaker: comment.speaker,
                                                   })
                                                 }
-                                                className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-lime-700 hover:text-lime-900"
+                                                className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
                                               >
-                                                <ChatBubbleIcon width={15} height={15} />
-                                                Reply
+                                                Respond
                                                 {(currentDiscussions[key]?.[comment.speaker]
                                                   ?.length ?? 0) > 0
                                                   ? ` (${currentDiscussions[key]?.[comment.speaker]?.length})`
                                                   : ""}
+                                                <ArrowRightIcon width={13} height={13} />
                                               </button>
                                             ) : null}
                                           </div>
@@ -708,7 +720,6 @@ export default function LineRubricPanel({
       {discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
         <DiscussionPanel
           open
-          forceReply
           onClose={() => setActiveDiscussion(null)}
           counterpartLabel={activeCounterpartLabel}
           criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}
@@ -717,6 +728,7 @@ export default function LineRubricPanel({
           pending={
             currentDiscussionPending[activeDiscussion.key]?.[activeDiscussion.speaker] ?? false
           }
+          resolved={currentResolved[activeDiscussion.key] ?? false}
           onSend={(text) =>
             onSendDiscussionMessage?.(
               currentAnswer.id,
