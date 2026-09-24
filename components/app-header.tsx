@@ -15,9 +15,9 @@ export default function AppHeader() {
       className="border-b border-stone-200 bg-white px-4 py-3 sm:px-6"
     >
       <Flex align="center" gap="2" className="min-w-0">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-lime-600 text-white">
-          <span className="text-sm font-bold">A</span>
-        </div>
+        {/* Same file as the favicon (app/icon.svg), which Next serves at /icon.svg. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon.svg" alt="" className="h-8 w-8 shrink-0" />
         <Text
           size="3"
           weight="bold"
