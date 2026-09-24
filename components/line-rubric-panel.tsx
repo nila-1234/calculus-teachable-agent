@@ -23,7 +23,7 @@ export type GradeComment = {
   pending: boolean;
 };
 
-const PROFESSOR_NAME = "Professor Alex";
+const PROFESSOR_NAME = "Prof. Phoenix";
 
 const SPEAKER_STYLES: Record<
   CommentSpeaker,
