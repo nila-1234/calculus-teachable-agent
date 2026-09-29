@@ -1,4 +1,5 @@
 import type { SurveyDefinition, SurveyId, SurveyItem, SurveyLikert } from "./types";
+import { ALGEBRA_CHECK_OPTIONS, POWER_RULE_OPTIONS } from "./eligibility";
 
 const AGREE_LIKERT: SurveyLikert = {
   min: 1,
@@ -29,20 +30,6 @@ function choiceItem(
   };
 }
 
-function multiItem(
-  id: string,
-  prompt: string,
-  choices: string[]
-): SurveyItem {
-  return {
-    id,
-    kind: "multi",
-    prompt,
-    required: true,
-    choices: choices.map((text) => ({ id: text, text })),
-  };
-}
-
 function openItem(
   id: string,
   prompt: string,
@@ -61,8 +48,8 @@ const SCREENING_SURVEY: SurveyDefinition = {
   id: "screening",
   title: "Screening",
   intro: [
-    "Before you begin, please answer a few questions about your background in mathematics.",
-    "This takes about a minute and tells us whether this study is a fit for you.",
+    "Before you begin, please answer a few questions about your mathematics background, including two short mathematics questions.",
+    "This takes a couple of minutes and tells us whether the study is a good fit for you.",
   ],
   sections: [
     {
@@ -83,31 +70,38 @@ const SCREENING_SURVEY: SurveyDefinition = {
             "I am not sure",
           ]
         ),
-        multiItem(
-          "calculus-topics",
-          "Which calculus topics have you studied? Select all that apply.",
-          [
-            "Limits and continuity",
-            "Derivatives and applications of derivatives",
-            "Extrema and the Mean Value Theorem",
-            "Integrals and applications of integrals",
-            "None of the above",
-          ]
-        ),
         choiceItem(
           "calculus-courses",
           "How many college-level calculus courses have you taken?",
           ["None", "1", "2", "3 or more", "I am not sure"]
         ),
         choiceItem(
-          "last-studied",
-          "When was the last time you studied or used calculus?",
+          "math_courses",
+          "How many college-level mathematics courses have you taken? Include all college-level mathematics (calculus, linear algebra, statistics, discrete mathematics, and so on).",
+          ["0", "1", "2", "3 or more"]
+        ),
+        choiceItem(
+          "calc_history",
+          "Have you ever taken a calculus course?",
           [
-            "I am currently studying calculus",
-            "Within the past year",
-            "More than 1 year ago",
-            "I have never studied or used calculus",
+            "Never",
+            "In high school",
+            "In college",
+            "Both",
+            "I am currently enrolled in a calculus course",
           ]
+        ),
+        // Skill checks (floor). Options come from eligibility.ts so the graded
+        // correct answer is always one of the presented options.
+        choiceItem(
+          "algebra_check",
+          "Anne is in a rowboat on a lake that is 2400 yards wide. She is 800 yards from the dock. She rows toward the dock for m minutes at a speed of 40 yards per minute. Which expression gives Anne's distance from the dock?",
+          ALGEBRA_CHECK_OPTIONS
+        ),
+        choiceItem(
+          "power_rule_check",
+          "For f(x) = x⁵ + 7, what is the derivative f′(x)?",
+          POWER_RULE_OPTIONS
         ),
       ],
     },

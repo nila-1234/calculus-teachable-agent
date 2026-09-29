@@ -18,7 +18,11 @@ import {
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { logEvent } from "@/lib/logger";
 import CompletionCode from "@/components/completion-code";
-import { COMPLETION_CODE, getProlificPid } from "@/lib/prolific";
+import {
+  COMPLETION_CODE,
+  getProlificPid,
+  prolificSubmissionUrl,
+} from "@/lib/prolific";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import {
   evaluateEligibility,
@@ -221,6 +225,7 @@ function SurveyPageContent() {
                 <CompletionCode
                   code={COMPLETION_CODE}
                   envVar="NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE"
+                  submitUrl={prolificSubmissionUrl(COMPLETION_CODE)}
                 />
               )}
               {survey.id === "pre" && (

@@ -131,12 +131,34 @@ export function clearProlificIds(): void {
  *
  * The environment variable still wins if set, so a deployment can override
  * without a code change.
- *
- * There is deliberately no screen-out code. Screened-out participants are not
- * compensated in this study, so they are simply told they may close the page.
  */
 const PROLIFIC_COMPLETION_CODE = "C5J1GCYW";
 
 export const COMPLETION_CODE =
   process.env.NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE?.trim() ||
   PROLIFIC_COMPLETION_CODE;
+
+/**
+ * Screen-out code, for a participant who is screened out at the eligibility
+ * survey. Prolific pays a reduced rate for a screen-out, so these participants
+ * still need a code — a different one from the completers, so the two outcomes
+ * are distinguishable on Prolific. Same override rules as the completion code.
+ *
+ * ⚠️ Must match the screen-out code on the Prolific study.
+ */
+const PROLIFIC_SCREEN_OUT_CODE = "C182P03K";
+
+export const SCREEN_OUT_CODE =
+  process.env.NEXT_PUBLIC_PROLIFIC_SCREEN_OUT_CODE?.trim() ||
+  PROLIFIC_SCREEN_OUT_CODE;
+
+/**
+ * The Prolific URL that records a submission for a given code. Prolific derives
+ * the outcome from the code, so completion and screen-out use the same endpoint
+ * with different codes.
+ */
+export function prolificSubmissionUrl(code: string): string {
+  return `https://app.prolific.com/submissions/complete?cc=${encodeURIComponent(
+    code
+  )}`;
+}

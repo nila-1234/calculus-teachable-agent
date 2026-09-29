@@ -15,6 +15,7 @@ export default function CompletionCode({
   label = "Your completion code",
   envVar,
   fallback,
+  submitUrl,
 }: {
   code: string | null;
   label?: string;
@@ -24,6 +25,11 @@ export default function CompletionCode({
    * participant with no screen-out code needs instructions, not a config error.
    */
   fallback?: React.ReactNode;
+  /**
+   * Prolific submission URL. When given, a button submits directly; the code
+   * stays visible as a fallback for when the redirect is blocked or fails.
+   */
+  submitUrl?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -73,9 +79,19 @@ export default function CompletionCode({
         </button>
       </div>
 
+      {submitUrl && (
+        <a
+          href={submitUrl}
+          className="mt-4 inline-block rounded-xl bg-lime-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-lime-700"
+        >
+          Submit to Prolific →
+        </a>
+      )}
+
       <p className="mt-3 text-sm leading-6 text-stone-600">
-        Copy this code and paste it into Prolific to complete your submission.
-        Your payment depends on it, so please do this before closing the page.
+        {submitUrl
+          ? "Use the button to submit on Prolific. If it does not work, copy the code above and paste it into Prolific by hand. Your payment depends on it, so please do this before closing the page."
+          : "Copy this code and paste it into Prolific to complete your submission. Your payment depends on it, so please do this before closing the page."}
       </p>
     </div>
   );
