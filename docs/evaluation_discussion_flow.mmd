@@ -1,0 +1,49 @@
+flowchart LR
+    %% "attempt" counts marks of the current item across every branch; MAX = 2.
+    %% "Prof. / Student" follows "PASS / FAIL": a PASS is discussed with the professor, a FAIL with the student.
+
+    A[TA marks Pass / Fail] --> REV{Correct status already told?}
+
+    %% ===== AFTER THE REVEAL =====
+    REV -->|Yes| RB{Correct status?}
+    RB -->|Yes| RC[Prof. / Student: That's it — thanks]
+    RC --> R[Item resolved]
+    RB -->|No| RD[Prof. / Student: It should be X — re-mark it]
+    RD --> A
+
+    %% ===== EVERY OTHER MARK =====
+    REV -->|No| CH{Correct PASS? — Prof. only}
+    CH -->|Yes, 80#37;| R
+    CH -->|Otherwise| T[Lock pass/fail buttons]
+    T --> U[Prof. / Student asks: Are you sure this is a PASS/FAIL?]
+    U --> V{TA response — LLM classifies}
+
+    V -->|Unclear, 1st time| CL[Prof. / Student: Just to check — are you keeping it as PASS/FAIL?]
+    CL --> V
+    V -->|Unclear, 2nd time| NO
+
+    V -->|Yes| B{Correct status?}
+    B -->|Yes| K[Prof. / Student gives brief affirmation + why the step meets / misses the criterion]
+    K --> R
+
+    B -->|No| AB[Prof. / Student asks: Why does this step meet / miss the criterion?]
+    AB --> AC[TA explains]
+    AC --> AD[Prof. / Student: Consider this: what the criterion checks, pointing at the step]
+    AD --> AE[TA responds]
+    AE --> AT
+
+    V -->|No| NO{Correct status?}
+    NO -->|Yes| M[Prof. / Student asks: What about the call are you unsure about?]
+    NO -->|No| W[Prof. / Student asks: Then what do you think is off, and why?]
+    M --> N[TA responds]
+    W --> N
+    N --> AT
+
+    %% ===== SHARED ATTEMPT CHECK =====
+    AT{Attempt < 2?}
+    AT -->|Yes| Z[Prof. / Student: Take another look and mark it the way you think is right<br/>Unlock buttons]
+    Z --> A
+    AT -->|No| AA[Prof. / Student tells the correct status + explanation<br/>Unlock — TA must re-mark it]
+    AA --> A
+
+    R --> NEXT[Next criterion]
