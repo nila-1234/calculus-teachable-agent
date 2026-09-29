@@ -19,7 +19,9 @@ flowchart LR
     %% EVERY OTHER DROP (right or wrong, always asked)
     %% =========================
 
-    REV -->|No| T[Lock item]
+    REV -->|No| CH{Correct placement?}
+    CH -->|Yes, 80%| R
+    CH -->|Otherwise| T[Lock item]
     T --> U[Professor asks: Are you sure?]
     U --> V{TA response — LLM classifies}
 

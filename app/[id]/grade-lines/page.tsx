@@ -33,9 +33,9 @@ import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
-// Chance that the professor still asks "Are you sure?" about a Pass the TA got right, so
-// questioning doesn't give away that a call is wrong. Otherwise a correct Pass is accepted
-// on the spot. Wrong calls, and every Fail (the student's), are always questioned.
+// Chance that the professor still asks "Are you sure?" about a drop or a Pass the TA got
+// right, so questioning doesn't give away that a call is wrong. Otherwise the correct call
+// is accepted on the spot. Wrong calls, and every Fail (the student's), are always questioned.
 const PROFESSOR_CHALLENGE_RATE = 0.2;
 
 type CommentKind = "placement" | "status";
@@ -466,6 +466,30 @@ function GradeLinesPageContent() {
     dispatchFlow(kind, answerId, criterionId, { type: "DROP", correct });
   };
 
+  // Rolls the professor's challenge on a correct call. When it doesn't fire, the call is
+  // accepted without a word and the discussion is skipped. Once the TA has been told the
+  // answer, the decision tree confirms it instead.
+  const acceptUnchallenged = (
+    kind: CommentKind,
+    answerId: string,
+    criterionId: string,
+    correct: boolean
+  ): boolean => {
+    const { flow } = getFlowThread(kind, answerId, criterionId);
+    if (!correct || flow.kind !== "dragging" || flow.revealed) return false;
+    if (Math.random() < PROFESSOR_CHALLENGE_RATE) return false;
+    logEvent(`grade_lines_${kind}_unchallenged`, scenarioId, {
+      answer_id: answerId,
+      criterion_id: criterionId,
+      attempt: flow.attempt,
+    });
+    updateFlowThread(kind, answerId, criterionId, (thread) => ({
+      ...thread,
+      flow: { kind: "resolved", how: "accepted", attempt: flow.attempt },
+    }));
+    return true;
+  };
+
   // Runs immediately after a criterion is dropped on a step: checks placement only
   // (status isn't chosen yet). In discussion mode every drop starts the placement
   // decision tree; otherwise a misplacement just gets a one-off correction bubble.
@@ -476,6 +500,7 @@ function GradeLinesPageContent() {
     item: StepCriterionFeedback
   ) => {
     if (discussionMode === 2) {
+      if (acceptUnchallenged("placement", answerId, criterionId, item.stepCorrect)) return;
       startFlowTurn("placement", answerId, criterionId, item, item.stepCorrect);
       return;
     }
@@ -497,22 +522,11 @@ function GradeLinesPageContent() {
     if (discussionMode === 2) {
       if (!item.status) return;
       const speaker = statusSpeaker(item.status);
-      const { flow } = getFlowThread("status", answerId, criterionId);
-      const skipChallenge =
-        item.statusCorrect &&
-        speaker === "professor" &&
-        flow.kind === "dragging" &&
-        !flow.revealed &&
-        Math.random() >= PROFESSOR_CHALLENGE_RATE;
-      if (skipChallenge) {
-        updateFlowThread("status", answerId, criterionId, (thread) => ({
-          ...thread,
-          speaker,
-          flow: { kind: "resolved", how: "accepted", attempt: flow.attempt },
-        }));
+      updateFlowThread("status", answerId, criterionId, (thread) => ({ ...thread, speaker }));
+      const correct = item.statusCorrect;
+      if (speaker === "professor" && acceptUnchallenged("status", answerId, criterionId, correct)) {
         return;
       }
-      updateFlowThread("status", answerId, criterionId, (thread) => ({ ...thread, speaker }));
       startFlowTurn("status", answerId, criterionId, item, item.statusCorrect);
       return;
     }
