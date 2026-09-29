@@ -200,6 +200,10 @@ export default function DiscussionPanel({
             <PaperPlaneIcon />
           </button>
         </form>
+        <p className="px-3 pb-2 text-[11px] leading-4 text-stone-400">
+          AI-generated replies may be incorrect. If the conversation goes off track, refresh
+          the page to restart.
+        </p>
       </div>
     </div>
   );
