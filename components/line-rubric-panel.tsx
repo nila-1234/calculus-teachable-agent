@@ -24,14 +24,19 @@ export type GradeComment = {
   pending: boolean;
 };
 
-// One criterion's placement discussion (discussion mode 2), driven by lib/placement-flow.
-// Lives across re-drags, so the transcript and attempt count survive moving the item.
-export type PlacementThread = {
+// One criterion's placement or pass/fail discussion (discussion mode 2), driven by the
+// decision tree in lib/placement-flow (reused as-is for pass/fail, see lib/status-flow).
+// Lives across re-drags and re-marks, so the transcript and attempt count survive them.
+export type FlowThread = {
   flow: PlacementFlow;
   messages: DiscussionMessage[];
   // True while a classify or explain call is in flight.
   pending: boolean;
+  // Who the TA is talking to. Placement is always the professor; pass/fail depends on the mark.
+  speaker: CommentSpeaker;
 };
+
+type FlowKind = "placement" | "status";
 
 const PROFESSOR_NAME = "Prof. Phoenix";
 
@@ -63,6 +68,7 @@ type Phase =
   | "checking"
   | "discuss-placement"
   | "mark"
+  | "discuss-status"
   | "resolve-placement"
   | "resolve-status"
   | "done";
@@ -73,7 +79,7 @@ const PHASE_PILL: Partial<Record<Phase, { text: string; className: string }>> = 
   "discuss-placement": { text: "Answer the professor", className: "bg-amber-100 text-amber-700" },
   mark: { text: "Mark pass or fail", className: "bg-lime-100 text-lime-700" },
   "resolve-placement": { text: "Check step placement", className: "bg-amber-100 text-amber-700" },
-  "resolve-status": { text: "Reply to resolve", className: "bg-amber-100 text-amber-700" },
+  "resolve-status": { text: "Mark it again", className: "bg-amber-100 text-amber-700" },
 };
 
 const DIM = "opacity-40 pointer-events-none";
@@ -109,8 +115,8 @@ export type StepAnswerReviewState = {
 export type StepReviewState = Record<string, StepAnswerReviewState>;
 
 // A thread key is `${criterionId}::placement` or `${criterionId}::status` — placement
-// and status are graded and discussed as two separate, sequential moments on the same
-// criterion, so every comment/discussion map below is keyed by thread, not by criterion.
+// and status are graded and commented on as two separate, sequential moments on the same
+// criterion, so the comment map below is keyed by thread, not by criterion.
 type LineRubricPanelProps = {
   question?: string;
   rubric: RubricCriterion[];
@@ -121,35 +127,21 @@ type LineRubricPanelProps = {
   // Keyed by answerId -> criterionId: true while that criterion's placement or status
   // check is in flight.
   gradingCriteria?: Record<string, Record<string, boolean>>;
-  // Keyed by answerId -> threadKey -> comments, in display order
+  // Mode 1 only: one-off correction bubbles, keyed by answerId -> threadKey, in display order.
   comments?: Record<string, Record<string, GradeComment[]>>;
-  // Discussion-mode follow-up turns, keyed by answerId -> threadKey -> speaker.
-  // The opening comment itself lives in `comments`.
-  discussions?: Record<
-    string,
-    Record<string, Partial<Record<CommentSpeaker, DiscussionMessage[]>>>
-  >;
-  discussionPending?: Record<
-    string,
-    Record<string, Partial<Record<CommentSpeaker, boolean>>>
-  >;
-  // Keyed by answerId -> threadKey: true once the counterpart has conceded the point.
-  resolvedThreads?: Record<string, Record<string, boolean>>;
-  onSendDiscussionMessage?: (
-    answerId: string,
-    threadKey: string,
-    speaker: CommentSpeaker,
-    text: string
-  ) => void;
-  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
-  // "Reply" discussion drawer. Defaults to 2.
+  // 1 = one-off correction bubbles (previous setup), 2 = every drop and every pass/fail
+  // mark is discussed through its decision tree. Defaults to 2.
   discussionMode?: number;
-  // Discussion mode only: the placement decision tree for each criterion, keyed by
-  // answerId -> criterionId, plus the TA's replies into it.
-  placementThreads?: Record<string, Record<string, PlacementThread>>;
+  // Discussion mode only: each criterion's placement and pass/fail decision trees, keyed
+  // by answerId -> criterionId, plus the TA's replies into them.
+  placementThreads?: Record<string, Record<string, FlowThread>>;
   onPlacementReply?: (answerId: string, criterionId: string, text: string) => void;
   // An unlocked item dropped back on the step it's already on — still a fresh answer.
   onPlacementRedrop?: (answerId: string, criterionId: string) => void;
+  statusThreads?: Record<string, Record<string, FlowThread>>;
+  onStatusReply?: (answerId: string, criterionId: string, text: string) => void;
+  // The already-marked status clicked again after a retry — still a fresh answer.
+  onStatusRemark?: (answerId: string, criterionId: string) => void;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every criterion in every answer has been graded.
@@ -165,14 +157,13 @@ export default function LineRubricPanel({
   reviewStates,
   gradingCriteria,
   comments,
-  discussions,
-  discussionPending,
-  resolvedThreads,
-  onSendDiscussionMessage,
   discussionMode = 2,
   placementThreads,
   onPlacementReply,
   onPlacementRedrop,
+  statusThreads,
+  onStatusReply,
+  onStatusRemark,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -180,13 +171,14 @@ export default function LineRubricPanel({
   const [dragCriterionId, setDragCriterionId] = useState<string | null>(null);
   const [dragOverStep, setDragOverStep] = useState<number | null>(null);
   const [dragOverBank, setDragOverBank] = useState(false);
+  // A discussion the TA reopened from its card.
   const [activeDiscussion, setActiveDiscussion] = useState<{
-    key: string;
-    speaker: CommentSpeaker;
+    criterionId: string;
+    kind: FlowKind;
   } | null>(null);
-  // Keyed by `${answerId}::${criterionId}`: how many placement messages the TA had seen
+  // Keyed by `${answerId}::${criterionId}::${kind}`: how many messages the TA had seen
   // when they last closed that discussion. New messages past this reopen it by themselves.
-  const [placementSeen, setPlacementSeen] = useState<Record<string, number>>({});
+  const [flowSeen, setFlowSeen] = useState<Record<string, number>>({});
 
   const currentAnswer = answers[currentIndex];
   const steps = currentAnswer.steps;
@@ -195,39 +187,32 @@ export default function LineRubricPanel({
   const isSubmitted = currentReview?.submitted ?? false;
   const currentGrading = gradingCriteria?.[currentAnswer.id] ?? {};
   const currentComments = comments?.[currentAnswer.id] ?? {};
-  const currentDiscussions = discussions?.[currentAnswer.id] ?? {};
-  const currentDiscussionPending = discussionPending?.[currentAnswer.id] ?? {};
-  const currentResolved = resolvedThreads?.[currentAnswer.id] ?? {};
-  const currentPlacementThreads = placementThreads?.[currentAnswer.id] ?? {};
-
-  const isThreadOpenAndUnresolved = (key: string) =>
-    (currentComments[key]?.length ?? 0) > 0 && !(currentResolved[key] ?? false);
-
-  // A challenge on an already-correct call can only be cleared through discussion — if
-  // discussion isn't available in this mode, it can't block progress, since there's
-  // nothing to fix and no way to resolve it.
-  const canDiscuss = discussionMode === 2;
-
-  // One phase (placement or status) is settled — and only then does it lock — once it's
-  // actually right AND, if the professor or student challenged it anyway, that challenge
-  // has been resolved. Being right isn't enough on its own to wave away an open challenge.
-  // Being wrong is never settled by discussion alone — conceding in chat isn't the same
-  // as fixing the call, so a mistake only clears once the TA actually redoes it (which
-  // re-checks it, and re-checking a genuinely fixed call comes back correct).
-  const isPhaseSettled = (correct: boolean, key: string): boolean =>
-    correct ? !canDiscuss || !isThreadOpenAndUnresolved(key) : false;
-
-  // In discussion mode, placement is settled only by the decision tree reaching the end
-  // (and its closing line having arrived) — every drop is questioned, right or wrong.
-  const isPlacementSettled = (criterionId: string, feedback: StepCriterionFeedback): boolean => {
-    if (!canDiscuss) return feedback.stepCorrect;
-    const thread = currentPlacementThreads[criterionId];
-    return thread?.flow.kind === "resolved" && !thread.pending;
+  const currentFlowThreads: Record<FlowKind, Record<string, FlowThread>> = {
+    placement: placementThreads?.[currentAnswer.id] ?? {},
+    status: statusThreads?.[currentAnswer.id] ?? {},
   };
 
-  // The item stays put while the TA is answering, and once its placement is final.
-  const isPlacementLocked = (criterionId: string): boolean =>
-    canDiscuss && (currentPlacementThreads[criterionId]?.flow.kind ?? "dragging") !== "dragging";
+  const canDiscuss = discussionMode === 2;
+
+  // In discussion mode, a call (placement, then pass/fail) is settled only by its decision
+  // tree reaching the end — and that closing line having arrived — since every drop and
+  // every mark is questioned, right or wrong. Otherwise it's settled once it's right: a
+  // wrong call only clears when the TA redoes it and the re-check comes back correct.
+  const isFlowSettled = (kind: FlowKind, criterionId: string, correct: boolean): boolean => {
+    if (!canDiscuss) return correct;
+    const thread = currentFlowThreads[kind][criterionId];
+    return thread?.flow.kind === "resolved" && !thread.pending;
+  };
+  const isPlacementSettled = (criterionId: string, feedback: StepCriterionFeedback) =>
+    isFlowSettled("placement", criterionId, feedback.stepCorrect);
+  const isStatusSettled = (criterionId: string, feedback: StepCriterionFeedback) =>
+    feedback.status != null && isFlowSettled("status", criterionId, feedback.statusCorrect);
+
+  // The item stays put (or the call stays marked) while the TA is answering, and once
+  // it's final.
+  const isFlowLocked = (kind: FlowKind, criterionId: string): boolean =>
+    canDiscuss && (currentFlowThreads[kind][criterionId]?.flow.kind ?? "dragging") !== "dragging";
+  const isPlacementLocked = (criterionId: string) => isFlowLocked("placement", criterionId);
 
   // A criterion is "done" — and only then does the TA get to touch a different one —
   // once its placement is settled and, in turn, its pass/fail call is settled too.
@@ -235,9 +220,7 @@ export default function LineRubricPanel({
     const feedback = currentReview?.feedback?.[criterionId];
     if (!feedback) return false;
     if (!isPlacementSettled(criterionId, feedback)) return false;
-    if (feedback.status == null) return false;
-    if (!isPhaseSettled(feedback.statusCorrect, `${criterionId}::status`)) return false;
-    return true;
+    return isStatusSettled(criterionId, feedback);
   };
 
   // Exactly one criterion is ever actionable, chosen by rubric order — everything before
@@ -263,7 +246,7 @@ export default function LineRubricPanel({
         ? "checking"
         : !isPlacementSettled(activeCriterionId, activeFeedback)
           ? canDiscuss
-            ? currentPlacementThreads[activeCriterionId]?.flow.kind === "dragging"
+            ? currentFlowThreads.placement[activeCriterionId]?.flow.kind === "dragging"
               ? "resolve-placement"
               : "discuss-placement"
             : isThreadPending(`${activeCriterionId}::placement`)
@@ -271,52 +254,68 @@ export default function LineRubricPanel({
               : "resolve-placement"
           : activeFeedback.status == null
             ? "mark"
-            : !isPhaseSettled(activeFeedback.statusCorrect, `${activeCriterionId}::status`)
-              ? isThreadPending(`${activeCriterionId}::status`)
-                ? "checking"
-                : "resolve-status"
+            : !isStatusSettled(activeCriterionId, activeFeedback)
+              ? canDiscuss
+                ? currentFlowThreads.status[activeCriterionId]?.flow.kind === "dragging"
+                  ? "resolve-status"
+                  : "discuss-status"
+                : isThreadPending(`${activeCriterionId}::status`)
+                  ? "checking"
+                  : "resolve-status"
               : "done";
 
-  // The placement discussion opens by itself while the TA owes an answer, and whenever the
-  // professor has said something the TA hasn't seen yet (e.g. the closing line). It can
-  // also be reopened from the card.
-  const placementSeenKey = (criterionId: string) => `${currentAnswer.id}::${criterionId}`;
-  const activePlacementThread = activeCriterionId
-    ? currentPlacementThreads[activeCriterionId]
+  const speakerName = (speaker: CommentSpeaker) =>
+    speaker === "professor" ? PROFESSOR_NAME : currentAnswer.label;
+
+  // Pass/fail is talked through with whoever that mark concerns, so the pill names them.
+  const activeStatusSpeaker = activeCriterionId
+    ? currentFlowThreads.status[activeCriterionId]?.speaker
     : undefined;
-  const autoOpenPlacement =
-    canDiscuss &&
-    activePlacementThread != null &&
-    (activePlacementThread.flow.kind === "chat" ||
-      activePlacementThread.messages.length >
-        (placementSeen[placementSeenKey(activeCriterionId!)] ?? 0));
-  const openPlacementCriterionId = activeDiscussion?.key.endsWith("::placement")
-    ? activeDiscussion.key.split("::")[0]
-    : autoOpenPlacement
-      ? activeCriterionId
-      : null;
-  const openPlacementThread = openPlacementCriterionId
-    ? currentPlacementThreads[openPlacementCriterionId]
+  const phasePill =
+    phase === "discuss-status"
+      ? {
+          text: `Answer ${activeStatusSpeaker === "student" ? currentAnswer.label : "the professor"}`,
+          className: "bg-amber-100 text-amber-700",
+        }
+      : PHASE_PILL[phase];
+
+  // A discussion opens by itself while the TA owes an answer, and whenever the other side
+  // has said something the TA hasn't seen yet (e.g. the closing line). It can also be
+  // reopened from the card. Pass/fail comes after placement, so it takes precedence.
+  const flowSeenKey = (criterionId: string, kind: FlowKind) =>
+    `${currentAnswer.id}::${criterionId}::${kind}`;
+  const needsAttention = (kind: FlowKind, criterionId: string) => {
+    const thread = currentFlowThreads[kind][criterionId];
+    return (
+      thread != null &&
+      (thread.flow.kind === "chat" ||
+        thread.messages.length > (flowSeen[flowSeenKey(criterionId, kind)] ?? 0))
+    );
+  };
+  // Not just the active criterion: resolving a call completes it and moves on, but its
+  // closing line should stay up until the TA closes it themselves.
+  const autoOpen: { criterionId: string; kind: FlowKind } | null = !canDiscuss
+    ? null
+    : rubric
+        .flatMap((criterion) =>
+          (["status", "placement"] as const).map((kind) => ({ criterionId: criterion.id, kind }))
+        )
+        .find(({ criterionId, kind }) => needsAttention(kind, criterionId)) ?? null;
+  const openDiscussion = activeDiscussion ?? autoOpen;
+  const openThread = openDiscussion
+    ? currentFlowThreads[openDiscussion.kind][openDiscussion.criterionId]
     : undefined;
 
-  const closePlacementDiscussion = () => {
-    if (openPlacementCriterionId) {
-      setPlacementSeen((prev) => ({
+  const closeDiscussion = () => {
+    if (openDiscussion) {
+      setFlowSeen((prev) => ({
         ...prev,
-        [placementSeenKey(openPlacementCriterionId)]: openPlacementThread?.messages.length ?? 0,
+        [flowSeenKey(openDiscussion.criterionId, openDiscussion.kind)]:
+          openThread?.messages.length ?? 0,
       }));
     }
     setActiveDiscussion(null);
   };
-
-  const activeDiscussionComment = activeDiscussion
-    ? currentComments[activeDiscussion.key]?.find((c) => c.speaker === activeDiscussion.speaker)
-    : undefined;
-  const activeDiscussionCriterion = activeDiscussion
-    ? rubric.find((c) => c.id === activeDiscussion.key.split("::")[0])
-    : undefined;
-  const activeCounterpartLabel =
-    activeDiscussion?.speaker === "professor" ? PROFESSOR_NAME : currentAnswer.label;
 
   const gradedCount = rubric.filter(
     (criterion) => currentReview?.feedback?.[criterion.id]?.status != null
@@ -342,7 +341,7 @@ export default function LineRubricPanel({
 
     // Dropping an unlocked item back where it already sits changes nothing in placements,
     // but after a retry it's still a new answer, so it's checked again as a drop.
-    const flow = currentPlacementThreads[criterionId]?.flow;
+    const flow = currentFlowThreads.placement[criterionId]?.flow;
     if (existing && !moved) {
       if (canDiscuss && flow?.kind === "dragging" && flow.attempt > 1) {
         onPlacementRedrop?.(currentAnswer.id, criterionId);
@@ -369,6 +368,16 @@ export default function LineRubricPanel({
   const setStatus = (criterionId: string, status: "pass" | "fail") => {
     const existing = currentPlacements[criterionId];
     if (!existing) return;
+
+    // In discussion mode a mark is never undone, only answered again: clicking the same
+    // one after a retry means "I'm keeping it", and is checked again as a new mark.
+    if (canDiscuss && existing.status === status) {
+      const flow = currentFlowThreads.status[criterionId]?.flow;
+      if (flow?.kind === "dragging" && flow.attempt > 1) {
+        onStatusRemark?.(currentAnswer.id, criterionId);
+      }
+      return;
+    }
 
     updatePlacements({
       ...currentPlacements,
@@ -438,11 +447,11 @@ export default function LineRubricPanel({
           <div className="mb-4 flex items-center justify-between gap-2">
             <h3 className="text-base font-bold text-stone-800">{currentAnswer.label}</h3>
             <div className="flex items-center gap-2">
-              {PHASE_PILL[phase] ? (
+              {phasePill ? (
                 <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${PHASE_PILL[phase]!.className}`}
+                  className={`rounded-full px-2.5 py-1 text-xs font-semibold ${phasePill.className}`}
                 >
-                  {PHASE_PILL[phase]!.text}
+                  {phasePill.text}
                 </span>
               ) : null}
               <span
@@ -523,35 +532,43 @@ export default function LineRubricPanel({
                           // `status` field is only non-null once the status phase has
                           // also run.
                           const placementChecked = criterionFeedback != null;
-                          const fullyGraded =
-                            placementChecked && criterionFeedback.status != null;
                           const placementKey = `${criterion.id}::placement`;
                           const statusKey = `${criterion.id}::status`;
-                          // A card only locks into its green/red verdict styling once
-                          // both the placement and status calls are settled — graded
-                          // alone isn't enough while a challenge on either is still open.
+                          // A card only shows its green/red verdict once both the placement
+                          // and status calls are settled — in discussion mode, showing it
+                          // any earlier would give away the answer the discussion is asking for.
                           const isResolved =
-                            fullyGraded &&
-                            isPlacementSettled(criterion.id, criterionFeedback!) &&
-                            isPhaseSettled(criterionFeedback!.statusCorrect, statusKey);
+                            placementChecked &&
+                            isPlacementSettled(criterion.id, criterionFeedback) &&
+                            isStatusSettled(criterion.id, criterionFeedback);
+                          const fullyGraded =
+                            placementChecked &&
+                            criterionFeedback.status != null &&
+                            (!canDiscuss || isResolved);
                           // Only the active criterion is ever interactive — every other
                           // placed card, by construction, is already done.
                           const isActive = criterion.id === activeCriterionId;
                           const lockedByOther = !isActive;
                           const placementLocked = isPlacementLocked(criterion.id);
-                          const placementThread = currentPlacementThreads[criterion.id];
-                          const lastProfessorLine = [...(placementThread?.messages ?? [])]
-                            .reverse()
-                            .find((message) => message.role === "professor");
+                          // The latest thing each side of this card's discussions said, shown
+                          // on the card with a way back into the conversation.
+                          const flowBubbles = (["placement", "status"] as const).flatMap((kind) => {
+                            const thread = currentFlowThreads[kind][criterion.id];
+                            const last = [...(thread?.messages ?? [])]
+                              .reverse()
+                              .find((message) => message.role !== "user");
+                            return canDiscuss && thread && last
+                              ? [{ kind, speaker: thread.speaker, text: last.text }]
+                              : [];
+                          });
                           // The mark block shows for the active card once its placement is
-                          // settled and it hasn't been marked yet — or, if the pass/fail call
-                          // itself was actually wrong, so the TA can redo it. A wrong call
-                          // can only be fixed by re-marking, never by conceding in discussion
-                          // alone, and a correct call under an open challenge doesn't get the
-                          // buttons back since there's nothing to redo.
-                          const isStatusMistake =
-                            phase === "resolve-status" && criterionFeedback?.statusCorrect === false;
-                          const showMarkBlock = isActive && (phase === "mark" || isStatusMistake);
+                          // settled and it hasn't been marked yet, or when the TA is asked to
+                          // mark it again: after a retry in discussion mode, or after a wrong
+                          // call otherwise.
+                          const isRemark = phase === "resolve-status";
+                          const showMarkBlock = isActive && (phase === "mark" || isRemark);
+                          // Only outside discussion mode does being asked again mean it was wrong.
+                          const isStatusMistake = isRemark && !canDiscuss;
 
                           return (
                             <div
@@ -612,14 +629,21 @@ export default function LineRubricPanel({
                                   <div className="flex items-center gap-1.5 text-xs text-stone-600">
                                     {isStatusMistake ? (
                                       <Cross2Icon className="shrink-0 text-red-700" />
-                                    ) : (
+                                    ) : isRemark ? null : (
                                       <CheckIcon className="shrink-0 text-green-700" />
                                     )}
                                     <span>
                                       <span className="font-semibold">
-                                        {isStatusMistake ? "That call was wrong." : "Placement confirmed."}
+                                        {isStatusMistake
+                                          ? "That call was wrong."
+                                          : isRemark
+                                            ? "Take another look."
+                                            : "Placement confirmed."}
                                       </span>{" "}
                                       Does this step meet the criterion?
+                                      {isRemark && canDiscuss
+                                        ? " Click your current mark again to keep it."
+                                        : ""}
                                     </span>
                                   </div>
                                   <div className="grid grid-cols-2 gap-2">
@@ -627,7 +651,7 @@ export default function LineRubricPanel({
                                       type="button"
                                       disabled={isGrading}
                                       onClick={() => setStatus(criterion.id, "pass")}
-                                      className="h-10 rounded-lg border border-green-300 text-xs font-semibold text-green-700 transition-colors hover:bg-green-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                      className={`h-10 rounded-lg border border-green-300 text-xs font-semibold transition-colors hover:bg-green-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${placement?.status === "pass" ? "bg-green-600 text-white" : "text-green-700"}`}
                                     >
                                       {currentAnswer.label} Passes this Criterion
                                     </button>
@@ -635,7 +659,7 @@ export default function LineRubricPanel({
                                       type="button"
                                       disabled={isGrading}
                                       onClick={() => setStatus(criterion.id, "fail")}
-                                      className="h-10 rounded-lg border border-red-300 text-xs font-semibold text-red-700 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                                      className={`h-10 rounded-lg border border-red-300 text-xs font-semibold transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${placement?.status === "fail" ? "bg-red-600 text-white" : "text-red-700"}`}
                                     >
                                       {currentAnswer.label} Fails this Criterion
                                     </button>
@@ -643,29 +667,27 @@ export default function LineRubricPanel({
                                 </div>
                               ) : null}
 
-                              {canDiscuss && lastProfessorLine ? (
+                              {flowBubbles.map((bubble) => (
                                 <div
-                                  className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES.professor.bubble}`}
+                                  key={bubble.kind}
+                                  className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES[bubble.speaker].bubble}`}
                                 >
                                   <span
-                                    title={PROFESSOR_NAME}
-                                    aria-label={PROFESSOR_NAME}
-                                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${SPEAKER_STYLES.professor.avatar}`}
+                                    title={speakerName(bubble.speaker)}
+                                    aria-label={speakerName(bubble.speaker)}
+                                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${SPEAKER_STYLES[bubble.speaker].avatar}`}
                                   >
-                                    {SPEAKER_STYLES.professor.initial}
+                                    {SPEAKER_STYLES[bubble.speaker].initial}
                                   </span>
                                   <div className="flex-1">
-                                    <span className="font-semibold">{PROFESSOR_NAME}: </span>
-                                    <MathDisplay
-                                      text={lastProfessorLine.text}
-                                      className="inline text-xs"
-                                    />
+                                    <span className="font-semibold">{speakerName(bubble.speaker)}: </span>
+                                    <MathDisplay text={bubble.text} className="inline text-xs" />
                                     <button
                                       type="button"
                                       onClick={() =>
                                         setActiveDiscussion({
-                                          key: placementKey,
-                                          speaker: "professor",
+                                          criterionId: criterion.id,
+                                          kind: bubble.kind,
                                         })
                                       }
                                       className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
@@ -675,17 +697,14 @@ export default function LineRubricPanel({
                                     </button>
                                   </div>
                                 </div>
-                              ) : null}
+                              ))}
 
                               {[placementKey, statusKey].flatMap((key) =>
                                 (currentComments[key] ?? [])
                                   .filter((comment) => comment.pending || comment.text)
                                   .map((comment) => {
                                     const style = SPEAKER_STYLES[comment.speaker];
-                                    const name =
-                                      comment.speaker === "professor"
-                                        ? PROFESSOR_NAME
-                                        : currentAnswer.label;
+                                    const name = speakerName(comment.speaker);
 
                                     return (
                                       <div
@@ -714,25 +733,6 @@ export default function LineRubricPanel({
                                               text={comment.text}
                                               className="inline text-xs"
                                             />
-                                            {discussionMode === 2 ? (
-                                              <button
-                                                type="button"
-                                                onClick={() =>
-                                                  setActiveDiscussion({
-                                                    key,
-                                                    speaker: comment.speaker,
-                                                  })
-                                                }
-                                                className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
-                                              >
-                                                Respond
-                                                {(currentDiscussions[key]?.[comment.speaker]
-                                                  ?.length ?? 0) > 0
-                                                  ? ` (${currentDiscussions[key]?.[comment.speaker]?.length})`
-                                                  : ""}
-                                                <ArrowRightIcon width={13} height={13} />
-                                              </button>
-                                            ) : null}
                                           </div>
                                         )}
                                       </div>
@@ -845,53 +845,43 @@ export default function LineRubricPanel({
         )}
       </div>
 
-      {canDiscuss && openPlacementCriterionId && openPlacementThread ? (
+      {canDiscuss && openDiscussion && openThread ? (
         <DiscussionPanel
           open
-          onClose={closePlacementDiscussion}
-          counterpartLabel={PROFESSOR_NAME}
+          onClose={closeDiscussion}
+          counterpartLabel={speakerName(openThread.speaker)}
           criterionLabel={
-            rubric.find((c) => c.id === openPlacementCriterionId)?.label ?? "this criterion"
+            rubric.find((c) => c.id === openDiscussion.criterionId)?.label ?? "this criterion"
           }
-          messages={openPlacementThread.messages}
-          pending={openPlacementThread.pending}
-          closable={openPlacementThread.flow.kind !== "chat"}
+          messages={openThread.messages}
+          pending={openThread.pending}
+          closable={openThread.flow.kind !== "chat"}
           quickReplies={
-            openPlacementThread.flow.kind === "chat" &&
-            openPlacementThread.flow.node === "askSure"
+            openThread.flow.kind === "chat" && openThread.flow.node === "askSure"
               ? PLACEMENT_QUICK_REPLIES.map((reply) => reply.text)
               : []
           }
           inputDisabledReason={
-            openPlacementThread.flow.kind === "dragging"
-              ? "Close this and drag the item to try again"
-              : openPlacementThread.flow.kind === "resolved"
-                ? "Placement is settled"
+            openThread.flow.kind === "dragging"
+              ? openDiscussion.kind === "status"
+                ? "Close this and mark it again to try again"
+                : "Close this and drag the item to try again"
+              : openThread.flow.kind === "resolved"
+                ? openDiscussion.kind === "status"
+                  ? "This call is settled"
+                  : "Placement is settled"
                 : undefined
           }
-          resolved={openPlacementThread.flow.kind === "resolved"}
-          resolvedNote="Placement confirmed. Close this to mark pass or fail."
-          onSend={(text) =>
-            onPlacementReply?.(currentAnswer.id, openPlacementCriterionId, text)
+          resolved={openThread.flow.kind === "resolved"}
+          resolvedNote={
+            openDiscussion.kind === "status"
+              ? "Call confirmed. Close this to move on to the next criterion."
+              : "Placement confirmed. Close this to mark pass or fail."
           }
-        />
-      ) : discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
-        <DiscussionPanel
-          open
-          onClose={() => setActiveDiscussion(null)}
-          counterpartLabel={activeCounterpartLabel}
-          criterionLabel={activeDiscussionCriterion?.label ?? "this criterion"}
-          openingComment={activeDiscussionComment.text}
-          messages={currentDiscussions[activeDiscussion.key]?.[activeDiscussion.speaker] ?? []}
-          pending={
-            currentDiscussionPending[activeDiscussion.key]?.[activeDiscussion.speaker] ?? false
-          }
-          resolved={currentResolved[activeDiscussion.key] ?? false}
           onSend={(text) =>
-            onSendDiscussionMessage?.(
+            (openDiscussion.kind === "status" ? onStatusReply : onPlacementReply)?.(
               currentAnswer.id,
-              activeDiscussion.key,
-              activeDiscussion.speaker,
+              openDiscussion.criterionId,
               text
             )
           }

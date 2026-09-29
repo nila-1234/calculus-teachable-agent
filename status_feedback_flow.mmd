@@ -1,0 +1,47 @@
+flowchart LR
+    %% "attempt" counts marks of the current item across every branch; MAX = 2.
+    %% Speaker: marked PASS -> professor, marked FAIL -> student.
+
+    A[TA marks Pass / Fail] --> REV{Correct status already told?}
+
+    %% ===== AFTER THE REVEAL =====
+    REV -->|Yes| RB{Correct status?}
+    RB -->|Yes| RC[Speaker: That's it — thanks]
+    RC --> R[Item resolved]
+    RB -->|No| RD[Speaker: It should be X — re-mark it]
+    RD --> A
+
+    %% ===== EVERY OTHER MARK =====
+    REV -->|No| T[Lock pass/fail buttons]
+    T --> U[Speaker asks: Are you sure this is a PASS/FAIL?]
+    U --> V{TA response — LLM classifies}
+
+    V -->|Unclear, 1st time| CL[Speaker: Just to check — are you keeping it as PASS/FAIL?]
+    CL --> V
+    V -->|Unclear, 2nd time| NO
+
+    V -->|Yes| B{Correct status?}
+    B -->|Yes| K[Speaker gives brief affirmation + why the step meets / misses the criterion]
+    K --> R
+
+    B -->|No| AB[Speaker asks: Why does this step meet / miss the criterion?]
+    AB --> AC[TA explains]
+    AC --> AD[Speaker: Consider this: what the criterion checks, pointing at the step]
+    AD --> AE[TA responds]
+    AE --> AT
+
+    V -->|No| NO{Correct status?}
+    NO -->|Yes| M[Speaker asks: What about the call are you unsure about?]
+    NO -->|No| W[Speaker asks: Then what do you think is off, and why?]
+    M --> N[TA responds]
+    W --> N
+    N --> AT
+
+    %% ===== SHARED ATTEMPT CHECK =====
+    AT{Attempt < 2?}
+    AT -->|Yes| Z[Speaker: Take another look and mark it the way you think is right<br/>Unlock buttons]
+    Z --> A
+    AT -->|No| AA[Speaker tells the correct status + explanation<br/>Unlock — TA must re-mark it]
+    AA --> A
+
+    R --> NEXT[Next criterion]

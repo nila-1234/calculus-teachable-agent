@@ -20,7 +20,6 @@ const AI_ROUTES = [
   "apply-rubric-feedback",
   "grade-chat",
   "grade-lines-comment",
-  "grade-lines-discussion",
   "grade-lines-feedback",
   "question-feedback",
 ];

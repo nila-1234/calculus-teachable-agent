@@ -25,11 +25,3 @@ export function pickStatusSpeaker(item: StatusItem): CommentSpeaker | null {
   const tooHarsh = item.status === "fail" && item.expectedStatus === "pass";
   return tooHarsh ? "student" : "professor";
 }
-
-// For a criterion the TA actually graded correctly, we sometimes have someone voice
-// doubt anyway, so the TA has to defend (not just fix) their call. A student would only
-// ever second-guess being marked Fail — they'd never invite doubt on a Pass — so a
-// professor is the one who double-checks a Pass for rigor instead.
-export function pickChallengeSpeaker(status: "pass" | "fail" | null): CommentSpeaker {
-  return status === "fail" ? "student" : "professor";
-}
