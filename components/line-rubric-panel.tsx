@@ -593,7 +593,7 @@ export default function LineRubricPanel({
                                         : "bg-red-100 text-red-700"
                                       }`}
                                   >
-                                    AI Student {placement?.status === "fail" ? "Fail" : "Pass"}
+                                    {currentAnswer.label} {placement?.status === "fail" ? "Fail" : "Pass"}
                                   </span>
                                 ) : null}
                                 <button
@@ -629,7 +629,7 @@ export default function LineRubricPanel({
                                       onClick={() => setStatus(criterion.id, "pass")}
                                       className="h-10 rounded-lg border border-green-300 text-xs font-semibold text-green-700 transition-colors hover:bg-green-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                      AI Student Pass
+                                      {currentAnswer.label} Passes this Criterion
                                     </button>
                                     <button
                                       type="button"
@@ -637,7 +637,7 @@ export default function LineRubricPanel({
                                       onClick={() => setStatus(criterion.id, "fail")}
                                       className="h-10 rounded-lg border border-red-300 text-xs font-semibold text-red-700 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                     >
-                                      AI Student Fail
+                                      {currentAnswer.label} Fails this Criterion
                                     </button>
                                   </div>
                                 </div>
