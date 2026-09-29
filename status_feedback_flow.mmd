@@ -12,7 +12,9 @@ flowchart LR
     RD --> A
 
     %% ===== EVERY OTHER MARK =====
-    REV -->|No| T[Lock pass/fail buttons]
+    REV -->|No| CH{Correct PASS?}
+    CH -->|Yes, 80%| R
+    CH -->|Otherwise| T[Lock pass/fail buttons]
     T --> U[Speaker asks: Are you sure this is a PASS/FAIL?]
     U --> V{TA response — LLM classifies}
 

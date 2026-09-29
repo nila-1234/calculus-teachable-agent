@@ -33,6 +33,11 @@ import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
+// Chance that the professor still asks "Are you sure?" about a Pass the TA got right, so
+// questioning doesn't give away that a call is wrong. Otherwise a correct Pass is accepted
+// on the spot. Wrong calls, and every Fail (the student's), are always questioned.
+const PROFESSOR_CHALLENGE_RATE = 0.2;
+
 type CommentKind = "placement" | "status";
 
 // Keyed by answerId -> criterionId.
@@ -492,6 +497,21 @@ function GradeLinesPageContent() {
     if (discussionMode === 2) {
       if (!item.status) return;
       const speaker = statusSpeaker(item.status);
+      const { flow } = getFlowThread("status", answerId, criterionId);
+      const skipChallenge =
+        item.statusCorrect &&
+        speaker === "professor" &&
+        flow.kind === "dragging" &&
+        !flow.revealed &&
+        Math.random() >= PROFESSOR_CHALLENGE_RATE;
+      if (skipChallenge) {
+        updateFlowThread("status", answerId, criterionId, (thread) => ({
+          ...thread,
+          speaker,
+          flow: { kind: "resolved", how: "accepted", attempt: flow.attempt },
+        }));
+        return;
+      }
       updateFlowThread("status", answerId, criterionId, (thread) => ({ ...thread, speaker }));
       startFlowTurn("status", answerId, criterionId, item, item.statusCorrect);
       return;
