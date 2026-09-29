@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
   DiscussionMessage,
   GradeComment,
+  PlacementThread,
   StepPlacement,
   StepPlacementsState,
   StepCriterionFeedback,
@@ -15,10 +16,18 @@ import LineRubricPanel, {
 import {
   CommentSpeaker,
   pickChallengeSpeaker,
-  pickPlacementChallengeSpeaker,
   pickPlacementSpeaker,
   pickStatusSpeaker,
 } from "@/lib/grading-voice";
+import {
+  INITIAL_PLACEMENT_FLOW,
+  PlacementEvent,
+  PlacementExplainSlot,
+  ReplyLabel,
+  placementLine,
+  quickReplyLabel,
+  transitionPlacement,
+} from "@/lib/placement-flow";
 import { getScenario } from "@/lib/scenarios/registry";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 import AppHeader from "@/components/app-header";
@@ -27,10 +36,11 @@ import StepIntro from "@/components/step-intro";
 import { parseScenarioId } from "@/lib/scenarios/utils";
 import { logEvent } from "@/lib/logger";
 
-// Chance that a correctly-graded criterion still gets challenged in discussion, so the
-// TA sometimes has to defend a right call instead of only ever fixing wrong ones. Split
-// by persona since the professor (rigor-checking a Pass, or a placement) and the student
-// (second-guessing their own Fail) shouldn't necessarily challenge equally often.
+// Chance that a correctly-marked pass/fail call still gets challenged in discussion, so
+// the TA sometimes has to defend a right call instead of only ever fixing wrong ones. Split
+// by persona since the professor (rigor-checking a Pass) and the student (second-guessing
+// their own Fail) shouldn't necessarily challenge equally often. Placement doesn't use
+// these: in discussion mode every drop is questioned (see lib/placement-flow.ts).
 const PROFESSOR_CHALLENGE_RATE = 1;
 const STUDENT_CHALLENGE_RATE = 1;
 
@@ -100,6 +110,15 @@ function GradeLinesPageContent() {
   // one for its criterion before touching state, so a stale reply can't clobber a fresher
   // result (or get the criterion mistakenly stuck as ungraded/undraggable).
   const gradeGenerationRef = useRef<Record<string, number>>({});
+  // Keyed by answerId -> criterionId. Mirrored in a ref so the async placement dispatcher
+  // always transitions from the latest flow state, not a stale render's.
+  const [placementThreads, setPlacementThreads] = useState<
+    Record<string, Record<string, PlacementThread>>
+  >({});
+  const placementThreadsRef = useRef<Record<string, Record<string, PlacementThread>>>({});
+  // The grading result of each criterion's latest drop, keyed by answerId -> criterionId —
+  // the placement discussion's lines and explanations are about that drop.
+  const placementItemsRef = useRef<Record<string, Record<string, StepCriterionFeedback>>>({});
 
   // Patches one speaker's bubble on a thread, leaving any other speaker's bubble alone.
   const patchComment = (
@@ -270,22 +289,182 @@ function GradeLinesPageContent() {
     );
   };
 
+  const getPlacementThread = (answerId: string, criterionId: string): PlacementThread =>
+    placementThreadsRef.current[answerId]?.[criterionId] ?? {
+      flow: INITIAL_PLACEMENT_FLOW,
+      messages: [],
+      pending: false,
+    };
+
+  const updatePlacementThread = (
+    answerId: string,
+    criterionId: string,
+    update: (thread: PlacementThread) => PlacementThread
+  ) => {
+    const next = {
+      ...placementThreadsRef.current,
+      [answerId]: {
+        ...placementThreadsRef.current[answerId],
+        [criterionId]: update(getPlacementThread(answerId, criterionId)),
+      },
+    };
+    placementThreadsRef.current = next;
+    setPlacementThreads(next);
+  };
+
+  const appendPlacementMessage = (
+    answerId: string,
+    criterionId: string,
+    role: DiscussionMessage["role"],
+    text: string
+  ) => {
+    updatePlacementThread(answerId, criterionId, (thread) => ({
+      ...thread,
+      messages: [
+        ...thread.messages,
+        { id: `${role}-${Date.now()}-${thread.messages.length}`, role, text },
+      ],
+    }));
+  };
+
+  const fetchPlacementExplain = async (
+    answer: FinalAiAnswer,
+    item: StepCriterionFeedback,
+    slot: PlacementExplainSlot,
+    taMessage: string | undefined
+  ): Promise<string> => {
+    try {
+      const res = await fetch("/api/placement-explain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slot,
+          answerTitle: answer.label,
+          answerText: answer.steps.join("\n\n"),
+          question,
+          criterionLabel: item.criterion,
+          placedStep: item.placedStep,
+          stepText: item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "",
+          expectedStep: item.expectedStep,
+          expectedStepText: answer.steps[item.expectedStep - 1] ?? "",
+          feedback: item.feedback,
+          correct: item.stepCorrect,
+          taMessage,
+        }),
+      });
+      const data = await res.json();
+      return data.text ?? "";
+    } catch {
+      return "";
+    }
+  };
+
+  const classifyPlacementReply = async (questionText: string, reply: string) => {
+    try {
+      const res = await fetch("/api/placement-classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: questionText, reply }),
+      });
+      const data = await res.json();
+      return (data.label as ReplyLabel) ?? "unclear";
+    } catch {
+      return "unclear";
+    }
+  };
+
+  // Advances one criterion's placement decision tree and runs the resulting effects in
+  // order. Which branch is taken is decided entirely by transitionPlacement.
+  const dispatchPlacement = async (
+    answerId: string,
+    criterionId: string,
+    event: PlacementEvent,
+    taMessage?: string
+  ) => {
+    const answer = FINAL_AI_ANSWERS.find((entry) => entry.id === answerId);
+    const item = placementItemsRef.current[answerId]?.[criterionId];
+    if (!answer || !item) return;
+
+    const from = getPlacementThread(answerId, criterionId).flow;
+    const { next, effects } = transitionPlacement(from, event);
+
+    logEvent("grade_lines_placement_transition", scenarioId, {
+      answer_id: answerId,
+      criterion_id: criterionId,
+      from,
+      event,
+      to: next,
+    });
+
+    updatePlacementThread(answerId, criterionId, (thread) => ({
+      ...thread,
+      flow: next,
+      pending: true,
+    }));
+
+    for (const effect of effects) {
+      if (effect.type === "say") {
+        appendPlacementMessage(
+          answerId,
+          criterionId,
+          "professor",
+          placementLine(effect.line, {
+            criterionLabel: item.criterion,
+            placedStep: item.placedStep,
+            expectedStep: item.expectedStep,
+          })
+        );
+      } else {
+        const text = await fetchPlacementExplain(answer, item, effect.slot, taMessage);
+        if (text) appendPlacementMessage(answerId, criterionId, "professor", text);
+      }
+    }
+
+    updatePlacementThread(answerId, criterionId, (thread) => ({ ...thread, pending: false }));
+  };
+
+  const handlePlacementReply = async (answerId: string, criterionId: string, text: string) => {
+    const thread = getPlacementThread(answerId, criterionId);
+    if (thread.flow.kind !== "chat" || thread.pending) return;
+
+    const lastQuestion =
+      [...thread.messages].reverse().find((message) => message.role === "professor")?.text ?? "";
+    appendPlacementMessage(answerId, criterionId, "user", text);
+
+    // Only "Are you sure?" branches on what was said; the other questions move on whatever
+    // the answer, so they skip classification entirely.
+    let label: ReplyLabel | null = null;
+    if (thread.flow.node === "askSure") {
+      label = quickReplyLabel(text);
+      if (!label) {
+        updatePlacementThread(answerId, criterionId, (current) => ({ ...current, pending: true }));
+        label = await classifyPlacementReply(lastQuestion, text);
+      }
+    }
+
+    await dispatchPlacement(answerId, criterionId, { type: "REPLY", label }, text);
+  };
+
   // Runs immediately after a criterion is dropped on a step: checks placement only
-  // (status isn't chosen yet), and either corrects a misplacement or occasionally
-  // challenges a correct one.
+  // (status isn't chosen yet). In discussion mode every drop starts the placement
+  // decision tree; otherwise a misplacement just gets a one-off correction bubble.
   const handlePlacementResult = (
     answerId: string,
     answer: FinalAiAnswer,
     criterionId: string,
     item: StepCriterionFeedback
   ) => {
-    const needsCorrection = !item.stepCorrect;
-    // Placement challenges are always raised by the professor (see pickPlacementChallengeSpeaker).
-    const challenge = !needsCorrection && Math.random() < PROFESSOR_CHALLENGE_RATE;
-    if (!needsCorrection && !challenge) return;
+    if (discussionMode === 2) {
+      placementItemsRef.current = {
+        ...placementItemsRef.current,
+        [answerId]: { ...placementItemsRef.current[answerId], [criterionId]: item },
+      };
+      dispatchPlacement(answerId, criterionId, { type: "DROP", correct: item.stepCorrect });
+      return;
+    }
 
-    const speaker = needsCorrection ? pickPlacementSpeaker() : pickPlacementChallengeSpeaker();
-    openThread(answerId, answer, criterionId, "placement", speaker, item, challenge);
+    if (item.stepCorrect) return;
+    openThread(answerId, answer, criterionId, "placement", pickPlacementSpeaker(), item, false);
   };
 
   // Runs immediately after the TA marks pass/fail: checks the status call and either
@@ -433,13 +612,21 @@ function GradeLinesPageContent() {
     });
   };
 
+  // Dropping an unlocked item back on the step it's already on doesn't change placements,
+  // but it's still a new answer to the placement question, so it's re-checked as a drop.
+  const handlePlacementRedrop = (answerId: string, criterionId: string) => {
+    const placement = placements[answerId]?.[criterionId];
+    if (!placement) return;
+    gradeCriterion(answerId, criterionId, { ...placement, status: null });
+  };
+
   const handleSendDiscussionMessage = async (
     answerId: string,
     key: string,
     speaker: CommentSpeaker,
     text: string
   ) => {
-    const { criterionId, kind } = parseCommentKey(key);
+    const { criterionId } = parseCommentKey(key);
     const answer = FINAL_AI_ANSWERS.find((item) => item.id === answerId);
     const criterionFeedback = reviewStates[answerId]?.feedback?.[criterionId];
     const openingComment = comments[answerId]?.[key]?.find((c) => c.speaker === speaker);
@@ -494,7 +681,6 @@ function GradeLinesPageContent() {
           expectedStatus: criterionFeedback.expectedStatus,
           placedStep: criterionFeedback.placedStep,
           expectedStep: criterionFeedback.expectedStep,
-          coversStep: kind === "placement",
           openingComment: openingComment.text,
           messages: priorMessages.map((m) => ({ role: m.role, text: m.text })),
           userMessage: text,
@@ -578,6 +764,9 @@ function GradeLinesPageContent() {
           discussionPending={discussionPending}
           resolvedThreads={resolvedThreads}
           onSendDiscussionMessage={handleSendDiscussionMessage}
+          placementThreads={placementThreads}
+          onPlacementReply={handlePlacementReply}
+          onPlacementRedrop={handlePlacementRedrop}
           discussionMode={discussionMode}
           currentIndex={currentIndex}
           onCurrentIndexChange={setCurrentIndex}

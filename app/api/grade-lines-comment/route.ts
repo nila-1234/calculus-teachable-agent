@@ -89,52 +89,16 @@ function buildFallbackReply(
 // when the LLM backend is unavailable.
 function buildFallbackChallengeReply(
   body: GradeLinesCommentRequestBody,
-  speaker: CommentSpeaker,
-  coversStep: boolean
+  speaker: CommentSpeaker
 ): string {
   const label = body.criterionLabel ?? "this criterion";
   const step = body.placedStep ?? "?";
-
-  if (coversStep) {
-    return `Are you sure "${label}" belongs on step ${step}? Why does it apply there?`;
-  }
 
   if (speaker === "professor") {
     return `Are you sure "${label}" earns a pass on step ${step}? Why is it correct?`;
   }
 
   return `Wait, are you sure I actually got "${label}" wrong on step ${step}?`;
-}
-
-// Placement doubt on a criterion that's actually attached to the right step. Always the
-// professor — a student wouldn't second-guess where their own work was tagged.
-function buildProfessorPlacementChallengePrompt(
-  body: GradeLinesCommentRequestBody,
-  studentName: string
-): string {
-  const { answerText, question, criterionLabel, stepText, feedback, placedStep } = body;
-
-  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
-
-The student named "${studentName}" submitted the following solution. The TA just attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}").
-
-Question:
-${question || "(question not provided)"}
-
-The student's submitted solution:
-${answerText || "(solution not provided)"}
-
-Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this placement is actually correct, so don't claim it's wrong.
-"${feedback || "(no additional context)"}"
-
-Write a short, skeptical-but-fair rebuttal to the TA:
-- Directly challenge the placement with a pointed question — literally ask something like "Are you sure this belongs on step ${placedStep ?? "?"}?" or "Why does this apply here?" Don't hedge into a vague request like "can you explain why..." — put them on the spot.
-- Reference step ${placedStep ?? "?"} specifically, not a generic "this step."
-- Never suggest, guess, or imply a different step number as the "real" answer (e.g. "shouldn't this be on step 3?") — you don't have an alternative in mind, because there isn't one. You're only testing whether the TA can justify keeping it where it is.
-- You expect them to be able to defend it, and if they do, you'll accept it — but the opening line itself should read as doubt, not curiosity.
-- Keep it to 1 sentence, brief and matter-of-fact, not accusatory.
-- Do not greet or sign off. Open with the question itself.
-- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
 
 function buildStudentChallengePrompt(
@@ -334,9 +298,8 @@ export async function POST(req: Request) {
     let systemPrompt: string;
 
     if (challenge) {
-      systemPrompt = coversStep
-        ? buildProfessorPlacementChallengePrompt(body, studentName)
-        : speaker === "professor"
+      systemPrompt =
+        speaker === "professor"
           ? buildProfessorChallengePrompt(body, studentName)
           : buildStudentChallengePrompt(body, studentName);
     } else if (coversStep && !coversStatus) {
@@ -386,7 +349,7 @@ export async function POST(req: Request) {
       reply:
         reply ||
         (challenge
-          ? buildFallbackChallengeReply(body, speaker, coversStep)
+          ? buildFallbackChallengeReply(body, speaker)
           : buildFallbackReply(body, speaker, coversStep, coversStatus)),
     });
   } catch (error) {
@@ -394,7 +357,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       speaker,
       reply: challenge
-        ? buildFallbackChallengeReply(body, speaker, coversStep)
+        ? buildFallbackChallengeReply(body, speaker)
         : buildFallbackReply(body, speaker, coversStep, coversStatus),
     });
   }

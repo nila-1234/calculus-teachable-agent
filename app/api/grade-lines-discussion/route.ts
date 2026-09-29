@@ -23,9 +23,6 @@ type GradeLinesDiscussionRequestBody = {
   openingComment?: string;
   messages?: DiscussionTurn[];
   userMessage?: string;
-  // True when this thread is about the step placement rather than the pass/fail call —
-  // the two are graded and discussed as separate, sequential moments.
-  coversStep?: boolean;
   // True when this thread was opened as a random challenge to a criterion the TA
   // actually graded correctly, not a correction of a real mistake.
   challenge?: boolean;
@@ -174,86 +171,6 @@ The TA is now discussing your correction with you directly. Stay in character as
 - You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
 }
 
-function buildProfessorPlacementDiscussionPrompt(
-  body: GradeLinesDiscussionRequestBody,
-  studentName: string
-): string {
-  const {
-    criterionLabel,
-    stepText,
-    feedback,
-    placedStep,
-    expectedStep,
-    openingComment,
-    question,
-    answerText,
-  } = body;
-
-  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
-
-The student named "${studentName}" submitted a solution. The TA attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"). You already gave this correction:
-"${openingComment ?? "(no opening message)"}"
-
-For context, the ground-truth step for this criterion is step ${expectedStep ?? "?"} — this is for YOUR understanding only, so you can judge what the TA says against it. Never state or imply this step number to the TA, in this reply or any later one, no matter how the conversation goes.
-
-Question:
-${question || "(question not provided)"}
-
-The student's submitted solution:
-${answerText || "(solution not provided)"}
-
-Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim, only use it to judge whether the TA's explanation is correct:
-"${feedback || "(no additional context)"}"
-
-The actual fix here is the TA re-dragging the criterion to the right step themselves — nothing you say in this chat can do that for them, so your job is to lead them toward looking in the right place, never to hand them the step number. Stay in character as the professor:
-- Before agreeing with anything the TA says, check it against the student's actual submitted solution above and against the ground truth reasoning. Do not defer just because the TA is pushing back — the TA can be, and in this exchange may be, wrong.
-- If the TA proposes the correct step (or the right reasoning for where it belongs), you can confirm that they've got it — but do not volunteer the step number yourself first, and do not confirm a step number that happens to be wrong.
-- If the TA's explanation is vague, wrong, or doesn't address your point, push back briefly with a question that points them toward what to look for (what the criterion is actually checking), not toward a specific step.
-- Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
-- Keep responses short (1-2 sentences), collegial and matter-of-fact — a mentor, not a scold.
-- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
-}
-
-function buildProfessorPlacementChallengeDiscussionPrompt(
-  body: GradeLinesDiscussionRequestBody,
-  studentName: string
-): string {
-  const {
-    criterionLabel,
-    stepText,
-    feedback,
-    placedStep,
-    openingComment,
-    question,
-    answerText,
-  } = body;
-
-  return `You are role-playing as a calculus professor supervising a teaching assistant (TA) who is grading an AI student's work in a tutoring exercise.
-
-The student named "${studentName}" submitted a solution. The TA attached the criterion "${criterionLabel ?? "this criterion"}" to step ${placedStep ?? "?"} of the work ("${stepText ?? ""}"), and you asked them to justify the placement rather than asserting it was wrong:
-"${openingComment ?? "(no opening message)"}"
-
-Question:
-${question || "(question not provided)"}
-
-The student's submitted solution:
-${answerText || "(solution not provided)"}
-
-Ground truth reasoning for this criterion, for your own understanding only — never quote it verbatim: this placement is actually correct.
-"${feedback || "(no additional context)"}"
-
-This placement was correct, so your job is not to find a flaw in the TA's defense — there isn't one. You are only checking that the TA is actually looking at the work, not rubber-stamping it.
-- Concede ("resolved": true) on the TA's very next reply unless it is truly EMPTY or factually wrong about the student's work (e.g. misquotes a number, sign, or step). A confident affirmation alone ("yes, I'm sure", "yes it is") is enough on its own — do not demand they restate their reasoning a second time or spell out the justification explicitly; standing by their answer after being asked once is enough. That's the entire bar — do not withhold concession because the explanation seems thin, generic, informal, or "could be more rigorous."
-- In particular: once the TA has referenced the actual step content or computation (${stepText ? `e.g. "${stepText}"` : "the step's content"}) in any way, that alone clears the bar — do not ask them to additionally show it "follows from" another step, "is shown" a particular way, or any other refinement not in your opening question. That is goalpost-moving, not rigor, and you must not do it.
-- Never suggest, guess, or imply a different step number as the "real" answer, at any point in this exchange, even while still pushing back — you don't have an alternative in mind, because there isn't one. You're only testing whether the TA can justify keeping it where it is.
-- When you do concede, open with a short affirming word or phrase ("Correct.", "Exactly.", "That's right.") before the rest of your reply — don't launch straight into restating the math with no acknowledgment.
-- Talk ONLY about the step placement. The pass/fail call is a separate matter, handled at a later step — don't bring it up.
-- Keep responses short (1-2 sentences), collegial and matter-of-fact — you were checking rigor, not accusing them of a mistake.
-- You are the professor, never the student. Never break character or mention that you are an AI/LLM.`;
-}
-
-// guide user to right step, 
-
 function buildStudentChallengeDiscussionPrompt(
   body: GradeLinesDiscussionRequestBody,
   studentName: string
@@ -338,20 +255,17 @@ export async function POST(req: Request) {
   const speaker: CommentSpeaker = rawSpeaker === "professor" ? "professor" : "student";
   const studentName = body.answerTitle || "the AI student";
   const challenge = body.challenge === true;
-  const coversStep = body.coversStep === true;
 
   try {
-    const basePrompt = coversStep
-      ? challenge
-        ? buildProfessorPlacementChallengeDiscussionPrompt(body, studentName)
-        : buildProfessorPlacementDiscussionPrompt(body, studentName)
-      : challenge
-        ? speaker === "professor"
-          ? buildProfessorChallengeDiscussionPrompt(body, studentName)
-          : buildStudentChallengeDiscussionPrompt(body, studentName)
-        : speaker === "professor"
-          ? buildProfessorDiscussionPrompt(body, studentName)
-          : buildStudentDiscussionPrompt(body, studentName);
+    // Only pass/fail threads come through here — placement is a deterministic decision
+    // tree (lib/placement-flow.ts) with its own classify/explain routes.
+    const basePrompt = challenge
+      ? speaker === "professor"
+        ? buildProfessorChallengeDiscussionPrompt(body, studentName)
+        : buildStudentChallengeDiscussionPrompt(body, studentName)
+      : speaker === "professor"
+        ? buildProfessorDiscussionPrompt(body, studentName)
+        : buildStudentDiscussionPrompt(body, studentName);
     const systemPrompt = basePrompt + RESOLUTION_INSTRUCTIONS;
 
     const history: { role: "assistant" | "user"; content: string }[] = messages.map(

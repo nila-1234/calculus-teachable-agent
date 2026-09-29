@@ -11,12 +11,6 @@ export function pickPlacementSpeaker(): CommentSpeaker {
   return "professor";
 }
 
-// Even a correctly-placed criterion is sometimes challenged just to make the TA defend
-// the placement. Same reasoning as above: only the professor would raise that doubt.
-export function pickPlacementChallengeSpeaker(): CommentSpeaker {
-  return "professor";
-}
-
 type StatusItem = {
   status: "pass" | "fail" | null;
   expectedStatus: "pass" | "fail" | null;

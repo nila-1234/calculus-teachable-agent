@@ -1,0 +1,64 @@
+flowchart LR
+
+    %% Implemented in lib/placement-flow.ts (transitionPlacement).
+    %% "attempt" counts drops of the current item across every branch; MAX = 2.
+
+    A[Dragging current item] --> REV{Correct step already told?}
+
+    %% =========================
+    %% AFTER THE REVEAL
+    %% =========================
+
+    REV -->|Yes| RB{Correct placement?}
+    RB -->|Yes| RC[Professor: That's the one — good]
+    RC --> R[Item resolved]
+    RB -->|No| RD[Professor: That's step N — drag it to step M]
+    RD --> A
+
+    %% =========================
+    %% EVERY OTHER DROP (right or wrong, always asked)
+    %% =========================
+
+    REV -->|No| T[Lock item]
+    T --> U[Professor asks: Are you sure?]
+    U --> V{TA response — LLM classifies}
+
+    V -->|Unclear, 1st time| CL[Professor: Just to check — are you keeping it there?]
+    CL --> V
+    V -->|Unclear, 2nd time| NO
+
+    V -->|Yes| B{Correct placement?}
+
+    B -->|Yes| K[Professor gives brief affirmation + explanation]
+    K --> R
+
+    B -->|No| AB[Professor asks: Why do you think this is the right place?]
+    AB --> AC[TA explains]
+    AC --> AD[Professor: Consider this: relevant concept / criterion]
+    AD --> AE[TA responds]
+    AE --> AT
+
+    V -->|No| NO{Correct placement?}
+    NO -->|Yes| M[Professor asks: What about your placement are you unsure about?]
+    NO -->|No| W[Professor asks: Then what do you think is not right, and why?]
+    M --> N[TA responds]
+    W --> N
+    N --> AT
+
+    %% =========================
+    %% SHARED ATTEMPT CHECK
+    %% =========================
+
+    AT{Attempt < 2?}
+    AT -->|Yes| Z[Professor: Take another look — drag it where it fits best<br/>Unlock item]
+    Z --> A
+    AT -->|No| AA[Professor tells the correct step + explanation<br/>Unlock item — TA must move it]
+    AA --> A
+
+    %% =========================
+    %% RESOLUTION RULE
+    %% =========================
+
+    R --> NEXT[Proceed to pass/fail marking]
+
+    %% Current item must resolve before NEXT is reached

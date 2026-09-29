@@ -10,7 +10,8 @@
     "check:instructor": "tsx scripts/check-instructor-workspace.ts",
     "seed:scenarios": "tsx scripts/seed-scenarios.ts",
     "export:logs": "tsx scripts/export-logs.ts",
-    "grade:tests": "tsx scripts/grade-tests.ts"
+    "grade:tests": "tsx scripts/grade-tests.ts",
+    "test": "tsx --test lib/placement-flow.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.117.1",

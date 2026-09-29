@@ -19,16 +19,27 @@ type DiscussionPanelProps = {
   onClose: () => void;
   counterpartLabel: string;
   criterionLabel: string;
-  openingComment: string;
+  // Shown as the first bubble. Omitted when the whole thread, opener included, is in
+  // `messages` (the placement discussion).
+  openingComment?: string;
   messages: DiscussionMessage[];
   pending: boolean;
   // True once the counterpart has conceded the point — shows a closing note instead of
   // implying there's still something to settle.
   resolved?: boolean;
+  resolvedNote?: string;
   onSend: (text: string) => void;
   // When true, the panel can't be dismissed until the TA has sent at least one reply —
   // used so a challenge or correction can't just be closed away unanswered.
   forceReply?: boolean;
+  // Overrides the close rule above when given — the placement discussion stays open
+  // exactly as long as the item is locked waiting on an answer.
+  closable?: boolean;
+  // One-click replies. When given, shown as-is (an empty list hides them); when omitted,
+  // the defaults show until the TA's first reply.
+  quickReplies?: string[];
+  // When set, typing is disabled and this explains why (e.g. "Close this and drag again").
+  inputDisabledReason?: string;
 };
 
 export default function DiscussionPanel({
@@ -40,13 +51,19 @@ export default function DiscussionPanel({
   messages,
   pending,
   resolved = false,
+  resolvedNote = "This conversation is resolved. You can proceed to the next step.",
   onSend,
   forceReply = false,
+  closable,
+  quickReplies,
+  inputDisabledReason,
 }: DiscussionPanelProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const hasReplied = messages.some((message) => message.role === "user");
-  const canClose = !forceReply || hasReplied;
+  const canClose = closable ?? (!forceReply || hasReplied);
+  const shownQuickReplies = quickReplies ?? (hasReplied ? [] : QUICK_REPLIES);
+  const inputDisabled = pending || inputDisabledReason != null;
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -57,13 +74,13 @@ export default function DiscussionPanel({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || pending) return;
+    if (!text || inputDisabled) return;
     onSend(text);
     setDraft("");
   };
 
   const handleQuickReply = (text: string) => {
-    if (pending) return;
+    if (inputDisabled) return;
     onSend(text);
   };
 
@@ -99,11 +116,13 @@ export default function DiscussionPanel({
         </div>
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          <div className="flex justify-start">
-            <div className="max-w-[85%] rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-sm leading-6 text-sky-900">
-              <MathDisplay text={openingComment} />
+          {openingComment ? (
+            <div className="flex justify-start">
+              <div className="max-w-[85%] rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-sm leading-6 text-sky-900">
+                <MathDisplay text={openingComment} />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           {messages.map((message) => (
             <div
@@ -134,18 +153,18 @@ export default function DiscussionPanel({
           {resolved && !pending ? (
             <div className="flex items-center gap-1.5 px-1 pt-1 text-xs font-medium text-green-700">
               <CheckCircledIcon className="shrink-0" />
-              This conversation is resolved. You can proceed to the next step.
+              {resolvedNote}
             </div>
           ) : null}
         </div>
 
-        {!hasReplied ? (
+        {shownQuickReplies.length > 0 ? (
           <div className="flex flex-wrap gap-2 border-t border-stone-200 px-3 pt-3">
-            {QUICK_REPLIES.map((reply) => (
+            {shownQuickReplies.map((reply) => (
               <button
                 key={reply}
                 type="button"
-                disabled={pending}
+                disabled={inputDisabled}
                 onClick={() => handleQuickReply(reply)}
                 className="rounded-full border border-stone-200 px-3 py-1 text-xs font-semibold text-stone-600 transition-colors hover:border-lime-600 hover:text-lime-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -157,7 +176,7 @@ export default function DiscussionPanel({
 
         <form
           onSubmit={handleSubmit}
-          className={`flex items-end gap-2 p-3 ${hasReplied ? "border-t border-stone-200" : ""}`}
+          className={`flex items-end gap-2 p-3 ${shownQuickReplies.length > 0 ? "" : "border-t border-stone-200"}`}
         >
           <textarea
             value={draft}
@@ -168,14 +187,14 @@ export default function DiscussionPanel({
                 handleSubmit(e);
               }
             }}
-            placeholder={`Reply to ${counterpartLabel}...`}
+            placeholder={inputDisabledReason ?? `Reply to ${counterpartLabel}...`}
             rows={1}
-            disabled={pending}
+            disabled={inputDisabled}
             className="min-h-[40px] flex-1 resize-none rounded-lg border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"
           />
           <button
             type="submit"
-            disabled={!draft.trim() || pending}
+            disabled={!draft.trim() || inputDisabled}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-lime-600 text-white transition-colors hover:bg-lime-700 disabled:cursor-not-allowed disabled:bg-stone-200 disabled:text-stone-400"
           >
             <PaperPlaneIcon />

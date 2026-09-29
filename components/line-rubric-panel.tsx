@@ -14,12 +14,22 @@ import Button from "@/components/button";
 import DiscussionPanel, { DiscussionMessage } from "@/components/discussion-panel";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 import type { CommentSpeaker } from "@/lib/grading-voice";
+import { PLACEMENT_QUICK_REPLIES, PlacementFlow } from "@/lib/placement-flow";
 
 export type { DiscussionMessage } from "@/components/discussion-panel";
 
 export type GradeComment = {
   speaker: CommentSpeaker;
   text: string;
+  pending: boolean;
+};
+
+// One criterion's placement discussion (discussion mode 2), driven by lib/placement-flow.
+// Lives across re-drags, so the transcript and attempt count survive moving the item.
+export type PlacementThread = {
+  flow: PlacementFlow;
+  messages: DiscussionMessage[];
+  // True while a classify or explain call is in flight.
   pending: boolean;
 };
 
@@ -48,11 +58,19 @@ export type RubricCriterion = {
 
 // Where the single active criterion currently stands. Drives the spotlight/dim
 // treatment and the header status pill.
-type Phase = "place" | "checking" | "mark" | "resolve-placement" | "resolve-status" | "done";
+type Phase =
+  | "place"
+  | "checking"
+  | "discuss-placement"
+  | "mark"
+  | "resolve-placement"
+  | "resolve-status"
+  | "done";
 
 const PHASE_PILL: Partial<Record<Phase, { text: string; className: string }>> = {
   place: { text: "Place it on a step", className: "bg-lime-100 text-lime-700" },
   checking: { text: "Checking…", className: "bg-stone-100 text-stone-500" },
+  "discuss-placement": { text: "Answer the professor", className: "bg-amber-100 text-amber-700" },
   mark: { text: "Mark pass or fail", className: "bg-lime-100 text-lime-700" },
   "resolve-placement": { text: "Check step placement", className: "bg-amber-100 text-amber-700" },
   "resolve-status": { text: "Reply to resolve", className: "bg-amber-100 text-amber-700" },
@@ -126,6 +144,12 @@ type LineRubricPanelProps = {
   // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
   // "Reply" discussion drawer. Defaults to 2.
   discussionMode?: number;
+  // Discussion mode only: the placement decision tree for each criterion, keyed by
+  // answerId -> criterionId, plus the TA's replies into it.
+  placementThreads?: Record<string, Record<string, PlacementThread>>;
+  onPlacementReply?: (answerId: string, criterionId: string, text: string) => void;
+  // An unlocked item dropped back on the step it's already on — still a fresh answer.
+  onPlacementRedrop?: (answerId: string, criterionId: string) => void;
   currentIndex: number;
   onCurrentIndexChange: (index: number) => void;
   // Called from the last answer once every criterion in every answer has been graded.
@@ -146,6 +170,9 @@ export default function LineRubricPanel({
   resolvedThreads,
   onSendDiscussionMessage,
   discussionMode = 2,
+  placementThreads,
+  onPlacementReply,
+  onPlacementRedrop,
   currentIndex,
   onCurrentIndexChange,
   onComplete,
@@ -157,6 +184,9 @@ export default function LineRubricPanel({
     key: string;
     speaker: CommentSpeaker;
   } | null>(null);
+  // Keyed by `${answerId}::${criterionId}`: how many placement messages the TA had seen
+  // when they last closed that discussion. New messages past this reopen it by themselves.
+  const [placementSeen, setPlacementSeen] = useState<Record<string, number>>({});
 
   const currentAnswer = answers[currentIndex];
   const steps = currentAnswer.steps;
@@ -168,6 +198,7 @@ export default function LineRubricPanel({
   const currentDiscussions = discussions?.[currentAnswer.id] ?? {};
   const currentDiscussionPending = discussionPending?.[currentAnswer.id] ?? {};
   const currentResolved = resolvedThreads?.[currentAnswer.id] ?? {};
+  const currentPlacementThreads = placementThreads?.[currentAnswer.id] ?? {};
 
   const isThreadOpenAndUnresolved = (key: string) =>
     (currentComments[key]?.length ?? 0) > 0 && !(currentResolved[key] ?? false);
@@ -186,12 +217,24 @@ export default function LineRubricPanel({
   const isPhaseSettled = (correct: boolean, key: string): boolean =>
     correct ? !canDiscuss || !isThreadOpenAndUnresolved(key) : false;
 
+  // In discussion mode, placement is settled only by the decision tree reaching the end
+  // (and its closing line having arrived) — every drop is questioned, right or wrong.
+  const isPlacementSettled = (criterionId: string, feedback: StepCriterionFeedback): boolean => {
+    if (!canDiscuss) return feedback.stepCorrect;
+    const thread = currentPlacementThreads[criterionId];
+    return thread?.flow.kind === "resolved" && !thread.pending;
+  };
+
+  // The item stays put while the TA is answering, and once its placement is final.
+  const isPlacementLocked = (criterionId: string): boolean =>
+    canDiscuss && (currentPlacementThreads[criterionId]?.flow.kind ?? "dragging") !== "dragging";
+
   // A criterion is "done" — and only then does the TA get to touch a different one —
   // once its placement is settled and, in turn, its pass/fail call is settled too.
   const isCriterionComplete = (criterionId: string): boolean => {
     const feedback = currentReview?.feedback?.[criterionId];
     if (!feedback) return false;
-    if (!isPhaseSettled(feedback.stepCorrect, `${criterionId}::placement`)) return false;
+    if (!isPlacementSettled(criterionId, feedback)) return false;
     if (feedback.status == null) return false;
     if (!isPhaseSettled(feedback.statusCorrect, `${criterionId}::status`)) return false;
     return true;
@@ -218,10 +261,14 @@ export default function LineRubricPanel({
       ? "place"
       : activeIsGrading || !activeFeedback
         ? "checking"
-        : !isPhaseSettled(activeFeedback.stepCorrect, `${activeCriterionId}::placement`)
-          ? isThreadPending(`${activeCriterionId}::placement`)
-            ? "checking"
-            : "resolve-placement"
+        : !isPlacementSettled(activeCriterionId, activeFeedback)
+          ? canDiscuss
+            ? currentPlacementThreads[activeCriterionId]?.flow.kind === "dragging"
+              ? "resolve-placement"
+              : "discuss-placement"
+            : isThreadPending(`${activeCriterionId}::placement`)
+              ? "checking"
+              : "resolve-placement"
           : activeFeedback.status == null
             ? "mark"
             : !isPhaseSettled(activeFeedback.statusCorrect, `${activeCriterionId}::status`)
@@ -229,6 +276,38 @@ export default function LineRubricPanel({
                 ? "checking"
                 : "resolve-status"
               : "done";
+
+  // The placement discussion opens by itself while the TA owes an answer, and whenever the
+  // professor has said something the TA hasn't seen yet (e.g. the closing line). It can
+  // also be reopened from the card.
+  const placementSeenKey = (criterionId: string) => `${currentAnswer.id}::${criterionId}`;
+  const activePlacementThread = activeCriterionId
+    ? currentPlacementThreads[activeCriterionId]
+    : undefined;
+  const autoOpenPlacement =
+    canDiscuss &&
+    activePlacementThread != null &&
+    (activePlacementThread.flow.kind === "chat" ||
+      activePlacementThread.messages.length >
+        (placementSeen[placementSeenKey(activeCriterionId!)] ?? 0));
+  const openPlacementCriterionId = activeDiscussion?.key.endsWith("::placement")
+    ? activeDiscussion.key.split("::")[0]
+    : autoOpenPlacement
+      ? activeCriterionId
+      : null;
+  const openPlacementThread = openPlacementCriterionId
+    ? currentPlacementThreads[openPlacementCriterionId]
+    : undefined;
+
+  const closePlacementDiscussion = () => {
+    if (openPlacementCriterionId) {
+      setPlacementSeen((prev) => ({
+        ...prev,
+        [placementSeenKey(openPlacementCriterionId)]: openPlacementThread?.messages.length ?? 0,
+      }));
+    }
+    setActiveDiscussion(null);
+  };
 
   const activeDiscussionComment = activeDiscussion
     ? currentComments[activeDiscussion.key]?.find((c) => c.speaker === activeDiscussion.speaker)
@@ -260,6 +339,16 @@ export default function LineRubricPanel({
     // Moving a criterion to a different step invalidates its earlier checks, so it's
     // placement-checked again (and has to be marked pass/fail again too).
     const moved = existing != null && existing.stepIndex !== stepIndex;
+
+    // Dropping an unlocked item back where it already sits changes nothing in placements,
+    // but after a retry it's still a new answer, so it's checked again as a drop.
+    const flow = currentPlacementThreads[criterionId]?.flow;
+    if (existing && !moved) {
+      if (canDiscuss && flow?.kind === "dragging" && flow.attempt > 1) {
+        onPlacementRedrop?.(currentAnswer.id, criterionId);
+      }
+      return;
+    }
 
     updatePlacements({
       ...currentPlacements,
@@ -443,12 +532,17 @@ export default function LineRubricPanel({
                           // alone isn't enough while a challenge on either is still open.
                           const isResolved =
                             fullyGraded &&
-                            isPhaseSettled(criterionFeedback!.stepCorrect, placementKey) &&
+                            isPlacementSettled(criterion.id, criterionFeedback!) &&
                             isPhaseSettled(criterionFeedback!.statusCorrect, statusKey);
                           // Only the active criterion is ever interactive — every other
                           // placed card, by construction, is already done.
                           const isActive = criterion.id === activeCriterionId;
                           const lockedByOther = !isActive;
+                          const placementLocked = isPlacementLocked(criterion.id);
+                          const placementThread = currentPlacementThreads[criterion.id];
+                          const lastProfessorLine = [...(placementThread?.messages ?? [])]
+                            .reverse()
+                            .find((message) => message.role === "professor");
                           // The mark block shows for the active card once its placement is
                           // settled and it hasn't been marked yet — or, if the pass/fail call
                           // itself was actually wrong, so the TA can redo it. A wrong call
@@ -462,7 +556,7 @@ export default function LineRubricPanel({
                           return (
                             <div
                               key={criterion.id}
-                              draggable={!isGrading && !lockedByOther}
+                              draggable={!isGrading && !lockedByOther && !placementLocked}
                               onDragStart={handleDragStart(criterion.id)}
                               onDragEnd={handleDragEnd}
                               className={`flex select-none flex-col gap-1.5 rounded-xl px-3.5 py-3 text-xs shadow-sm transition-opacity ${isResolved
@@ -504,7 +598,7 @@ export default function LineRubricPanel({
                                 ) : null}
                                 <button
                                   type="button"
-                                  disabled={isGrading || lockedByOther}
+                                  disabled={isGrading || lockedByOther || placementLocked}
                                   onClick={() => unassign(criterion.id)}
                                   className="shrink-0 text-stone-400 transition-colors hover:text-stone-600 disabled:cursor-not-allowed disabled:opacity-50"
                                   aria-label="Remove rubric item from this step"
@@ -544,6 +638,40 @@ export default function LineRubricPanel({
                                       className="h-10 rounded-lg border border-red-300 text-xs font-semibold text-red-700 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       AI Student Fail
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {canDiscuss && lastProfessorLine ? (
+                                <div
+                                  className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES.professor.bubble}`}
+                                >
+                                  <span
+                                    title={PROFESSOR_NAME}
+                                    aria-label={PROFESSOR_NAME}
+                                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${SPEAKER_STYLES.professor.avatar}`}
+                                  >
+                                    {SPEAKER_STYLES.professor.initial}
+                                  </span>
+                                  <div className="flex-1">
+                                    <span className="font-semibold">{PROFESSOR_NAME}: </span>
+                                    <MathDisplay
+                                      text={lastProfessorLine.text}
+                                      className="inline text-xs"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setActiveDiscussion({
+                                          key: placementKey,
+                                          speaker: "professor",
+                                        })
+                                      }
+                                      className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
+                                    >
+                                      View conversation
+                                      <ArrowRightIcon width={13} height={13} />
                                     </button>
                                   </div>
                                 </div>
@@ -717,7 +845,37 @@ export default function LineRubricPanel({
         )}
       </div>
 
-      {discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
+      {canDiscuss && openPlacementCriterionId && openPlacementThread ? (
+        <DiscussionPanel
+          open
+          onClose={closePlacementDiscussion}
+          counterpartLabel={PROFESSOR_NAME}
+          criterionLabel={
+            rubric.find((c) => c.id === openPlacementCriterionId)?.label ?? "this criterion"
+          }
+          messages={openPlacementThread.messages}
+          pending={openPlacementThread.pending}
+          closable={openPlacementThread.flow.kind !== "chat"}
+          quickReplies={
+            openPlacementThread.flow.kind === "chat" &&
+            openPlacementThread.flow.node === "askSure"
+              ? PLACEMENT_QUICK_REPLIES.map((reply) => reply.text)
+              : []
+          }
+          inputDisabledReason={
+            openPlacementThread.flow.kind === "dragging"
+              ? "Close this and drag the item to try again"
+              : openPlacementThread.flow.kind === "resolved"
+                ? "Placement is settled"
+                : undefined
+          }
+          resolved={openPlacementThread.flow.kind === "resolved"}
+          resolvedNote="Placement confirmed. Close this to mark pass or fail."
+          onSend={(text) =>
+            onPlacementReply?.(currentAnswer.id, openPlacementCriterionId, text)
+          }
+        />
+      ) : discussionMode === 2 && activeDiscussion && activeDiscussionComment ? (
         <DiscussionPanel
           open
           onClose={() => setActiveDiscussion(null)}
