@@ -38,7 +38,7 @@ function PilotWelcome() {
             Please make your best attempt, even if some problems are unfamiliar.
           </p>
           <p className="mt-3 text-sm leading-6 text-stone-500">
-            The study takes approximately 20 minutes. Please work independently
+            The study takes approximately 30 minutes. Please work independently
             without calculators, AI tools, or outside help. Scratch paper is
             allowed.
           </p>
