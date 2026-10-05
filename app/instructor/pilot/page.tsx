@@ -6,6 +6,13 @@ import Button from "@/components/button";
 
 type Q1Item = { given: string; expected: number; correct: boolean };
 
+type Phase = {
+  started: string | null;
+  completed: string | null;
+  seconds: number | null;
+};
+type ItemTiming = { answered_at: string | null; seconds: number | null };
+
 type Answer = {
   choiceId?: string;
   matches?: Record<string, string>;
@@ -31,6 +38,14 @@ type Row = {
   q1_total: number;
   q1: Record<string, Q1Item>;
   test_answers: Record<string, Answer>;
+  timings: {
+    screening: Phase;
+    pre_survey: Phase;
+    assessment: Phase;
+    difficulty: Phase;
+  };
+  item_timings: Record<string, ItemTiming>;
+  total_seconds: number | null;
   motivation: string | null;
   motivation_other: string | null;
   difficulty: string | null;
@@ -57,8 +72,22 @@ function mean(values: number[]): number | null {
     : null;
 }
 
+function median(values: (number | null)[]): number | null {
+  const a = values.filter((v): v is number => v != null).sort((x, y) => x - y);
+  if (!a.length) return null;
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : Math.round((a[m - 1] + a[m]) / 2);
+}
+
 const pct = (v: number | null) =>
   v === null ? "—" : `${Math.round(v * 100)}%`;
+
+function fmtSec(s: number | null | undefined): string {
+  if (s == null) return "—";
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
 
 const shortId = (r: Row) => (r.prolific_pid || r.subject).slice(0, 10);
 
@@ -130,6 +159,7 @@ function ParticipantCard({ r }: { r: Row }) {
               <th className="py-1 pr-3 font-semibold">Item</th>
               <th className="py-1 pr-3 font-semibold">Expected</th>
               <th className="py-1 pr-3 font-semibold">Given</th>
+              <th className="py-1 pr-3 font-semibold">Time</th>
               <th className="py-1 font-semibold"></th>
             </tr>
           </thead>
@@ -142,6 +172,9 @@ function ParticipantCard({ r }: { r: Row }) {
                   <td className="py-1 pr-3 text-stone-600">{item.expected}</td>
                   <td className="py-1 pr-3 text-stone-800">
                     {item.given || "—"}
+                  </td>
+                  <td className="py-1 pr-3 text-stone-500">
+                    {fmtSec(r.item_timings?.[id]?.seconds)}
                   </td>
                   <td className="py-1">
                     <Tick ok={item.correct} />
@@ -167,6 +200,26 @@ function ParticipantCard({ r }: { r: Row }) {
             “{q3Text}”
           </p>
         )}
+      </div>
+
+      <div className="mt-4 rounded-lg bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+          Timing
+        </p>
+        <p className="mt-1 text-sm text-stone-700">
+          Total: <span className="font-semibold">{fmtSec(r.total_seconds)}</span>
+          {" · "}Screening: {fmtSec(r.timings?.screening?.seconds)}
+          {" · "}Pre-survey: {fmtSec(r.timings?.pre_survey?.seconds)}
+          {" · "}Assessment: {fmtSec(r.timings?.assessment?.seconds)}
+          {" · "}Difficulty: {fmtSec(r.timings?.difficulty?.seconds)}
+        </p>
+        <p className="mt-1 text-xs text-stone-500">
+          Per item:{" "}
+          {Object.keys(r.item_timings ?? {})
+            .sort()
+            .map((id) => `${id} ${fmtSec(r.item_timings[id]?.seconds)}`)
+            .join(" · ") || "—"}
+        </p>
       </div>
 
       {(r.unclear || r.feedback) && (
@@ -258,6 +311,10 @@ export default function PilotAnalysisPage() {
       algebraRate: mean(completed.map((r) => (r.screening_algebra_correct ? 1 : 0))),
       powerRate: mean(completed.map((r) => (r.screening_power_rule_correct ? 1 : 0))),
       q3CorrectRate,
+      medianTotal: median(completed.map((r) => r.total_seconds)),
+      medianAssessment: median(
+        completed.map((r) => r.timings?.assessment?.seconds ?? null)
+      ),
     };
   }, [rows, showTestRuns]);
 
@@ -323,6 +380,11 @@ export default function PilotAnalysisPage() {
                 </div>
               ))}
             </div>
+
+            <p className="text-sm text-stone-500">
+              Median total time: {fmtSec(view.medianTotal)} · median assessment
+              time: {fmtSec(view.medianAssessment)} (completed participants).
+            </p>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
