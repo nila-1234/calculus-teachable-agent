@@ -44,7 +44,8 @@ const PRE_TEST: TestDefinition = {
         rows: [
           ["$2", "180", "$360"],
           ["$4", "160", "$640"],
-          ["\\(p\\) dollars", "\\(200 - 10p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(200 - 10p\\)", "?"],
         ],
       },
       tableNote:
@@ -116,7 +117,7 @@ const PRE_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $20 would make the model predict a negative number of lunch boxes sold.",
+              text: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
             },
             {
               id: "B",
@@ -124,11 +125,11 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $20.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
           reference:
-            "A. The price cannot be less than $0. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
+            "A. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
         },
       ],
     },
@@ -216,7 +217,8 @@ const POST_TEST: TestDefinition = {
         rows: [
           ["$10", "100", "$1000"],
           ["$20", "80", "$1600"],
-          ["\\(p\\) dollars", "\\(120 - 2p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(120 - 2p\\)", "?"],
         ],
       },
       tableNote:
@@ -288,7 +290,7 @@ const POST_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $60 would make the model predict a negative number of units sold.",
+              text: "A price above $60 would make the model predict a negative number of units sold.",
             },
             {
               id: "B",
@@ -296,13 +298,13 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $60.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
           explanationPrompt: "Briefly explain your choice.",
           placeholder: "Briefly explain your choice…",
           reference:
-            "A. The price cannot be less than $0. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
+            "A. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
         },
       ],
     },
