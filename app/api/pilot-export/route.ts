@@ -71,6 +71,16 @@ function flattenAnswer(a: unknown): string {
   return parts.join(" | ");
 }
 
+function tsOf(ev: Ev | null): number | null {
+  const t = ev?.timestamp ? Date.parse(ev.timestamp) : NaN;
+  return Number.isFinite(t) ? t : null;
+}
+
+/** Whole seconds between two epoch-millis marks, or null if either is missing. */
+function secBetween(a: number | null, b: number | null): number | null {
+  return a != null && b != null ? Math.max(0, Math.round((b - a) / 1000)) : null;
+}
+
 export async function GET(req: NextRequest) {
   const denied = authorizeInstructor(req);
   if (denied) return denied;
@@ -87,8 +97,8 @@ export async function GET(req: NextRequest) {
     }
 
     const rows = [...bySubject.entries()].map(([subject, evs]) => {
-      const latest = (name: string, scenario?: string): Ev | null => {
-        const matches = evs
+      const sorted = (name: string, scenario?: string): Ev[] =>
+        evs
           .filter(
             (e) =>
               e.event === name &&
@@ -97,7 +107,13 @@ export async function GET(req: NextRequest) {
           .sort((a, b) =>
             String(a.timestamp ?? "").localeCompare(String(b.timestamp ?? ""))
           );
-        return matches.length ? matches[matches.length - 1] : null;
+      const latest = (name: string, scenario?: string): Ev | null => {
+        const m = sorted(name, scenario);
+        return m.length ? m[m.length - 1] : null;
+      };
+      const first = (name: string, scenario?: string): Ev | null => {
+        const m = sorted(name, scenario);
+        return m.length ? m[0] : null;
       };
 
       const testEv = latest("test_completed");
@@ -113,6 +129,58 @@ export async function GET(req: NextRequest) {
       const pre = answersOf(latest("survey_completed", "pre"));
       const difficulty = answersOf(latest("survey_completed", "post"));
       const testAnswers = answersOf(testEv);
+
+      // --- Timing -----------------------------------------------------------
+      const testScenario = testKey || undefined;
+      const phase = (startEv: Ev | null, endEv: Ev | null) => ({
+        started: startEv?.timestamp ?? null,
+        completed: endEv?.timestamp ?? null,
+        seconds: secBetween(tsOf(startEv), tsOf(endEv)),
+      });
+
+      const timings = {
+        screening: phase(
+          first("screening_started", "screening"),
+          latest("screening_completed", "screening")
+        ),
+        pre_survey: phase(
+          first("survey_started", "pre"),
+          latest("survey_completed", "pre")
+        ),
+        assessment: phase(
+          first("test_started", testScenario),
+          latest("test_completed", testScenario)
+        ),
+        difficulty: phase(
+          first("survey_started", "post"),
+          latest("survey_completed", "post")
+        ),
+      };
+
+      // Per-item dwell on the test: a test_item_answered mark is logged as each
+      // question is left, so dwell = time from the previous item (or the test
+      // start) to that mark.
+      const item_timings: Record<
+        string,
+        { answered_at: string | null; seconds: number | null }
+      > = {};
+      let prev = tsOf(first("test_started", testScenario));
+      for (const ev of sorted("test_item_answered")) {
+        const id = String((ev.data as Record<string, unknown>)?.item_id ?? "");
+        const t = tsOf(ev);
+        if (id) item_timings[id] = { answered_at: ev.timestamp ?? null, seconds: secBetween(prev, t) };
+        prev = t ?? prev;
+      }
+
+      // Total engagement: first to last logged event for the subject.
+      const allTs = evs
+        .map(tsOf)
+        .filter((t): t is number => t != null)
+        .sort((a, b) => a - b);
+      const total_seconds =
+        allTs.length >= 2
+          ? Math.round((allTs[allTs.length - 1] - allTs[0]) / 1000)
+          : null;
 
       const algebraOk =
         screening.algebra_check === SKILL_CHECK_ANSWERS.algebra_check;
@@ -166,6 +234,15 @@ export async function GET(req: NextRequest) {
         // Full, ungraded answer set for every test item (Q1 original + 1b–1e,
         // Q2, and the Q3 AI-conversation question). Captured from test_completed.
         test_answers: testAnswers,
+        // Phase durations, per-item dwell, and total engagement time.
+        timings,
+        item_timings,
+        total_seconds,
+        // Flat copies of the phase durations, for the CSV columns.
+        sec_screening: timings.screening.seconds,
+        sec_pre_survey: timings.pre_survey.seconds,
+        sec_assessment: timings.assessment.seconds,
+        sec_difficulty: timings.difficulty.seconds,
         motivation: pre["why-study"] ?? null,
         motivation_other: pre["why-study-other"] ?? null,
         difficulty: difficulty.difficulty ?? null,
@@ -199,14 +276,20 @@ export async function GET(req: NextRequest) {
         "difficulty",
         "confidence",
         "length",
+        // Phase durations (seconds) and total engagement time.
+        "sec_screening",
+        "sec_pre_survey",
+        "sec_assessment",
+        "sec_difficulty",
+        "total_seconds",
       ];
       // One column per test item, across everyone, so the raw Q1/Q2/Q3 answers
-      // (incl. the AI-conversation question) land in the spreadsheet. Sorted so
-      // the columns are stable from one export to the next.
+      // (incl. the AI-conversation question) land in the spreadsheet, each paired
+      // with the seconds spent on it. Sorted so columns are stable per export.
       const itemIds = [
         ...new Set(rows.flatMap((r) => Object.keys(r.test_answers ?? {}))),
       ].sort();
-      const answerCols = itemIds.map((id) => `ans_${id}`);
+      const answerCols = itemIds.flatMap((id) => [`ans_${id}`, `sec_${id}`]);
 
       const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const csv = [
@@ -214,9 +297,16 @@ export async function GET(req: NextRequest) {
         ...rows.map((r) => {
           const record = r as Record<string, unknown>;
           const answers = (r.test_answers ?? {}) as Record<string, unknown>;
+          const itemTimes = (r.item_timings ?? {}) as Record<
+            string,
+            { seconds: number | null }
+          >;
           return [
             ...cols.map((c) => esc(record[c])),
-            ...itemIds.map((id) => esc(flattenAnswer(answers[id]))),
+            ...itemIds.flatMap((id) => [
+              esc(flattenAnswer(answers[id])),
+              esc(itemTimes[id]?.seconds),
+            ]),
           ].join(",");
         }),
       ].join("\n");

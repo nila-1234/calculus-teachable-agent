@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 import SurveyPanel, { areSurveyAnswersComplete } from "@/components/survey-panel";
@@ -27,6 +27,13 @@ export default function PilotSurveyRunner({
   const [answers, setAnswers] = useState<SurveyAnswers>({});
   const items = survey.sections.flatMap((section) => section.items);
   const canSubmit = areSurveyAnswersComplete(survey, answers);
+
+  // Mark when this phase opened so its duration can be measured. Mirrors the
+  // completion event name (screening_completed -> screening_started, etc.).
+  // logEvent drops events in instructor preview, so this never pollutes data.
+  useEffect(() => {
+    logEvent(event.replace("_completed", "_started"), survey.id, {});
+  }, [event, survey.id]);
 
   const handleSubmit = () => {
     logEvent(event, survey.id, { answers });
