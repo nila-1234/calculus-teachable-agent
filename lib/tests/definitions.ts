@@ -96,7 +96,7 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -20\\)\nSince \\(R''(p)\\) is negative, the shape of the graph is a downward-opening parabola. So \\(p = 10\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 200p - 10p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 10\\) produces a maximum.",
             },
           ],
           choices: [
@@ -107,7 +107,7 @@ const PRE_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; R″(p) = −20 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
@@ -269,7 +269,7 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -4\\)\nSince \\(R''(p)\\) is negative, the revenue function is concave down, so \\(p = 30\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 120p - 2p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 30\\) produces a maximum.",
             },
           ],
           choices: [
@@ -280,7 +280,7 @@ const POST_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; R″(p) = −4 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
