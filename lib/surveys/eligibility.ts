@@ -53,14 +53,11 @@ export const SKILL_CHECK_ANSWERS: Record<string, string> = {
  * ids; values are option ids, which are the option labels themselves.
  */
 export const INELIGIBLE_OPTIONS: Record<string, string[]> = {
-  // Ceiling: too advanced, or unable to place themselves.
-  "highest-math": [
-    "Calculus III or higher",
-    "Other college-level mathematics (e.g., linear algebra, differential equations)",
-    "I am not sure",
-  ],
-  // Ceiling: too many calculus courses, or unable to say.
-  "calculus-courses": ["3 or more", "I am not sure"],
+  // Ceiling: Calculus II or beyond is past the applied-optimization material
+  // this study teaches (0929, Ken).
+  "highest-math": ["Calculus II", "Calculus III or higher"],
+  // Ceiling: too many calculus courses.
+  "calculus-courses": ["3 or more"],
   // Ceiling: too many college mathematics courses of any kind.
   math_courses: ["3 or more"],
   // Currently taking calculus, so the material would be concurrent coursework
