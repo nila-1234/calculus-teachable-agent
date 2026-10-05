@@ -21,6 +21,10 @@ type Row = {
   test: string;
   completed_test: boolean;
   completed_pilot: boolean;
+  highest_math: string | null;
+  calculus_courses: string | null;
+  math_courses: string | null;
+  calc_history: string | null;
   screening_algebra_correct: boolean;
   screening_power_rule_correct: boolean;
   q1_correct: number;
@@ -81,6 +85,18 @@ function ParticipantCard({ r }: { r: Row }) {
         <span className="text-xs font-semibold text-stone-500">
           Form {r.form} ({r.test || "—"}) · motivation: {r.motivation ?? "—"}
         </span>
+      </div>
+
+      <div className="mt-3 rounded-lg bg-stone-50 p-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+          Math background (self-reported)
+        </p>
+        <p className="mt-1 text-sm text-stone-700">
+          Highest math: <span className="font-semibold">{r.highest_math ?? "—"}</span>
+          {" · "}Calc courses: {r.calculus_courses ?? "—"}
+          {" · "}Math courses: {r.math_courses ?? "—"}
+          {" · "}Calc history: {r.calc_history ?? "—"}
+        </p>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
