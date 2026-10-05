@@ -3,7 +3,10 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
-import Button from "@/components/button";
+import InstructionIntro, {
+  introSeen,
+  markIntroSeen,
+} from "@/components/instruction-intro";
 import { STUDY_SCENARIO_ID } from "@/lib/scenarios/utils";
 import {
   lessonPath,
@@ -31,8 +34,6 @@ import { isPreviewActive } from "@/lib/preview";
  * when previewing instruction. Shown once per participant; always shown in
  * preview so it can be reviewed.
  */
-const INTRO_SEEN_KEY = "instruction:introSeen";
-
 function ScenariosRouterContent() {
   const router = useRouter();
   const query = useSearchParams().toString();
@@ -73,8 +74,7 @@ function ScenariosRouterContent() {
       // post-test.
       const entering = dest !== "/test/posttest";
       const preview = isPreviewActive();
-      const seen =
-        !preview && sessionStorage.getItem(INTRO_SEEN_KEY) === "true";
+      const seen = !preview && introSeen();
 
       if (entering && !seen) {
         setTarget(withQuery);
@@ -91,7 +91,7 @@ function ScenariosRouterContent() {
   const handleContinue = () => {
     if (!target) return;
     if (!isPreviewActive()) {
-      sessionStorage.setItem(INTRO_SEEN_KEY, "true");
+      markIntroSeen();
       logEvent("instruction_intro_continue", "instruction", {});
     }
     router.replace(target);
@@ -108,26 +108,7 @@ function ScenariosRouterContent() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-stone-100">
-      <AppHeader />
-      <div className="mx-auto w-full max-w-2xl px-4 py-16 sm:px-6">
-        <div className="rounded-2xl border-2 border-stone-200 bg-white p-10 text-center shadow-sm">
-          <h1 className="text-2xl font-bold text-stone-800">
-            You&apos;ve finished the pre-test.
-          </h1>
-          <p className="mt-4 text-base leading-7 text-stone-600">
-            Next, you&apos;ll work through a short instructional activity on
-            applied optimization. After that, there is a final quiz and a brief
-            survey.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <Button onClick={handleContinue}>Continue</Button>
-          </div>
-        </div>
-      </div>
-    </main>
-  );
+  return <InstructionIntro onContinue={handleContinue} />;
 }
 
 export default function ScenariosPage() {

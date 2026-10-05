@@ -1,13 +1,19 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
+import InstructionIntro, {
+  introSeen,
+  markIntroSeen,
+} from "@/components/instruction-intro";
 import LessonRunner from "@/components/lesson-runner";
 import { LESSON_SEQUENCE, lessonFromSlug, lessonPath } from "@/lib/lessons/definitions";
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import { markLessonComplete } from "@/lib/condition";
+
+const subscribeNothing = () => () => {};
 
 /**
  * One lesson of the lesson arm.
@@ -32,6 +38,23 @@ function LessonPageContent() {
     logEvent("lesson_started", lesson.id, { title: lesson.title });
   }, [lesson]);
 
+  // The lesson arm also starts with the pre-test transition, so it shows even
+  // when an instructor previews a lesson directly. Gated by introSeen so a
+  // participant who already saw it at /scenarios never sees it twice; always in
+  // preview. Read via useSyncExternalStore (server snapshot false) to avoid a
+  // hydration mismatch.
+  const [introDismissed, setIntroDismissed] = useState(false);
+  const needsIntro = useSyncExternalStore(
+    subscribeNothing,
+    () => {
+      const pos = lesson
+        ? LESSON_SEQUENCE.indexOf(lesson.id as (typeof LESSON_SEQUENCE)[number])
+        : -1;
+      return pos === 0 && (isPreviewActive() || !introSeen());
+    },
+    () => false
+  );
+
   if (!lesson) {
     return (
       <main className="min-h-screen bg-stone-100">
@@ -47,6 +70,15 @@ function LessonPageContent() {
     lesson.id as (typeof LESSON_SEQUENCE)[number]
   );
   const next = LESSON_SEQUENCE[position + 1];
+
+  const dismissIntro = () => {
+    if (!isPreviewActive()) markIntroSeen();
+    setIntroDismissed(true);
+  };
+
+  if (needsIntro && !introDismissed) {
+    return <InstructionIntro onContinue={dismissIntro} />;
+  }
 
   const handleComplete = () => {
     // Preview must never write study state or advance a participant's progress.
