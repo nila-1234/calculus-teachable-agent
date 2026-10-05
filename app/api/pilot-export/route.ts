@@ -39,6 +39,30 @@ function numberIn(value: unknown): number | null {
   return match ? Number.parseFloat(match[0]) : null;
 }
 
+/**
+ * Flattens one test answer to a single readable string for a CSV cell. Keeps
+ * every part a participant could have supplied (choice, matches, text, the
+ * "Other" text and any explanation) rather than grading it — the raw dump the
+ * instructor asked for.
+ */
+function flattenAnswer(a: unknown): string {
+  if (a == null || typeof a !== "object") return String(a ?? "");
+  const ans = a as Record<string, unknown>;
+  const parts: string[] = [];
+  if (ans.choiceId) parts.push(`choice:${ans.choiceId}`);
+  if (ans.matches && typeof ans.matches === "object") {
+    parts.push(
+      Object.entries(ans.matches as Record<string, unknown>)
+        .map(([k, v]) => `${k}=${v}`)
+        .join("; ")
+    );
+  }
+  if (ans.text) parts.push(String(ans.text));
+  if (ans.otherText) parts.push(`other:${ans.otherText}`);
+  if (ans.explanation) parts.push(`why:${ans.explanation}`);
+  return parts.join(" | ");
+}
+
 export async function GET(req: NextRequest) {
   const denied = authorizeInstructor(req);
   if (denied) return denied;
@@ -120,6 +144,9 @@ export async function GET(req: NextRequest) {
         q1_correct: q1Correct,
         q1_total: q1Total,
         q1,
+        // Full, ungraded answer set for every test item (Q1 original + 1b–1e,
+        // Q2, and the Q3 AI-conversation question). Captured from test_completed.
+        test_answers: testAnswers,
         motivation: pre["why-study"] ?? null,
         motivation_other: pre["why-study-other"] ?? null,
         difficulty: difficulty.difficulty ?? null,
@@ -150,12 +177,25 @@ export async function GET(req: NextRequest) {
         "confidence",
         "length",
       ];
+      // One column per test item, across everyone, so the raw Q1/Q2/Q3 answers
+      // (incl. the AI-conversation question) land in the spreadsheet. Sorted so
+      // the columns are stable from one export to the next.
+      const itemIds = [
+        ...new Set(rows.flatMap((r) => Object.keys(r.test_answers ?? {}))),
+      ].sort();
+      const answerCols = itemIds.map((id) => `ans_${id}`);
+
       const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const csv = [
-        cols.join(","),
-        ...rows.map((r) =>
-          cols.map((c) => esc((r as Record<string, unknown>)[c])).join(",")
-        ),
+        [...cols, ...answerCols].join(","),
+        ...rows.map((r) => {
+          const record = r as Record<string, unknown>;
+          const answers = (r.test_answers ?? {}) as Record<string, unknown>;
+          return [
+            ...cols.map((c) => esc(record[c])),
+            ...itemIds.map((id) => esc(flattenAnswer(answers[id]))),
+          ].join(",");
+        }),
       ].join("\n");
       return new NextResponse(csv, {
         headers: {
