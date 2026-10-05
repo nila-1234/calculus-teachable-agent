@@ -16,11 +16,52 @@ const instructorTools = [
     icon: BarChartIcon,
   },
   {
+    href: "/instructor/pilot",
+    title: "Pilot results",
+    description:
+      "The A/B test-question pilot: its 50/50 split, graded Q1 items, difficulty survey, and screening-vs-performance — kept separate from the main study.",
+    icon: BarChartIcon,
+  },
+  {
     href: "/instructor/generate",
     title: "Generate instruction set",
     description:
       "Create a new calculus teaching module, from the student task through its grading materials.",
     icon: Pencil2Icon,
+  },
+];
+
+const PILOT_PREVIEW = [
+  { label: "Pilot · Welcome", path: "/pilot", description: "The pilot's entry page." },
+  {
+    label: "Pilot · Screening",
+    path: "/pilot/survey/screening",
+    description: "Collected, but nobody is screened out.",
+  },
+  {
+    label: "Pilot · Pre-survey",
+    path: "/pilot/survey/pre",
+    description: "The pre-survey plus the motivation question.",
+  },
+  {
+    label: "Pilot · Test A (pretest)",
+    path: "/pilot/test?form=A",
+    description: "Form A — the pretest with the five-item Question 1.",
+  },
+  {
+    label: "Pilot · Test B (posttest)",
+    path: "/pilot/test?form=B",
+    description: "Form B — the posttest with the five-item Question 1.",
+  },
+  {
+    label: "Pilot · Difficulty survey",
+    path: "/pilot/survey/difficulty",
+    description: "The closing questions about the test.",
+  },
+  {
+    label: "Pilot · Complete",
+    path: "/pilot/complete",
+    description: "Thank-you and the completion code.",
   },
 ];
 
@@ -48,6 +89,42 @@ export default function InstructorDashboardPage() {
           {PREVIEW_PHASES.map((phase) => (
             <Link
               key={phase.id}
+              href={previewHref(phase.path)}
+              className="group flex flex-col rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-lime-600 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lime-600"
+            >
+              <span className="text-lg font-bold text-stone-800">
+                {phase.label}
+              </span>
+              <span className="mt-2 flex-1 text-sm leading-6 text-stone-500">
+                {phase.description}
+              </span>
+              <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-lime-700">
+                Open
+                <ArrowRightIcon
+                  width={16}
+                  height={16}
+                  aria-hidden="true"
+                  className="transition-transform group-hover:translate-x-1"
+                />
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        <h2 className="mt-12 text-2xl font-bold text-stone-800">
+          Pilot study (A/B test-question pilot)
+        </h2>
+        <p className="mt-2 max-w-2xl text-base leading-6 text-stone-500">
+          A separate study at <code className="font-mono">/pilot</code> —
+          screening (no screen-out), pre-survey, one of two counterbalanced test
+          forms, and a difficulty survey. Its data is kept separate from the
+          main study.
+        </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {PILOT_PREVIEW.map((phase) => (
+            <Link
+              key={phase.path}
               href={previewHref(phase.path)}
               className="group flex flex-col rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-lime-600 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-lime-600"
             >
