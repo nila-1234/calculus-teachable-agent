@@ -2,6 +2,14 @@ import { UNKNOWN_SUBJECT_ID, getSubjectId } from "@/lib/subject";
 import { isNonParticipantContext } from "@/lib/preview";
 import { getProlificPid } from "@/lib/prolific";
 
+/** Events from the /pilot flow are tagged so the server stores them separately. */
+function isPilotRoute(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.location.pathname.startsWith("/pilot")
+  );
+}
+
 const QUEUE_KEY = "logQueue";
 
 /**
@@ -21,6 +29,8 @@ export type LogEntry = {
   timestamp: string;
   event: string;
   scenario_id: string;
+  /** "pilot" for events from the /pilot flow, kept in a separate store. */
+  study?: string;
   data: Record<string, unknown>;
 };
 
@@ -194,6 +204,9 @@ export async function logEvent(
     timestamp: new Date().toISOString(),
     event,
     scenario_id: String(scenarioId),
+    // Events from the /pilot flow are tagged so the server routes them to a
+    // separate collection, keeping the pilot's data out of the main study.
+    ...(isPilotRoute() ? { study: "pilot" } : {}),
     data,
   };
 

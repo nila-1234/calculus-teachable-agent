@@ -18,51 +18,64 @@ export async function POST(req: NextRequest) {
 
     const env = process.env.VERCEL_ENV ?? "local";
     const receivedAt = FieldValue.serverTimestamp();
-    const logs = getFirestore().collection("logs");
+    const db = getFirestore();
 
-    // Each event carries its own event_id, so using it as the document ID
-    // makes a retried event a no-op create() rejection (ALREADY_EXISTS)
-    // instead of a duplicate row — the same de-dupe the old unique Mongo
-    // index gave us.
-    const results = await Promise.allSettled(
-      entries.map((entry) => {
-        const record = entry as Record<string, unknown>;
-        const eventId = record.event_id;
-        if (typeof eventId !== "string" || !eventId) {
-          return Promise.reject(new Error("log entry missing event_id"));
+    // Pilot events live in their own collection so the pilot's data never mixes
+    // with the main study's.
+    const isPilot = (e: unknown) =>
+      (e as Record<string, unknown>)?.study === "pilot";
+    const pilotEntries = entries.filter(isPilot);
+    const mainEntries = entries.filter((e) => !isPilot(e));
+
+    // Each event carries its own event_id, so using it as the document ID makes
+    // a retried event a no-op create() rejection (ALREADY_EXISTS) rather than a
+    // duplicate — the same de-dupe the old unique Mongo index gave us.
+    const writeBatch = async (collectionName: string, items: unknown[]) => {
+      if (!items.length) return 0;
+      const coll = db.collection(collectionName);
+      const results = await Promise.allSettled(
+        items.map((entry) => {
+          const record = entry as Record<string, unknown>;
+          const eventId = record.event_id;
+          if (typeof eventId !== "string" || !eventId) {
+            return Promise.reject(new Error("log entry missing event_id"));
+          }
+          return coll
+            .doc(eventId)
+            .create({ ...record, env, received_at: receivedAt });
+        })
+      );
+
+      let inserted = 0;
+      const nonDuplicateErrors: unknown[] = [];
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          inserted += 1;
+        } else {
+          const err = result.reason as { code?: number };
+          if (err?.code === ALREADY_EXISTS) continue;
+          nonDuplicateErrors.push(result.reason);
         }
-        return logs.doc(eventId).create({
-          ...record,
-          env,
-          received_at: receivedAt,
-        });
-      })
-    );
-
-    let inserted = 0;
-    const nonDuplicateErrors: unknown[] = [];
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        inserted += 1;
-      } else {
-        const err = result.reason as { code?: number };
-        if (err?.code === ALREADY_EXISTS) continue;
-        nonDuplicateErrors.push(result.reason);
       }
-    }
+      // A batch that is purely retries is a success, not a failure.
+      if (nonDuplicateErrors.length) throw nonDuplicateErrors[0];
+      return inserted;
+    };
 
-    // A batch that is purely retries is a success, not a failure — only a
-    // genuine write error fails the request.
-    if (nonDuplicateErrors.length) throw nonDuplicateErrors[0];
+    const inserted =
+      (await writeBatch("logs", mainEntries)) +
+      (await writeBatch("pilot_logs", pilotEntries));
 
-    // Mirror into the browsable subjects/ tree. Deliberately after the write
-    // above and deliberately swallowed: the tree is a convenience projection,
-    // and losing a participant's data because a display copy failed would be
-    // an absurd trade. /api/rebuild-tree repairs anything missed.
-    try {
-      await mirrorEvents(entries as LogEntry[]);
-    } catch (err) {
-      console.error("Tree mirror failed (logs are unaffected):", err);
+    // Mirror only the main study into the browsable subjects/ tree; the pilot
+    // analysis reads pilot_logs flat. Deliberately swallowed: the tree is a
+    // convenience projection, and losing data because a display copy failed
+    // would be an absurd trade. /api/rebuild-tree repairs anything missed.
+    if (mainEntries.length) {
+      try {
+        await mirrorEvents(mainEntries as LogEntry[]);
+      } catch (err) {
+        console.error("Tree mirror failed (logs are unaffected):", err);
+      }
     }
 
     return NextResponse.json({ ok: true, inserted });
