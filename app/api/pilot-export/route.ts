@@ -19,6 +19,8 @@ export const dynamic = "force-dynamic";
 type Ev = {
   subject_id?: string;
   prolific_pid?: string | null;
+  prolific_study_id?: string | null;
+  prolific_session_id?: string | null;
   event?: string;
   scenario_id?: string;
   timestamp?: string;
@@ -99,9 +101,16 @@ export async function GET(req: NextRequest) {
         if (correct) q1Correct += 1;
       }
 
+      // The Prolific identifiers can ride on any event, so take the first
+      // non-null value across the subject's events rather than only the test's.
+      const firstNonNull = (pick: (e: Ev) => string | null | undefined) =>
+        evs.map(pick).find((v) => v != null) ?? null;
+
       return {
         subject,
-        prolific_pid: testEv?.prolific_pid ?? null,
+        prolific_pid: firstNonNull((e) => e.prolific_pid),
+        prolific_study_id: firstNonNull((e) => e.prolific_study_id),
+        prolific_session_id: firstNonNull((e) => e.prolific_session_id),
         form,
         test: testKey,
         completed_test: Boolean(testEv),
@@ -115,7 +124,7 @@ export async function GET(req: NextRequest) {
         motivation_other: pre["why-study-other"] ?? null,
         difficulty: difficulty.difficulty ?? null,
         confidence: difficulty.confidence ?? null,
-        time: difficulty.time ?? null,
+        length: difficulty.length ?? null,
         unclear: difficulty.unclear ?? null,
         feedback: difficulty.feedback ?? null,
       };
@@ -125,6 +134,9 @@ export async function GET(req: NextRequest) {
     if (format === "csv") {
       const cols = [
         "subject",
+        "prolific_pid",
+        "prolific_study_id",
+        "prolific_session_id",
         "form",
         "test",
         "completed_test",
@@ -136,7 +148,7 @@ export async function GET(req: NextRequest) {
         "motivation",
         "difficulty",
         "confidence",
-        "time",
+        "length",
       ];
       const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const csv = [

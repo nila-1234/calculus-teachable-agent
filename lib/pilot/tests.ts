@@ -102,6 +102,18 @@ export const PILOT_Q1_ANSWERS: Record<string, Record<string, number>> = {
   posttest: { "1b": 16, "1c": 25, "1d": 800, "1e": 81 },
 };
 
+/**
+ * A single neutral title and intro for both forms. The pilot runs one test per
+ * participant, so "Pre-Test" / "Post-Test" would be meaningless; identical text
+ * on both forms also keeps the A/B assignment blinded. The intro drops the base
+ * tests' "you can go back to revise" line — the pilot runner has no Back button.
+ */
+const PILOT_TEST_TITLE = "Optimization Problems";
+const PILOT_TEST_INTRO = [
+  "This test has three questions: a worked optimization problem, a multi-part modeling and grading exercise, and a problem where you review an AI's solution.",
+  "Answer each part in order. Once you continue past a question you cannot change that answer, so finish each one before moving on.",
+];
+
 function withExtendedQ1(
   base: TestDefinition,
   extra: TestItem[]
@@ -109,6 +121,8 @@ function withExtendedQ1(
   const [q1, ...rest] = base.sections;
   return {
     ...base,
+    title: PILOT_TEST_TITLE,
+    intro: PILOT_TEST_INTRO,
     sections: [{ ...q1, items: [...q1.items, ...extra] }, ...rest],
   };
 }

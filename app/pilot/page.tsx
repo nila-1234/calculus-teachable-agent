@@ -24,16 +24,23 @@ function PilotWelcome() {
       <AppHeader />
       <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
         <div className="rounded-2xl border-2 border-stone-200 bg-white p-10 shadow-sm">
-          <h1 className="text-2xl font-bold text-stone-800">Calculus study</h1>
+          <h1 className="text-2xl font-bold text-stone-800">
+            Calculus Problem-Solving Study
+          </h1>
           <p className="mt-4 text-base leading-7 text-stone-600">
-            Thank you for taking part. You will answer a few background
-            questions, a short survey, and then a calculus test, followed by a
-            couple of questions about the test. It takes about 30 minutes.
+            In this study, you will answer a few questions about your math
+            background, complete a set of calculus optimization problems
+            involving maximums and minimums, and answer brief questions about
+            your experience and the difficulty of the problems.
+          </p>
+          <p className="mt-3 text-base leading-7 text-stone-600">
+            Participants with different levels of math experience are welcome.
+            Please make your best attempt, even if some problems are unfamiliar.
           </p>
           <p className="mt-3 text-sm leading-6 text-stone-500">
-            Please complete it in one sitting and on your own, without
-            generative-AI assistance. Ordinary calculators and scratch paper are
-            fine.
+            The study takes approximately 30 minutes. Please work independently
+            without calculators, AI tools, or outside help. Scratch paper is
+            allowed.
           </p>
           <div className="mt-8 flex justify-end">
             <Button onClick={begin}>Begin</Button>
