@@ -1,6 +1,7 @@
 "use client";
 
 import MathDisplay from "@/components/math-display";
+import ConversationScenario from "@/components/conversation-scenario";
 import MathInputField from "@/components/math-input-field";
 import OptionRow, { OptionRowState } from "@/components/option-row";
 import { TestItem, TestItemAnswer, TestSection } from "@/lib/tests/types";
@@ -28,7 +29,7 @@ export default function TestQuestionPanel({
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
             {section.title} · Scenario
           </p>
-          <MathDisplay
+          <ConversationScenario
             text={section.scenario}
             className="text-sm leading-6 text-stone-700"
           />
