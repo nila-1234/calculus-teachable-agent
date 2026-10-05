@@ -15,6 +15,13 @@ export const dynamic = "force-dynamic";
 const FORMS = ["A", "B"] as const;
 type Form = (typeof FORMS)[number];
 
+/**
+ * TEMPORARY OVERRIDE — force every new assignment onto one form.
+ * "B" collects the posttest only; set back to null to restore balanced A/B.
+ * (A matching override exists in lib/pilot/condition.ts — flip both.)
+ */
+const FORCE_FORM: Form | null = "B";
+
 const ASSIGNMENTS = "pilot_assignments";
 const COUNTS_DOC = "pilot_assignment_counts/global";
 
@@ -50,7 +57,9 @@ export async function POST(req: NextRequest) {
       ) as Record<Form, number>;
 
       let chosen: Form;
-      if (preferred) {
+      if (FORCE_FORM) {
+        chosen = FORCE_FORM;
+      } else if (preferred) {
         chosen = preferred;
       } else {
         const fewest = Math.min(...FORMS.map((f) => tally[f]));
@@ -61,7 +70,7 @@ export async function POST(req: NextRequest) {
       tx.set(subjectRef, {
         subject_id: subjectId,
         form: chosen,
-        via: preferred ? "client-fallback" : "balanced",
+        via: FORCE_FORM ? "forced" : preferred ? "client-fallback" : "balanced",
         assigned_at: FieldValue.serverTimestamp(),
       });
       tx.set(

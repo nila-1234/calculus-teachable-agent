@@ -14,6 +14,13 @@ import type { PilotForm } from "@/lib/pilot/tests";
 
 const FORMS: PilotForm[] = ["A", "B"];
 
+/**
+ * TEMPORARY OVERRIDE — force every new participant onto one form.
+ * "B" collects the posttest only; set back to null to restore balanced A/B.
+ * (A matching override exists in app/api/pilot-assign/route.ts — flip both.)
+ */
+const FORCE_FORM: PilotForm | null = "B";
+
 /** Lets an instructor preview a specific form: ?form=B */
 const FORM_PARAM = "form";
 
@@ -65,6 +72,17 @@ export function previewForm(): PilotForm {
 }
 
 export async function resolvePilotForm(): Promise<PilotForm> {
+  // Temporary override: hand everyone the forced form and record it server-side.
+  if (FORCE_FORM) {
+    writeCache(FORCE_FORM);
+    void fetch("/api/pilot-assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_id: getSubjectId(), preferred: FORCE_FORM }),
+    }).catch(() => {});
+    return FORCE_FORM;
+  }
+
   const cached = readCache();
   if (cached) return cached;
 
@@ -97,6 +115,7 @@ export async function resolvePilotForm(): Promise<PilotForm> {
 
 /** The already-decided form, cached; fallback before one exists. */
 export function getPilotForm(): PilotForm {
+  if (FORCE_FORM) return FORCE_FORM;
   if (typeof window === "undefined") return "A";
   return readCache() ?? fallbackForm();
 }
