@@ -175,9 +175,17 @@ export default function PilotAnalysisPage() {
               </p>
             )}
 
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => download("csv")}>Download CSV</Button>
-              <Button onClick={() => download("json")}>Download JSON</Button>
+            <div className="space-y-2">
+              <p className="text-sm text-stone-500">
+                The download includes every participant&apos;s raw answers to all
+                test questions — the original Question 1, Question 2, and the
+                Question 3 AI-conversation items — one column per item in the CSV
+                (<code className="font-mono">ans_&lt;item&gt;</code>), ungraded.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => download("csv")}>Download CSV</Button>
+                <Button onClick={() => download("json")}>Download JSON</Button>
+              </div>
             </div>
           </div>
         )}
