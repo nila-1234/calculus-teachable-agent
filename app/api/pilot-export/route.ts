@@ -32,11 +32,19 @@ function answersOf(ev: Ev | null): Record<string, unknown> {
   return a && typeof a === "object" ? (a as Record<string, unknown>) : {};
 }
 
-function numberIn(value: unknown): number | null {
-  const match = String(value ?? "")
-    .replace(/,/g, "")
-    .match(/-?\d+(\.\d+)?/);
-  return match ? Number.parseFloat(match[0]) : null;
+/**
+ * Every number in a free-text answer. Matched against the key as a set, because
+ * participants paste a bare number, restate the domain ("during 0≤t≤8 is 324"),
+ * or show work ("x = 20, area = 800"). Grading on the FIRST number marked the
+ * first of these wrong — it read the 0 from the domain — so we accept a match on
+ * any number in the response instead.
+ */
+function allNumbers(value: unknown): number[] {
+  return [
+    ...String(value ?? "")
+      .replace(/,/g, "")
+      .matchAll(/-?\d+(\.\d+)?/g),
+  ].map((m) => Number.parseFloat(m[0]));
 }
 
 /**
@@ -111,17 +119,23 @@ export async function GET(req: NextRequest) {
       const powerOk =
         screening.power_rule_check === SKILL_CHECK_ANSWERS.power_rule_check;
 
-      // Grade the four new Q1 items by extracting a number and matching the key.
+      // Grade the four new Q1 items: correct if the expected value appears among
+      // any of the numbers in the response (see allNumbers). expected is kept on
+      // each item so the instructor view can show it next to what was given.
       const key = PILOT_Q1_ANSWERS[testKey] ?? {};
-      const q1: Record<string, { given: string; correct: boolean }> = {};
+      const q1: Record<
+        string,
+        { given: string; expected: number; correct: boolean }
+      > = {};
       let q1Correct = 0;
       let q1Total = 0;
       for (const [itemId, expected] of Object.entries(key)) {
         q1Total += 1;
         const givenRaw = (testAnswers[itemId] as { text?: string })?.text ?? "";
-        const num = numberIn(givenRaw);
-        const correct = num !== null && Math.abs(num - expected) < 1e-6;
-        q1[itemId] = { given: String(givenRaw), correct };
+        const correct = allNumbers(givenRaw).some(
+          (n) => Math.abs(n - expected) < 1e-6
+        );
+        q1[itemId] = { given: String(givenRaw), expected, correct };
         if (correct) q1Correct += 1;
       }
 
