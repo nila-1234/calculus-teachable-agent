@@ -4,7 +4,7 @@ import { Suspense, useEffect, useSyncExternalStore } from "react";
 import AppHeader from "@/components/app-header";
 import CompletionCode from "@/components/completion-code";
 import {
-  COMPLETION_CODE,
+  PILOT_COMPLETION_CODE,
   getProlificPid,
   prolificSubmissionUrl,
 } from "@/lib/prolific";
@@ -14,10 +14,10 @@ import { isPreviewActive } from "@/lib/preview";
 const subscribeNothing = () => () => {};
 
 /**
- * End of the pilot. Shows the Prolific completion code for participants who
- * arrived from Prolific (or in preview). The pilot is a separate Prolific study
- * and will need its own completion code once that study is set up; this reuses
- * the main code until then.
+ * End of the pilot. Shows the pilot's own Prolific completion code for
+ * participants who arrived from Prolific (or in preview). The pilot is a
+ * separate Prolific study with its own code (PILOT_COMPLETION_CODE), kept
+ * distinct from the main study's so the two outcomes never cross.
  */
 function PilotComplete() {
   useEffect(() => {
@@ -42,9 +42,9 @@ function PilotComplete() {
           {showCode && (
             <div className="mx-auto mt-2 max-w-md">
               <CompletionCode
-                code={COMPLETION_CODE}
-                envVar="NEXT_PUBLIC_PROLIFIC_COMPLETION_CODE"
-                submitUrl={prolificSubmissionUrl(COMPLETION_CODE)}
+                code={PILOT_COMPLETION_CODE}
+                envVar="NEXT_PUBLIC_PILOT_PROLIFIC_COMPLETION_CODE"
+                submitUrl={prolificSubmissionUrl(PILOT_COMPLETION_CODE)}
               />
             </div>
           )}

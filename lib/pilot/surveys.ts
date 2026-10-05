@@ -83,11 +83,11 @@ const difficultyItems: SurveyItem[] = [
     likert: AGREE_LIKERT,
   },
   {
-    id: "time",
+    id: "length",
     kind: "choice",
     required: true,
-    prompt: "Did you have enough time to complete the test?",
-    choices: choices(["More than enough", "Just enough", "Not enough"]),
+    prompt: "How did the length of this test feel to you?",
+    choices: choices(["Too short", "About right", "Too long"]),
   },
   {
     id: "unclear",

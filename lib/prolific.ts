@@ -139,6 +139,22 @@ export const COMPLETION_CODE =
   PROLIFIC_COMPLETION_CODE;
 
 /**
+ * Completion code for the test-question pilot (the /pilot flow).
+ *
+ * The pilot is a separate Prolific study with its own code, so a pilot
+ * submission must not be sent with the main study's code — Prolific would
+ * reject it. Same override rules as the main completion code; the pilot's own
+ * env var wins if set.
+ *
+ * ⚠️ Must match the completion code on the pilot's Prolific study.
+ */
+const PILOT_PROLIFIC_COMPLETION_CODE = "CLAVQVJP";
+
+export const PILOT_COMPLETION_CODE =
+  process.env.NEXT_PUBLIC_PILOT_PROLIFIC_COMPLETION_CODE?.trim() ||
+  PILOT_PROLIFIC_COMPLETION_CODE;
+
+/**
  * Screen-out code, for a participant who is screened out at the eligibility
  * survey. Prolific pays a reduced rate for a screen-out, so these participants
  * still need a code — a different one from the completers, so the two outcomes

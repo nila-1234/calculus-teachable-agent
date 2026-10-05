@@ -1,6 +1,6 @@
 import { UNKNOWN_SUBJECT_ID, getSubjectId } from "@/lib/subject";
 import { isNonParticipantContext } from "@/lib/preview";
-import { getProlificPid } from "@/lib/prolific";
+import { getProlificIds } from "@/lib/prolific";
 
 /** Events from the /pilot flow are tagged so the server stores them separately. */
 function isPilotRoute(): boolean {
@@ -24,8 +24,15 @@ export type LogEntry = {
   subject_id: string;
   /** Groups one uninterrupted run in one tab, independent of subject_id. */
   session_id: string;
-  /** Present when the participant arrived from Prolific. */
+  /**
+   * Prolific's launch parameters, captured from the entry URL so a submission
+   * can be reconciled on Prolific. All present when the participant arrived from
+   * Prolific; null otherwise. prolific_session_id is Prolific's SESSION_ID, not
+   * the per-tab session_id above.
+   */
   prolific_pid: string | null;
+  prolific_study_id: string | null;
+  prolific_session_id: string | null;
   timestamp: string;
   event: string;
   scenario_id: string;
@@ -194,13 +201,17 @@ export async function logEvent(
     );
   }
 
+  // Recorded from the launch URL, so events are attributable even before the
+  // subject ID is entered in the pre-survey.
+  const prolific = getProlificIds();
+
   const entry: LogEntry = {
     event_id: newEventId(),
     subject_id: subjectId,
     session_id: getSessionId(),
-    // Recorded from the launch URL, so events are attributable even before the
-    // subject ID is entered in the pre-survey.
-    prolific_pid: getProlificPid(),
+    prolific_pid: prolific.pid,
+    prolific_study_id: prolific.studyId,
+    prolific_session_id: prolific.sessionId,
     timestamp: new Date().toISOString(),
     event,
     scenario_id: String(scenarioId),
