@@ -29,6 +29,7 @@ type Props = {
   onTryAgainPart: (partId: string) => void;
   onNextPart: () => void;
   onContinue?: () => void;
+  mode?: number;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
   onExplanationBlur?: (partId: string, value: string) => void;
@@ -46,6 +47,7 @@ export default function QuestionPartCardDeck({
   onTryAgainPart,
   onNextPart,
   onContinue,
+  mode = 1,
   explanations = {},
   onExplanationChange,
   onExplanationBlur,
@@ -65,6 +67,7 @@ export default function QuestionPartCardDeck({
   const isSubmitted = part ? Boolean(submittedParts[part.id]) : false;
   const isCorrect = Boolean(selectedChoice?.correct);
   const canSubmit = Boolean(selectedChoice) && !isSubmitted;
+  const isMode2 = mode === 2;
 
   useEffect(() => {
     if (isSubmitted && feedbackRef.current) {
@@ -98,7 +101,7 @@ export default function QuestionPartCardDeck({
           </span>
         </Flex>
 
-        <div className="grid grid-cols-[3fr_2fr] gap-4 items-stretch">
+        <div className={isMode2 ? "grid grid-cols-[3fr_2fr] gap-4 items-stretch" : ""}>
           <Flex direction="column" gap="2" className="w-full">
             {part.options.map((choice, index) => (
               <OptionRow
@@ -112,7 +115,8 @@ export default function QuestionPartCardDeck({
             ))}
           </Flex>
 
-          <Flex direction="column" gap="2" className="h-full">
+          {isMode2 && (
+            <Flex direction="column" gap="2" className="h-full">
               <Text size="2" weight="medium" className="text-stone-600">
                 Explain your reasoning
               </Text>
@@ -123,8 +127,9 @@ export default function QuestionPartCardDeck({
                 onBlur={(e) => onExplanationBlur?.(part.id, e.target.value)}
                 disabled={isSubmitted}
                 className="flex-1 min-h-0 w-full resize-none rounded-xl border-2 border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 transition-colors focus:outline-none focus:border-lime-600 focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50 disabled:opacity-60"
-            />
-          </Flex>
+              />
+            </Flex>
+          )}
         </div>
 
         {!isSubmitted && (
@@ -140,8 +145,8 @@ export default function QuestionPartCardDeck({
             <Flex direction="column" gap="4">
               <FeedbackCard
                 feedback={selectedChoice?.feedback || "No feedback available."}
-                llmFeedback={llmFeedback[part.id]}
-                loadingLlm={loadingFeedback[part.id]}
+                llmFeedback={isMode2 ? llmFeedback[part.id] : undefined}
+                loadingLlm={isMode2 && loadingFeedback[part.id]}
                 correct={isCorrect}
               />
 

@@ -32,6 +32,7 @@ type AuthorQuestionPanelProps = {
   onTryAgainPart: (partId: string) => void;
   onNextPart: () => void;
   onContinue?: () => void;
+  mode?: number;
   explanations?: Record<string, string>;
   onExplanationChange?: (partId: string, value: string) => void;
   onExplanationBlur?: (partId: string, value: string) => void;
@@ -53,6 +54,7 @@ export default function AuthorQuestionPanel({
   onTryAgainPart,
   onNextPart,
   onContinue,
+  mode = 1,
   explanations,
   onExplanationChange,
   onExplanationBlur,
@@ -75,7 +77,6 @@ export default function AuthorQuestionPanel({
 
   return (
     <Flex direction="column" gap="5">
-
       <ScenarioCard
         scenario={scenario}
         scatterPlotSrc={scatterPlotSrc}
@@ -93,6 +94,7 @@ export default function AuthorQuestionPanel({
         onTryAgainPart={onTryAgainPart}
         onNextPart={onNextPart}
         onContinue={onContinue}
+        mode={mode}
         explanations={explanations}
         onExplanationChange={onExplanationChange}
         onExplanationBlur={onExplanationBlur}

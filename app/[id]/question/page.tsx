@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AuthorQuestionPanel from "@/components/author-question-panel";
 import StepProgress from "@/components/step-progress";
 import StepIntro from "@/components/step-intro";
@@ -13,6 +13,9 @@ import { logEvent } from "@/lib/logger";
 function AuthorQuestionPageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const mode = parseInt(searchParams.get("questionMode") || "2", 10);
+  const applyRubricMode = searchParams.get("applyRubricMode") || "2";
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -60,56 +63,62 @@ function AuthorQuestionPageContent() {
   }, [QUESTION_PLACEHOLDER, selectedChoices, allAnswered]);
 
   const handleSubmitPart = async (partId: string) => {
-    const selectedId = selectedParts[partId];
-    if (!selectedId) return;
+    if (!selectedParts[partId]) return;
 
     const part = QUESTION_PARTS.find((p) => p.id === partId);
-    const selectedChoice = part?.options.find((opt) => opt.id === selectedId);
-
+    const selectedChoice = part?.options.find((opt) => opt.id === selectedParts[partId]);
     logEvent("question_part_submitted", scenarioId, {
       part_id: partId,
-      selected_choice_id: selectedId,
+      selected_choice_id: selectedParts[partId],
       is_correct: selectedChoice?.correct ?? false,
+      mode,
     });
 
     setSubmittedParts((prev) => ({ ...prev, [partId]: true }));
 
-    if (!part || !selectedChoice) return;
+    if (mode === 2) {
+      const part = QUESTION_PARTS.find((p) => p.id === partId);
+      if (!part) return;
 
-    setLoadingFeedback((prev) => ({ ...prev, [partId]: true }));
+      const selectedId = selectedParts[partId];
+      const selectedChoice = part.options.find((opt) => opt.id === selectedId);
+      if (!selectedChoice) return;
 
-    try {
-      const res = await fetch("/api/question-feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenario: SCENARIO_PLACEHOLDER,
-          question: QUESTION_PLACEHOLDER,
-          responses: [
-            {
-              partId,
-              partLabel: part.label,
-              selectedChoiceId: selectedId,
-              selectedChoiceText: selectedChoice.text,
-              selectedChoiceCorrect: selectedChoice.correct,
-              hardcodedFeedback: selectedChoice.feedback,
-              explanation: explanations[partId] || "",
-            },
-          ],
-        }),
-      });
+      setLoadingFeedback((prev) => ({ ...prev, [partId]: true }));
 
-      const data = await res.json();
-      if (data.feedbackByPart?.[partId]) {
-        setLlmFeedback((prev) => ({
-          ...prev,
-          [partId]: data.feedbackByPart[partId],
-        }));
+      try {
+        const res = await fetch("/api/question-feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenario: SCENARIO_PLACEHOLDER,
+            question: QUESTION_PLACEHOLDER,
+            responses: [
+              {
+                partId,
+                partLabel: part.label,
+                selectedChoiceId: selectedId,
+                selectedChoiceText: selectedChoice.text,
+                selectedChoiceCorrect: selectedChoice.correct,
+                hardcodedFeedback: selectedChoice.feedback,
+                explanation: explanations[partId] || "",
+              },
+            ],
+          }),
+        });
+
+        const data = await res.json();
+        if (data.feedbackByPart?.[partId]) {
+          setLlmFeedback((prev) => ({
+            ...prev,
+            [partId]: data.feedbackByPart[partId],
+          }));
+        }
+      } catch (e) {
+        console.error("Failed to get LLM feedback:", e);
+      } finally {
+        setLoadingFeedback((prev) => ({ ...prev, [partId]: false }));
       }
-    } catch (e) {
-      console.error("Failed to get LLM feedback:", e);
-    } finally {
-      setLoadingFeedback((prev) => ({ ...prev, [partId]: false }));
     }
   };
 
@@ -161,6 +170,7 @@ function AuthorQuestionPageContent() {
       selected_parts: selectedParts,
       all_correct: isFullyCorrect,
       composed_question: composedQuestion,
+      mode,
     });
 
     sessionStorage.setItem(
@@ -190,7 +200,7 @@ function AuthorQuestionPageContent() {
       isFullyCorrect ? "true" : "false"
     );
 
-    router.push(`/${scenarioId}/create-rubric`);
+    router.push(`/${scenarioId}/create-rubric?applyRubricMode=${applyRubricMode}`);
   };
 
   return (
@@ -230,6 +240,7 @@ function AuthorQuestionPageContent() {
           onTryAgainPart={handleTryAgainPart}
           onNextPart={handleNextPart}
           onContinue={handleContinue}
+          mode={mode}
           explanations={explanations}
           onExplanationChange={(partId, value) =>
             setExplanations((prev) => ({ ...prev, [partId]: value }))

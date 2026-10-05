@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import GradePanel, {
   AnswerReviewState,
   RubricCriterion,
@@ -17,6 +17,8 @@ import { logEvent } from "@/lib/logger";
 function GradePageContent() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const mode = parseInt(searchParams.get("applyRubricMode") || "2", 10);
 
   const scenarioId = parseScenarioId(params.id);
   const scenario = scenarioId ? getScenario(scenarioId) : null;
@@ -174,6 +176,7 @@ function GradePageContent() {
     logEvent("apply_rubric_submitted", scenarioId, {
       answer_id: answerId,
       results: review.results,
+      mode,
     });
 
     const rubricWithReviews = rubric.map((criterion) => ({
