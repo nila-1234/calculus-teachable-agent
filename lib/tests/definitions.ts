@@ -25,6 +25,7 @@ const PRE_TEST: TestDefinition = {
           prompt:
             "A gardener wants to enclose a rectangular garden along a straight river. The side along the river does not require fencing, so the gardener will fence only the two sides perpendicular to the river and the one side parallel to it. The gardener has 60 meters of fencing.\n\nUse calculus to determine the dimensions of the garden that maximize its enclosed area and state the maximum area. Show your work.",
           placeholder: "Show your work here…",
+          mathInput: true,
           reference:
             "Let x be each side perpendicular to the river and y the side parallel to it, so 2x + y = 60 and A(x) = x(60 − 2x) = 60x − 2x². A′(x) = 60 − 4x = 0 gives x = 15; A is a downward parabola so this is the maximum. y = 30, maximum area 450 m². Rubric (5 pts, consequential grading): Model, Derivative, Critical value, Extremum justification, Resulting quantities.",
         },
@@ -197,6 +198,7 @@ const POST_TEST: TestDefinition = {
           prompt:
             "A community center wants to enclose a rectangular outdoor activity area next to a long building. The side along the building does not require fencing, so fencing is needed only for the two sides perpendicular to the building and the one side parallel to it. The center has 80 meters of fencing.\n\nUse calculus to determine the dimensions of the activity area that maximize its enclosed area and state the maximum area. Show your work.",
           placeholder: "Show your work here…",
+          mathInput: true,
           reference:
             "Let x be each side perpendicular to the building and y the side parallel to it, so 2x + y = 80 and A(x) = x(80 − 2x) = 80x − 2x². A′(x) = 80 − 4x = 0 gives x = 20; A is a downward parabola so this is the maximum. y = 40, maximum area 800 m². Rubric (5 pts, consequential grading): Model, Derivative, Critical value, Extremum justification, Resulting quantities.",
         },

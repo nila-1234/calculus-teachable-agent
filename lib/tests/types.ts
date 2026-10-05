@@ -34,6 +34,8 @@ export type TestItem = {
   /** For multiple-choice items that also ask the student to explain their choice. */
   explanationPrompt?: string;
   placeholder?: string;
+  /** Free-response items where the answer is math: show an on-screen keypad and preview. */
+  mathInput?: boolean;
   /** Small note under the item (e.g. "This question is not graded."). */
   note?: string;
   /** Reference solution / grading rubric from the assessment doc. Not shown to students. */

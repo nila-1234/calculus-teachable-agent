@@ -1,6 +1,7 @@
 "use client";
 
 import MathDisplay from "@/components/math-display";
+import MathInputField from "@/components/math-input-field";
 import OptionRow, { OptionRowState } from "@/components/option-row";
 import { TestItem, TestItemAnswer, TestSection } from "@/lib/tests/types";
 
@@ -197,7 +198,15 @@ export default function TestQuestionPanel({
             </div>
           )}
 
-          {item.kind === "free-response" && (
+          {item.kind === "free-response" && item.mathInput && (
+            <MathInputField
+              value={answer.text || ""}
+              onChange={(text) => onAnswerChange({ ...answer, text })}
+              placeholder={item.placeholder || "Type your answer…"}
+            />
+          )}
+
+          {item.kind === "free-response" && !item.mathInput && (
             <textarea
               placeholder={item.placeholder || "Type your answer…"}
               value={answer.text || ""}
