@@ -324,3 +324,41 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
   }
 }
+
+/**
+ * Instructor-only cleanup of preview/test runs.
+ *
+ * Deletes ONLY pilot_logs events whose prolific_pid is "test" — the marker a
+ * manual/preview run carries. Scoped in the query itself, so it can never remove
+ * a real participant's data regardless of what is passed. Token-gated like the
+ * export.
+ */
+export async function DELETE(req: NextRequest) {
+  const denied = authorizeInstructor(req);
+  if (denied) return denied;
+
+  try {
+    const db = getFirestore();
+    const snap = await db
+      .collection("pilot_logs")
+      .where("prolific_pid", "==", "test")
+      .get();
+
+    const subjects = new Set(
+      snap.docs.map((d) => String((d.data() as Ev).subject_id ?? ""))
+    );
+
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+
+    return NextResponse.json({
+      ok: true,
+      deleted: snap.size,
+      subjects: [...subjects],
+    });
+  } catch (err) {
+    console.error("Pilot cleanup failed:", err);
+    return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
+  }
+}
