@@ -243,6 +243,11 @@ export async function GET(req: NextRequest) {
         sec_pre_survey: timings.pre_survey.seconds,
         sec_assessment: timings.assessment.seconds,
         sec_difficulty: timings.difficulty.seconds,
+        // Full raw answer maps per phase, so a report can show every item from
+        // screening through the post-survey.
+        screening_all: screening,
+        pre_all: pre,
+        post_all: difficulty,
         motivation: pre["why-study"] ?? null,
         motivation_other: pre["why-study-other"] ?? null,
         difficulty: difficulty.difficulty ?? null,
