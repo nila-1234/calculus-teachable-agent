@@ -17,8 +17,61 @@ type GradeInfo = {
   total: number;
   max: number;
   complete: boolean;
-  items: Record<string, { points: number | null; max: number; kind: string }>;
+  items: Record<
+    string,
+    {
+      points: number | null;
+      max: number;
+      kind: string;
+      criteria?: Record<string, string>;
+    }
+  >;
 };
+
+/** Rubric criteria for the show-work (open) items, labelled for the analysis. */
+const CRIT_SPECS: { item: string; label: string; crits: [string, string][] }[] = [
+  {
+    item: "1",
+    label: "Q1a — optimization (show work)",
+    crits: [
+      ["model", "sets up the constraint"],
+      ["one-variable", "area as one variable"],
+      ["derivative", "differentiates & solves"],
+      ["extremum", "justifies it is a maximum"],
+      ["quantities", "reports dimensions & area"],
+    ],
+  },
+  {
+    item: "2.2",
+    label: "Q2.2 — explain the concept (show work)",
+    crits: [
+      ["derivative", "names the derivative"],
+      ["critical-point", "identifies critical point"],
+      ["definition", "defines critical point (deriv=0)"],
+      ["candidate-only", "critical point only a candidate"],
+      ["verify", "must verify it is a max"],
+    ],
+  },
+  {
+    item: "3.2",
+    label: "Q3.2 — rebut the AI (show work)",
+    crits: [
+      ["names-constraint", "names the range constraint"],
+      ["identifies-conflict", "identifies the AI's conflict"],
+      ["prompts-revision", "prompts a revision"],
+    ],
+  },
+];
+
+const ITEM_ANALYSIS_LABELS: [string, string][] = [
+  ["1", "Q1a optimization (show work)"],
+  ["2.1", "Q2.1 revenue model (MC)"],
+  ["2.2", "Q2.2 explain concept (show work)"],
+  ["2.3", "Q2.3 matching"],
+  ["2.4", "Q2.4 interpret domain (MC)"],
+  ["3.1", "Q3.1 question the AI (MC)"],
+  ["3.2", "Q3.2 rebut the AI (show work)"],
+];
 
 /**
  * AI rubric grades (gradeTest + answer key, LiteLLM/claude-sonnet) computed
@@ -26,16 +79,16 @@ type GradeInfo = {
  * Any newer grades from /api/pilot-grade override these by subject.
  */
 const STATIC_GRADES: Record<string, GradeInfo> = {
-  "58adfc6e7cf56d0001f931a2": {"total":4,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":1,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
-  "697cd118af4b9f1235c8a580": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
-  "698ce4ba931f89581ecc6d7d": {"total":11,"max":20,"complete":true,"items":{"1":{"points":4,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
-  "699f99838bc35ad313ab9f51": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
-  "69dae6f92db929c858644edc": {"total":2,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
-  "69fb90ec1ec66537d620e491": {"total":15,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
-  "6a178e2e2b82ec7429f2353c": {"total":15,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
-  "6a1c4ff5565b7f7ae832d10e": {"total":11,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
-  "6a9f047c09a7a822e7058fb8": {"total":15,"max":20,"complete":true,"items":{"1":{"points":1,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open"},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
-  "6aaf04a43b9d955ca2188eb7": {"total":17,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+  "58adfc6e7cf56d0001f931a2": {"total":4,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":1,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "697cd118af4b9f1235c8a580": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "698ce4ba931f89581ecc6d7d": {"total":11,"max":20,"complete":true,"items":{"1":{"points":4,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"not_met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "699f99838bc35ad313ab9f51": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "69dae6f92db929c858644edc": {"total":2,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "69fb90ec1ec66537d620e491": {"total":15,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a178e2e2b82ec7429f2353c": {"total":14,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a1c4ff5565b7f7ae832d10e": {"total":11,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a9f047c09a7a822e7058fb8": {"total":15,"max":20,"complete":true,"items":{"1":{"points":1,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6aaf04a43b9d955ca2188eb7": {"total":17,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"met","verify":"met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
 };
 
 type Answer = {
@@ -484,6 +537,32 @@ export default function PilotAnalysisPage() {
     );
   };
 
+  const downloadAnalysisCsv = () => {
+    if (!analysis) return;
+    const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const lines: string[] = [];
+    lines.push("ITEM-LEVEL (mean % of max; higher = did better)");
+    lines.push(["item", "label", "max", "mean_points", "pct_of_max"].map(q).join(","));
+    for (const it of analysis.items)
+      lines.push(
+        [it.id, it.label, it.max, it.meanPts.toFixed(2), `${it.pct}%`].map(q).join(",")
+      );
+    lines.push("");
+    lines.push("CRITERION-LEVEL (show-work items; % of participants who met each rubric point)");
+    lines.push(["item", "rubric_criterion", "met", "n", "pct_met"].map(q).join(","));
+    for (const c of analysis.crit)
+      lines.push(
+        [c.item, c.clabel, c.met, c.n, `${c.pct}%`].map(q).join(",")
+      );
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "pilot-answer-key-analysis.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const view = useMemo(() => {
     if (!rows) return null;
     // A preview/test run has no real Prolific PID (preview sends "test").
@@ -527,6 +606,44 @@ export default function PilotAnalysisPage() {
       ),
     };
   }, [rows, showTestRuns]);
+
+  // Answer-key analysis against the AI rubric grades: per-item mean % of max,
+  // and per-criterion % met on the show-work items. Computed over all completed
+  // participants shown (preview/test runs already excluded by `view`).
+  const analysis = useMemo(() => {
+    if (!view) return null;
+    const subs = view.completed;
+    const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
+
+    const items = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+      const vals = subs
+        .map((r) => grades[r.subject]?.items?.[id])
+        .filter((x): x is NonNullable<typeof x> => Boolean(x));
+      const max = vals[0]?.max ?? 0;
+      const meanPts = vals.length
+        ? vals.reduce((a, i) => a + (i.points ?? 0), 0) / vals.length
+        : 0;
+      return { id, label, max, meanPts, pct: pctOf(meanPts, max), n: vals.length };
+    }).sort((a, b) => b.pct - a.pct);
+
+    const crit = CRIT_SPECS.flatMap((spec) =>
+      spec.crits.map(([cid, clabel]) => {
+        const verdicts = subs
+          .map((r) => grades[r.subject]?.items?.[spec.item]?.criteria?.[cid])
+          .filter((v): v is string => Boolean(v));
+        const met = verdicts.filter((v) => v === "met").length;
+        return {
+          item: spec.label,
+          clabel,
+          met,
+          n: verdicts.length,
+          pct: pctOf(met, verdicts.length),
+        };
+      })
+    );
+
+    return { items, crit };
+  }, [view, grades]);
 
   return (
     <main className="min-h-screen bg-stone-100">
@@ -728,6 +845,76 @@ export default function PilotAnalysisPage() {
                 .
               </p>
             </div>
+
+            {analysis && (
+              <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-base font-bold text-stone-800">
+                    Answer-key analysis (AI rubric)
+                  </h2>
+                  <Button onClick={downloadAnalysisCsv}>
+                    Download analysis (CSV)
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-stone-400">
+                  Across {view.completed.length} completed participants. Higher =
+                  students did better against the answer-key rubric.
+                </p>
+
+                <h3 className="mt-3 text-sm font-bold text-stone-700">
+                  By question — mean % of max (best first)
+                </h3>
+                <table className="mt-1 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Question</th>
+                      <th className="py-1 pr-3 font-semibold">Mean</th>
+                      <th className="py-1 font-semibold">% of max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.items.map((it) => (
+                      <tr key={it.id} className="border-t border-stone-100">
+                        <td className="py-1 pr-3 text-stone-700">{it.label}</td>
+                        <td className="py-1 pr-3 text-stone-600">
+                          {it.meanPts.toFixed(2)}/{it.max}
+                        </td>
+                        <td className="py-1 font-semibold text-stone-800">
+                          {it.pct}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <h3 className="mt-4 text-sm font-bold text-stone-700">
+                  Show-work rubric — % who met each point
+                </h3>
+                <table className="mt-1 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Item</th>
+                      <th className="py-1 pr-3 font-semibold">Rubric criterion</th>
+                      <th className="py-1 font-semibold">% met</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.crit.map((c, i) => (
+                      <tr key={i} className="border-t border-stone-100">
+                        <td className="py-1 pr-3 text-stone-500">{c.item}</td>
+                        <td className="py-1 pr-3 text-stone-700">{c.clabel}</td>
+                        <td className="py-1 font-semibold text-stone-800">
+                          {c.pct}%{" "}
+                          <span className="text-xs font-normal text-stone-400">
+                            ({c.met}/{c.n})
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2">
