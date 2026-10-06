@@ -289,7 +289,13 @@ export default function PilotAnalysisPage() {
     const testRuns = rows.filter(isTestRun);
     const shown = showTestRuns ? rows : real;
 
-    const completed = shown.filter((r) => r.completed_test);
+    // "Completed" = finished the whole pilot (through the exit survey). Someone
+    // who did the test but abandoned the exit survey is counted separately, not
+    // in the analysis, so a half-finished run can't skew the numbers.
+    const completed = shown.filter((r) => r.completed_pilot);
+    const testOnly = shown.filter(
+      (r) => r.completed_test && !r.completed_pilot
+    ).length;
     const byForm = (f: string) =>
       completed.filter((r) => r.form === f);
     const q1Rate = (f: string) =>
@@ -311,6 +317,7 @@ export default function PilotAnalysisPage() {
       algebraRate: mean(completed.map((r) => (r.screening_algebra_correct ? 1 : 0))),
       powerRate: mean(completed.map((r) => (r.screening_power_rule_correct ? 1 : 0))),
       q3CorrectRate,
+      testOnly,
       medianTotal: median(completed.map((r) => r.total_seconds)),
       medianAssessment: median(
         completed.map((r) => r.timings?.assessment?.seconds ?? null)
@@ -418,6 +425,12 @@ export default function PilotAnalysisPage() {
               <h2 className="text-xl font-bold text-stone-800">
                 Participants ({view.completed.length})
               </h2>
+              {view.testOnly > 0 && (
+                <p className="mt-1 text-xs text-stone-400">
+                  {view.testOnly} more did the test but did not finish the exit
+                  survey — excluded here.
+                </p>
+              )}
               <div className="mt-3 space-y-4">
                 {view.completed.length === 0 && (
                   <p className="text-sm text-stone-500">

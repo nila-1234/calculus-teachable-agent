@@ -339,24 +339,31 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const db = getFirestore();
-    const snap = await db
-      .collection("pilot_logs")
-      .where("prolific_pid", "==", "test")
-      .get();
+    const coll = db.collection("pilot_logs");
 
-    const subjects = new Set(
-      snap.docs.map((d) => String((d.data() as Ev).subject_id ?? ""))
-    );
+    // Always sweep the preview/test marker; also remove an exact subject_id when
+    // one is named (?subject=...), to clear a manual run whose early events have
+    // no prolific_pid yet. Both are explicit, so no real participant is touched.
+    const subject = req.nextUrl.searchParams.get("subject")?.trim();
+    const queries = [coll.where("prolific_pid", "==", "test").get()];
+    if (subject) queries.push(coll.where("subject_id", "==", subject).get());
 
+    const seen = new Set<string>();
+    const subjects = new Set<string>();
     const batch = db.batch();
-    snap.docs.forEach((d) => batch.delete(d.ref));
+    let deleted = 0;
+    for (const snap of await Promise.all(queries)) {
+      for (const doc of snap.docs) {
+        if (seen.has(doc.id)) continue;
+        seen.add(doc.id);
+        subjects.add(String((doc.data() as Ev).subject_id ?? ""));
+        batch.delete(doc.ref);
+        deleted += 1;
+      }
+    }
     await batch.commit();
 
-    return NextResponse.json({
-      ok: true,
-      deleted: snap.size,
-      subjects: [...subjects],
-    });
+    return NextResponse.json({ ok: true, deleted, subjects: [...subjects] });
   } catch (err) {
     console.error("Pilot cleanup failed:", err);
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 });
