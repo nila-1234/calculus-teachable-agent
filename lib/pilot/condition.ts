@@ -16,10 +16,10 @@ const FORMS: PilotForm[] = ["A", "B"];
 
 /**
  * TEMPORARY OVERRIDE — force every new participant onto one form.
- * "B" collects the posttest only; set back to null to restore balanced A/B.
+ * "A"/"B" collects that form only; set back to null to restore balanced A/B.
  * (A matching override exists in app/api/pilot-assign/route.ts — flip both.)
  */
-const FORCE_FORM: PilotForm | null = "B";
+const FORCE_FORM: PilotForm | null = "A";
 
 /** Lets an instructor preview a specific form: ?form=B */
 const FORM_PARAM = "form";
