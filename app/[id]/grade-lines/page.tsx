@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useEffect, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import LineRubricPanel, {
@@ -64,10 +64,14 @@ function GradeLinesPageContent() {
     return <main className="p-6">Scenario not found.</main>;
   }
 
-  const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS } = scenario.schema;
+  const { RUBRIC_OPTIONS, FINAL_AI_ANSWERS, QUESTION_PLACEHOLDER: question } = scenario.schema;
 
-  const [question, setQuestion] = useState("");
-  const [rubric, setRubric] = useState<RubricCriterion[]>([]);
+  // Only the correct rubric criteria — step 2 can't be passed without selecting exactly these.
+  const rubric = useMemo<RubricCriterion[]>(
+    () =>
+      RUBRIC_OPTIONS.filter((option) => option.correct).map(({ id, label }) => ({ id, label })),
+    [RUBRIC_OPTIONS]
+  );
   const [placements, setPlacements] = useState<StepPlacementsState>({});
   const [reviewStates, setReviewStates] = useState<StepReviewState>({});
   // Keyed by answerId -> criterionId: true while that criterion's placement or status
@@ -113,22 +117,6 @@ function GradeLinesPageContent() {
       },
     }));
   };
-
-  useEffect(() => {
-    setQuestion(sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) || "");
-  }, [scenarioId]);
-
-  useEffect(() => {
-    const raw = sessionStorage.getItem(`scenario:${scenarioId}:selectedRubricIds`);
-    const ids: string[] = raw ? JSON.parse(raw) : RUBRIC_OPTIONS.map((option) => option.id);
-
-    const selectedRubric = ids.map((id) => {
-      const match = RUBRIC_OPTIONS.find((option) => option.id === id);
-      return { id, label: match?.label || id };
-    });
-
-    setRubric(selectedRubric);
-  }, [RUBRIC_OPTIONS, scenarioId]);
 
   // Drops every comment bubble tied to a criterion, or
   // just the status-phase bubble when `kind` is given. Used whenever a criterion's

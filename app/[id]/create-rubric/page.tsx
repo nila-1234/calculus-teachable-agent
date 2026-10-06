@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import CreateRubricPanel, {
   RubricDecision,
@@ -31,25 +31,18 @@ function CreateRubricPageContent() {
     PLOT_DATA_SRC,
     SCENARIO_IMAGE_SRC,
     QUESTION_PARTS,
+    QUESTION_PLACEHOLDER,
   } = scenario.schema;
 
   // The model was settled in step 1, so plot the correct choice's curve.
   const correctModel = QUESTION_PARTS[0]?.options.find((choice) => choice.correct);
   const plotEquation = correctModel ? toPlotEquation(correctModel.text) : "";
 
-  const [question, setQuestion] = useState("");
   const [rubricDecisions, setRubricDecisions] = useState<
     Record<string, RubricDecision>
   >({});
   const [submitted, setSubmitted] = useState(false);
   const [isPerfect, setIsPerfect] = useState(false);
-
-  useEffect(() => {
-    setQuestion(
-      sessionStorage.getItem(`scenario:${scenarioId}:studentQuestion`) ||
-      "Question placeholder"
-    );
-  }, [scenarioId]);
 
   const selectedRubricIds = useMemo(
     () =>
@@ -144,7 +137,7 @@ function CreateRubricPageContent() {
           scatterPlotSrc={PLOT_DATA_SRC}
           scenarioImageSrc={SCENARIO_IMAGE_SRC}
           plotEquation={plotEquation}
-          question={question}
+          question={QUESTION_PLACEHOLDER}
           correctSample={SAMPLE_ANSWERS.correct}
           incorrectSample={SAMPLE_ANSWERS.incorrect}
           rubricOptions={RUBRIC_OPTIONS}
