@@ -560,7 +560,14 @@ export default function LineRubricPanel({
                               .reverse()
                               .find((message) => message.role !== "user");
                             return canDiscuss && thread && last
-                              ? [{ kind, speaker: thread.speaker, text: last.text }]
+                              ? [
+                                  {
+                                    kind,
+                                    speaker: thread.speaker,
+                                    text: last.text,
+                                    resolved: thread.flow.kind === "resolved" && !thread.pending,
+                                  },
+                                ]
                               : [];
                           });
                           // The mark block shows for the active card once its placement is
@@ -672,7 +679,7 @@ export default function LineRubricPanel({
                               {flowBubbles.map((bubble) => (
                                 <div
                                   key={bubble.kind}
-                                  className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES[bubble.speaker].bubble}`}
+                                  className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES[bubble.speaker].bubble} ${bubble.resolved ? "opacity-50" : ""}`}
                                 >
                                   <div className="flex-1">
                                     <span className="font-semibold">{speakerName(bubble.speaker)}</span>{" "}
@@ -685,7 +692,8 @@ export default function LineRubricPanel({
                                           kind: bubble.kind,
                                         })
                                       }
-                                      className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
+                                      disabled={bubble.resolved}
+                                      className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900 disabled:cursor-not-allowed disabled:hover:text-lime-700"
                                     >
                                       Respond
                                       <ArrowRightIcon width={13} height={13} />
