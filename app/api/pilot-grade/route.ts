@@ -104,6 +104,14 @@ export async function GET(req: NextRequest) {
         continue;
       }
       model = r.gradedBy ?? model;
+      // Per-criterion verdicts for the open (show-work) items, for a rubric-area
+      // analysis ("where did students do best").
+      const criteriaByItem = new Map(
+        r.openItems.map((o) => [
+          o.itemId,
+          Object.fromEntries(o.criteria.map((c) => [c.id, c.verdict])),
+        ])
+      );
       scores[subject] = {
         testId: r.testId,
         total: r.totalPoints,
@@ -112,7 +120,14 @@ export async function GET(req: NextRequest) {
         items: Object.fromEntries(
           r.items.map((it) => [
             it.itemId,
-            { points: it.points ?? null, max: it.maxPoints, kind: it.kind },
+            {
+              points: it.points ?? null,
+              max: it.maxPoints,
+              kind: it.kind,
+              ...(criteriaByItem.has(it.itemId)
+                ? { criteria: criteriaByItem.get(it.itemId) }
+                : {}),
+            },
           ])
         ),
       };
