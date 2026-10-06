@@ -18,6 +18,9 @@ import type { TestAnswers, TestId } from "@/lib/tests/types";
  */
 
 export const dynamic = "force-dynamic";
+// Grading several submissions each needs an LLM round-trip; allow the function
+// the time to finish rather than timing out at the default limit.
+export const maxDuration = 300;
 
 type Ev = {
   subject_id?: string;
@@ -80,15 +83,29 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Grade each submission with the LLM rubric. Open items (Q1a/Q2/Q3) go to
-    // the model; closed items are scored by key inside gradeTest.
+    // Grade all submissions concurrently — each needs an LLM round-trip, so
+    // sequential grading of ten people overruns the function's time limit. One
+    // failure is isolated so it cannot discard the others.
     const scores: Record<string, unknown> = {};
     let model: string | null = null;
-    for (const { subject, testId, answers } of subs) {
-      const r = await gradeTest(testId, answers);
+    const graded = await Promise.all(
+      subs.map(async ({ subject, testId, answers }) => {
+        try {
+          const r = await gradeTest(testId, answers);
+          return { subject, r, error: null as string | null };
+        } catch (e) {
+          return { subject, r: null, error: String(e) };
+        }
+      })
+    );
+    for (const { subject, r, error } of graded) {
+      if (!r) {
+        scores[subject] = { error };
+        continue;
+      }
       model = r.gradedBy ?? model;
       scores[subject] = {
-        testId,
+        testId: r.testId,
         total: r.totalPoints,
         max: r.totalMaxPoints,
         complete: r.complete,
