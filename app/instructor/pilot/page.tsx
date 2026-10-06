@@ -13,6 +13,13 @@ type Phase = {
 };
 type ItemTiming = { answered_at: string | null; seconds: number | null };
 
+type GradeInfo = {
+  total: number;
+  max: number;
+  complete: boolean;
+  items: Record<string, { points: number | null; max: number; kind: string }>;
+};
+
 type Answer = {
   choiceId?: string;
   matches?: Record<string, string>;
@@ -183,7 +190,7 @@ function renderAnswer(a?: Answer): string {
 }
 
 /** One participant's full breakdown — collapsed by default to keep the page short. */
-function ParticipantCard({ r }: { r: Row }) {
+function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
   const q3 = r.test_answers?.["3.1"]?.choiceId ?? "—";
   const so = screenOut(r);
   const aiFlag = looksAiWritten(r.test_answers?.["1"]?.text ?? "");
@@ -252,12 +259,21 @@ function ParticipantCard({ r }: { r: Row }) {
       </div>
 
       <div className="mt-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-1">
           <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
             All responses — Q1 to Q3
           </p>
           <p className="text-xs text-stone-400">
             New Q1: {r.q1_correct}/{r.q1_total}
+            {grade && (
+              <>
+                {" · "}
+                <span className="font-semibold text-stone-600">
+                  AI-graded total: {grade.total}/{grade.max}
+                </span>
+                {!grade.complete && " (some items need review)"}
+              </>
+            )}
           </p>
         </div>
         <table className="mt-2 w-full border-collapse text-sm">
@@ -266,7 +282,8 @@ function ParticipantCard({ r }: { r: Row }) {
               <th className="py-1 pr-3 font-semibold">Question</th>
               <th className="py-1 pr-3 font-semibold">Response</th>
               <th className="py-1 pr-3 font-semibold">Time</th>
-              <th className="py-1 font-semibold">Result</th>
+              <th className="py-1 pr-3 font-semibold">Result</th>
+              <th className="py-1 font-semibold">AI score</th>
             </tr>
           </thead>
           <tbody>
@@ -311,6 +328,11 @@ function ParticipantCard({ r }: { r: Row }) {
                       ) : (
                         <span className="text-stone-300">—</span>
                       )}
+                    </td>
+                    <td className="py-1 whitespace-nowrap text-stone-600">
+                      {grade?.items?.[id] && grade.items[id].points != null
+                        ? `${grade.items[id].points}/${grade.items[id].max}`
+                        : "—"}
                     </td>
                   </tr>
                 );
@@ -374,6 +396,7 @@ export default function PilotAnalysisPage() {
   );
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [grades, setGrades] = useState<Record<string, GradeInfo>>({});
 
   const runAi = async (force: boolean) => {
     setAiLoading(true);
@@ -417,6 +440,13 @@ export default function PilotAnalysisPage() {
         // Auto-run the AI difficulty analysis. The server only calls the model
         // when the dataset changed, so a refresh on unchanged data is free.
         void runAi(false);
+        // AI rubric grades for the free-response items (cached server-side).
+        fetch("/api/pilot-grade", { headers: { "x-grading-token": token } })
+          .then((r) => r.json())
+          .then((g) => {
+            if (g.ok && g.scores) setGrades(g.scores as Record<string, GradeInfo>);
+          })
+          .catch(() => {});
       }
     } catch (e) {
       setError(String(e));
@@ -715,7 +745,11 @@ export default function PilotAnalysisPage() {
                 {view.completed
                   .filter((r) => !onlyEligible || !screenOut(r).out)
                   .map((r) => (
-                    <ParticipantCard key={r.subject} r={r} />
+                    <ParticipantCard
+                      key={r.subject}
+                      r={r}
+                      grade={grades[r.subject]}
+                    />
                   ))}
               </div>
             </div>
