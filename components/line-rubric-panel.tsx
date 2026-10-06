@@ -76,8 +76,9 @@ type Phase =
 const PHASE_PILL: Partial<Record<Phase, { text: string; className: string }>> = {
   place: { text: "Place it on a step", className: "bg-lime-100 text-lime-700" },
   checking: { text: "Checking…", className: "bg-stone-100 text-stone-500" },
-  "discuss-placement": { text: "Answer the professor", className: "bg-amber-100 text-amber-700" },
+  "discuss-placement": { text: "Check step placement", className: "bg-amber-100 text-amber-700" },
   mark: { text: "Mark pass or fail", className: "bg-lime-100 text-lime-700" },
+  "discuss-status": { text: "Check evaluation", className: "bg-amber-100 text-amber-700" },
   "resolve-placement": { text: "Check step placement", className: "bg-amber-100 text-amber-700" },
   "resolve-status": { text: "Mark it again", className: "bg-amber-100 text-amber-700" },
 };
@@ -672,16 +673,9 @@ export default function LineRubricPanel({
                                   key={bubble.kind}
                                   className={`ml-5 flex items-start gap-2 rounded-xl px-3.5 py-3 text-xs shadow-sm ${SPEAKER_STYLES[bubble.speaker].bubble}`}
                                 >
-                                  <span
-                                    title={speakerName(bubble.speaker)}
-                                    aria-label={speakerName(bubble.speaker)}
-                                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${SPEAKER_STYLES[bubble.speaker].avatar}`}
-                                  >
-                                    {SPEAKER_STYLES[bubble.speaker].initial}
-                                  </span>
                                   <div className="flex-1">
-                                    <span className="font-semibold">{speakerName(bubble.speaker)}: </span>
-                                    <MathDisplay text={bubble.text} className="inline text-xs" />
+                                    <span className="font-semibold">{speakerName(bubble.speaker)}</span>{" "}
+                                    has a comment for you.
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -692,7 +686,7 @@ export default function LineRubricPanel({
                                       }
                                       className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-lime-700 hover:text-lime-900"
                                     >
-                                      View conversation
+                                      Respond
                                       <ArrowRightIcon width={13} height={13} />
                                     </button>
                                   </div>
@@ -850,6 +844,7 @@ export default function LineRubricPanel({
           open
           onClose={closeDiscussion}
           counterpartLabel={speakerName(openThread.speaker)}
+          speakerNames={{ professor: PROFESSOR_NAME, student: currentAnswer.label }}
           criterionLabel={
             rubric.find((c) => c.id === openDiscussion.criterionId)?.label ?? "this criterion"
           }

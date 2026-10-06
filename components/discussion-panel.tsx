@@ -40,6 +40,8 @@ type DiscussionPanelProps = {
   quickReplies?: string[];
   // When set, typing is disabled and this explains why (e.g. "Close this and drag again").
   inputDisabledReason?: string;
+  // Name shown above each bubble, by role. Non-user roles fall back to counterpartLabel.
+  speakerNames?: Partial<Record<DiscussionMessage["role"], string>>;
 };
 
 export default function DiscussionPanel({
@@ -57,6 +59,7 @@ export default function DiscussionPanel({
   closable,
   quickReplies,
   inputDisabledReason,
+  speakerNames,
 }: DiscussionPanelProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -64,6 +67,8 @@ export default function DiscussionPanel({
   const canClose = closable ?? (!forceReply || hasReplied);
   const shownQuickReplies = quickReplies ?? (hasReplied ? [] : QUICK_REPLIES);
   const inputDisabled = pending || inputDisabledReason != null;
+  const nameFor = (role: DiscussionMessage["role"]) =>
+    speakerNames?.[role] ?? (role === "user" ? "You" : counterpartLabel);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -117,7 +122,10 @@ export default function DiscussionPanel({
 
         <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {openingComment ? (
-            <div className="flex justify-start">
+            <div className="flex flex-col items-start">
+              <span className="mb-1 px-1 text-[11px] font-semibold text-stone-500">
+                {counterpartLabel}
+              </span>
               <div className="max-w-[85%] rounded-xl rounded-tl-none bg-sky-50 px-3.5 py-2.5 text-sm leading-6 text-sky-900">
                 <MathDisplay text={openingComment} />
               </div>
@@ -127,8 +135,11 @@ export default function DiscussionPanel({
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex flex-col ${message.role === "user" ? "items-end" : "items-start"}`}
             >
+              <span className="mb-1 px-1 text-[11px] font-semibold text-stone-500">
+                {nameFor(message.role)}
+              </span>
               <div
                 className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-6 ${
                   message.role === "user"
