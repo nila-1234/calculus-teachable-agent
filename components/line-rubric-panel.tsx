@@ -392,7 +392,8 @@ export default function LineRubricPanel({
   const handleDragStart = (criterionId: string) => (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", criterionId);
-    setDragCriterionId(criterionId);
+    // Deferred: drop hints shift the card, and Chrome aborts a drag whose source moves.
+    requestAnimationFrame(() => setDragCriterionId(criterionId));
   };
 
   const handleDragEnd = () => {
