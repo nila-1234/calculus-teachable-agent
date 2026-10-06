@@ -151,6 +151,21 @@ const ITEM_LABELS: Record<string, string> = {
   "3.2": "Q3.2 — reply to the AI",
 };
 
+/** Test-question order for the per-participant "all responses" table. */
+const ALL_ITEMS = [
+  "1",
+  "1b",
+  "1c",
+  "1d",
+  "1e",
+  "2.1",
+  "2.2",
+  "2.3",
+  "2.4",
+  "3.1",
+  "3.2",
+];
+
 function renderAnswer(a?: Answer): string {
   if (!a) return "—";
   const parts: string[] = [];
@@ -170,15 +185,8 @@ function renderAnswer(a?: Answer): string {
 /** One participant's full breakdown — collapsed by default to keep the page short. */
 function ParticipantCard({ r }: { r: Row }) {
   const q3 = r.test_answers?.["3.1"]?.choiceId ?? "—";
-  const q3Text = r.test_answers?.["3.2"]?.text ?? "";
-  const q1Ids = Object.keys(r.q1 ?? {}).sort();
   const so = screenOut(r);
-  const q1aText = r.test_answers?.["1"]?.text ?? "";
-  const aiFlag = looksAiWritten(q1aText);
-  // Q1a and Q2 responses; 1b–1e are in the graded table and Q3 has its own block.
-  const otherItems = ["1", "2.1", "2.2", "2.3", "2.4"].filter(
-    (id) => r.test_answers?.[id]
-  );
+  const aiFlag = looksAiWritten(r.test_answers?.["1"]?.text ?? "");
 
   return (
     <details className="rounded-xl border-2 border-stone-200 bg-white">
@@ -244,77 +252,72 @@ function ParticipantCard({ r }: { r: Row }) {
       </div>
 
       <div className="mt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
-          New Question 1 — {r.q1_correct}/{r.q1_total}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+            All responses — Q1 to Q3
+          </p>
+          <p className="text-xs text-stone-400">
+            New Q1: {r.q1_correct}/{r.q1_total}
+          </p>
+        </div>
         <table className="mt-2 w-full border-collapse text-sm">
           <thead>
             <tr className="text-left text-xs text-stone-400">
-              <th className="py-1 pr-3 font-semibold">Item</th>
-              <th className="py-1 pr-3 font-semibold">Expected</th>
-              <th className="py-1 pr-3 font-semibold">Given</th>
+              <th className="py-1 pr-3 font-semibold">Question</th>
+              <th className="py-1 pr-3 font-semibold">Response</th>
               <th className="py-1 pr-3 font-semibold">Time</th>
-              <th className="py-1 font-semibold"></th>
+              <th className="py-1 font-semibold">Result</th>
             </tr>
           </thead>
           <tbody>
-            {q1Ids.map((id) => {
-              const item = r.q1[id];
-              return (
-                <tr key={id} className="border-t border-stone-100 align-top">
-                  <td className="py-1 pr-3 font-mono text-stone-600">{id}</td>
-                  <td className="py-1 pr-3 text-stone-600">{item.expected}</td>
-                  <td className="py-1 pr-3 text-stone-800">
-                    {item.given || "—"}
-                  </td>
-                  <td className="py-1 pr-3 text-stone-500">
-                    {fmtSec(r.item_timings?.[id]?.seconds)}
-                  </td>
-                  <td className="py-1">
-                    <Tick ok={item.correct} />
-                  </td>
-                </tr>
-              );
-            })}
+            {ALL_ITEMS.filter((id) => r.test_answers?.[id] || r.q1?.[id]).map(
+              (id) => {
+                const graded = r.q1?.[id];
+                const isQ3 = id === "3.1";
+                return (
+                  <tr key={id} className="border-t border-stone-100 align-top">
+                    <td className="py-1 pr-3 font-mono text-xs text-stone-600">
+                      {ITEM_LABELS[id] ?? id}
+                      {id === "1" && aiFlag && (
+                        <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-bold text-amber-800">
+                          AI?
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1 pr-3 text-stone-800">
+                      <span className="whitespace-pre-wrap">
+                        {renderAnswer(r.test_answers?.[id])}
+                      </span>
+                      {isQ3 && (
+                        <span className="text-stone-400">
+                          {" "}
+                          ({Q3_GLOSS[q3] ?? "—"})
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-1 pr-3 whitespace-nowrap text-stone-500">
+                      {fmtSec(r.item_timings?.[id]?.seconds)}
+                    </td>
+                    <td className="py-1 whitespace-nowrap">
+                      {graded ? (
+                        <>
+                          <Tick ok={graded.correct} />{" "}
+                          <span className="text-xs text-stone-400">
+                            exp {graded.expected}
+                          </span>
+                        </>
+                      ) : isQ3 ? (
+                        <Tick ok={q3 === Q3_CORRECT} />
+                      ) : (
+                        <span className="text-stone-300">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              }
+            )}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
-          Q1a &amp; Q2 responses
-        </p>
-        {otherItems.map((id) => (
-          <div key={id} className="rounded-lg bg-stone-50 p-3 text-sm">
-            <p className="flex items-center gap-2 text-xs font-semibold text-stone-500">
-              {ITEM_LABELS[id] ?? id}
-              {id === "1" && aiFlag && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
-                  looks AI-written
-                </span>
-              )}
-            </p>
-            <p className="mt-1 whitespace-pre-wrap text-stone-800">
-              {renderAnswer(r.test_answers?.[id])}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 rounded-lg bg-stone-50 p-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
-          AI-conversation question (Q3)
-        </p>
-        <p className="mt-1 text-sm text-stone-700">
-          Chose <span className="font-bold">{q3}</span> —{" "}
-          {Q3_GLOSS[q3] ?? "—"}{" "}
-          <Tick ok={q3 === Q3_CORRECT} />
-        </p>
-        {q3Text && (
-          <p className="mt-2 text-sm italic text-stone-600">
-            “{q3Text}”
-          </p>
-        )}
       </div>
 
       <div className="mt-4 rounded-lg bg-stone-50 p-3">
@@ -365,6 +368,7 @@ export default function PilotAnalysisPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showTestRuns, setShowTestRuns] = useState(false);
+  const [onlyEligible, setOnlyEligible] = useState(false);
   const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
     null
   );
@@ -674,9 +678,26 @@ export default function PilotAnalysisPage() {
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-stone-800">
-                Participants ({view.completed.length})
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-xl font-bold text-stone-800">
+                  Participants (
+                  {
+                    view.completed.filter(
+                      (r) => !onlyEligible || !screenOut(r).out
+                    ).length
+                  }
+                  {onlyEligible ? ` of ${view.completed.length}` : ""})
+                </h2>
+                <label className="flex items-center gap-2 text-sm text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={onlyEligible}
+                    onChange={(e) => setOnlyEligible(e.target.checked)}
+                    className="h-4 w-4 accent-lime-600"
+                  />
+                  Only show participants not screened out
+                </label>
+              </div>
               {view.testOnly > 0 && (
                 <p className="mt-1 text-xs text-stone-400">
                   {view.testOnly} more did the test but did not finish the exit
@@ -684,14 +705,18 @@ export default function PilotAnalysisPage() {
                 </p>
               )}
               <div className="mt-3 space-y-4">
-                {view.completed.length === 0 && (
+                {view.completed.filter(
+                  (r) => !onlyEligible || !screenOut(r).out
+                ).length === 0 && (
                   <p className="text-sm text-stone-500">
-                    No completed participants to show.
+                    No participants to show.
                   </p>
                 )}
-                {view.completed.map((r) => (
-                  <ParticipantCard key={r.subject} r={r} />
-                ))}
+                {view.completed
+                  .filter((r) => !onlyEligible || !screenOut(r).out)
+                  .map((r) => (
+                    <ParticipantCard key={r.subject} r={r} />
+                  ))}
               </div>
             </div>
 
