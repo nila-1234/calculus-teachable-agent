@@ -249,6 +249,34 @@ export default function PilotAnalysisPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showTestRuns, setShowTestRuns] = useState(false);
+  const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
+    null
+  );
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const runAi = async (force: boolean) => {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const res = await fetch(
+        `/api/pilot-ai-analysis${force ? "?force=1" : ""}`,
+        { headers: { "x-grading-token": token } }
+      ).then((r) => r.json());
+      if (res.ok) {
+        setAi({
+          analysis: res.analysis,
+          model: res.cached ? `${res.model} (cached)` : res.model,
+        });
+      } else {
+        setAiError(res.error || "Could not run the AI analysis.");
+      }
+    } catch (e) {
+      setAiError(String(e));
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -266,6 +294,9 @@ export default function PilotAnalysisPage() {
       } else {
         setRows(exp.rows as Row[]);
         setSplit(asg?.ok ? (asg as Split) : null);
+        // Auto-run the AI difficulty analysis. The server only calls the model
+        // when the dataset changed, so a refresh on unchanged data is free.
+        void runAi(false);
       }
     } catch (e) {
       setError(String(e));
@@ -392,6 +423,43 @@ export default function PilotAnalysisPage() {
               Median total time: {fmtSec(view.medianTotal)} · median assessment
               time: {fmtSec(view.medianAssessment)} (completed participants).
             </p>
+
+            <div className="rounded-xl border-2 border-lime-300 bg-lime-50/50 p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-bold text-stone-800">
+                  AI difficulty analysis — are the pre- and post-test equally
+                  hard?
+                </h2>
+                <Button
+                  onClick={() => runAi(true)}
+                  disabled={aiLoading || !token}
+                >
+                  {aiLoading ? "Analyzing…" : "Re-run"}
+                </Button>
+              </div>
+              {aiError && (
+                <p className="mt-2 text-sm text-amber-800">{aiError}</p>
+              )}
+              {ai ? (
+                <>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
+                    {ai.analysis}
+                  </p>
+                  {ai.model && (
+                    <p className="mt-2 text-xs text-stone-400">
+                      Model: {ai.model}. Regenerated only when the dataset
+                      changes.
+                    </p>
+                  )}
+                </>
+              ) : (
+                !aiError && (
+                  <p className="mt-2 text-sm text-stone-500">
+                    {aiLoading ? "Analyzing the dataset…" : "Preparing…"}
+                  </p>
+                )
+              )}
+            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border-2 border-stone-200 bg-white p-5">

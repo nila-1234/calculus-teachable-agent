@@ -17,10 +17,10 @@ type Form = (typeof FORMS)[number];
 
 /**
  * TEMPORARY OVERRIDE — force every new assignment onto one form.
- * "B" collects the posttest only; set back to null to restore balanced A/B.
+ * "A"/"B" collects that form only; set back to null to restore balanced A/B.
  * (A matching override exists in lib/pilot/condition.ts — flip both.)
  */
-const FORCE_FORM: Form | null = "B";
+const FORCE_FORM: Form | null = "A";
 
 const ASSIGNMENTS = "pilot_assignments";
 const COUNTS_DOC = "pilot_assignment_counts/global";
