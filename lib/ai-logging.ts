@@ -16,9 +16,6 @@ import { logEvent } from "@/lib/logger";
 
 /** Route suffixes under /api that talk to a model on the student's behalf. */
 const AI_ROUTES = [
-  "ai-student-answers",
-  "apply-rubric-feedback",
-  "grade-chat",
   "grade-lines-comment",
   "grade-lines-feedback",
   "question-feedback",

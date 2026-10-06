@@ -19,7 +19,7 @@ const EXEMPT = [
   /^\/not-eligible(\/|$)/,
   /^\/instructor(\/|$)/,
   /^\/scenarios(\/|$)/,
-  /^\/[^/]+\/(question|apply-rubric|create-rubric|grade|grade-lines)(\/|$)/,
+  /^\/[^/]+\/(question|create-rubric|grade-lines)(\/|$)/,
 ];
 
 /**
