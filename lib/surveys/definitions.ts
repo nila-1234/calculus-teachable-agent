@@ -66,14 +66,12 @@ const SCREENING_SURVEY: SurveyDefinition = {
             "Calculus I",
             "Calculus II",
             "Calculus III or higher",
-            "Other college-level mathematics (e.g., linear algebra, differential equations)",
-            "I am not sure",
           ]
         ),
         choiceItem(
           "calculus-courses",
           "How many college-level calculus courses have you taken?",
-          ["None", "1", "2", "3 or more", "I am not sure"]
+          ["None", "1", "2", "3 or more"]
         ),
         choiceItem(
           "math_courses",
