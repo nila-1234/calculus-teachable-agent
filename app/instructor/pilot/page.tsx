@@ -20,6 +20,24 @@ type GradeInfo = {
   items: Record<string, { points: number | null; max: number; kind: string }>;
 };
 
+/**
+ * AI rubric grades (gradeTest + answer key, LiteLLM/claude-sonnet) computed
+ * 2026-10-06 and hard-coded so the view shows them without a live model call.
+ * Any newer grades from /api/pilot-grade override these by subject.
+ */
+const STATIC_GRADES: Record<string, GradeInfo> = {
+  "58adfc6e7cf56d0001f931a2": {"total":4,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":1,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
+  "697cd118af4b9f1235c8a580": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
+  "698ce4ba931f89581ecc6d7d": {"total":11,"max":20,"complete":true,"items":{"1":{"points":4,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
+  "699f99838bc35ad313ab9f51": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
+  "69dae6f92db929c858644edc": {"total":2,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open"},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open"}}},
+  "69fb90ec1ec66537d620e491": {"total":15,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+  "6a178e2e2b82ec7429f2353c": {"total":15,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open"},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+  "6a1c4ff5565b7f7ae832d10e": {"total":11,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+  "6a9f047c09a7a822e7058fb8": {"total":15,"max":20,"complete":true,"items":{"1":{"points":1,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open"},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+  "6aaf04a43b9d955ca2188eb7": {"total":17,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open"},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open"},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open"}}},
+};
+
 type Answer = {
   choiceId?: string;
   matches?: Record<string, string>;
@@ -396,7 +414,7 @@ export default function PilotAnalysisPage() {
   );
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
-  const [grades, setGrades] = useState<Record<string, GradeInfo>>({});
+  const [grades, setGrades] = useState<Record<string, GradeInfo>>(STATIC_GRADES);
 
   const runAi = async (force: boolean) => {
     setAiLoading(true);
@@ -444,7 +462,11 @@ export default function PilotAnalysisPage() {
         fetch("/api/pilot-grade", { headers: { "x-grading-token": token } })
           .then((r) => r.json())
           .then((g) => {
-            if (g.ok && g.scores) setGrades(g.scores as Record<string, GradeInfo>);
+            if (g.ok && g.scores)
+              setGrades({
+                ...STATIC_GRADES,
+                ...(g.scores as Record<string, GradeInfo>),
+              });
           })
           .catch(() => {});
       }
