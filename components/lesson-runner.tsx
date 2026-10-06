@@ -106,16 +106,14 @@ function normalizeAnswer(raw: string): string[] {
     .replace(/\.$/, "");
 
   const withoutLhs = base.replace(/^[a-z]+(\([a-z]\))?=/, "");
-  const alnum = base.replace(/[^a-z0-9]/g, "");
 
+  // Deliberately no sign-stripped form here. Collapsing to letters+digits made
+  // "8 - x" and "8 + x" both become "8x" (and "3" match "-3"), so a wrong-sign
+  // answer was accepted as correct — a real bug caught in piloting. base and
+  // the sorted-term forms preserve signs and still tolerate spacing, term
+  // order, and factor order.
   return [
-    ...new Set([
-      base,
-      withoutLhs,
-      alnum,
-      sortedTerms(base),
-      sortedTerms(withoutLhs),
-    ]),
+    ...new Set([base, withoutLhs, sortedTerms(base), sortedTerms(withoutLhs)]),
   ].filter(Boolean);
 }
 
