@@ -99,24 +99,118 @@ function Tick({ ok }: { ok: boolean }) {
   );
 }
 
-/** One participant's full breakdown — the analysis you'd otherwise do by hand. */
+/** The real study's screen-out rule (lib/surveys/eligibility.ts), applied here. */
+const INELIGIBLE: Record<string, string[]> = {
+  highest_math: [
+    "Calculus III or higher",
+    "Other college-level mathematics (e.g., linear algebra, differential equations)",
+    "I am not sure",
+  ],
+  calculus_courses: ["3 or more", "I am not sure"],
+  math_courses: ["3 or more"],
+  calc_history: ["I am currently enrolled in a calculus course"],
+};
+
+function screenOut(r: Row): { out: boolean; reasons: string[] } {
+  const reasons: string[] = [];
+  if (INELIGIBLE.highest_math.includes(String(r.highest_math)))
+    reasons.push(`highest math: ${r.highest_math}`);
+  if (INELIGIBLE.calculus_courses.includes(String(r.calculus_courses)))
+    reasons.push(`${r.calculus_courses} calculus courses`);
+  if (INELIGIBLE.math_courses.includes(String(r.math_courses)))
+    reasons.push(`${r.math_courses} math courses`);
+  if (INELIGIBLE.calc_history.includes(String(r.calc_history)))
+    reasons.push("currently enrolled in calculus");
+  if (!r.screening_algebra_correct) reasons.push("algebra check failed");
+  if (!r.screening_power_rule_correct) reasons.push("power-rule check failed");
+  return { out: reasons.length > 0, reasons };
+}
+
+/**
+ * Heuristic flag for a Q1a answer that looks machine-written: LaTeX source in a
+ * plain box, or textbook scaffolding ("Step 2", "Substitute", "Therefore").
+ * A hint for a human decision, not an automatic exclusion.
+ */
+function looksAiWritten(text: string): boolean {
+  return /\\\(|\\\[|\\frac|\bStep\s*\d|\bSubstitute\b|\bFormulate\b|\bTherefore\b/i.test(
+    text || ""
+  );
+}
+
+const ITEM_LABELS: Record<string, string> = {
+  "1": "Q1a — gardener, show work",
+  "1b": "Q1b",
+  "1c": "Q1c",
+  "1d": "Q1d",
+  "1e": "Q1e",
+  "2.1": "Q2.1",
+  "2.2": "Q2.2",
+  "2.3": "Q2.3 — matching",
+  "2.4": "Q2.4",
+  "3.1": "Q3.1 — accept/question the AI",
+  "3.2": "Q3.2 — reply to the AI",
+};
+
+function renderAnswer(a?: Answer): string {
+  if (!a) return "—";
+  const parts: string[] = [];
+  if (a.choiceId) parts.push(`chose ${a.choiceId}`);
+  if (a.matches)
+    parts.push(
+      Object.entries(a.matches)
+        .map(([k, v]) => `${k}=${v}`)
+        .join(", ")
+    );
+  if (a.text) parts.push(a.text);
+  if (a.otherText) parts.push(`other: ${a.otherText}`);
+  if (a.explanation) parts.push(`— ${a.explanation}`);
+  return parts.join(" ") || "—";
+}
+
+/** One participant's full breakdown — collapsed by default to keep the page short. */
 function ParticipantCard({ r }: { r: Row }) {
   const q3 = r.test_answers?.["3.1"]?.choiceId ?? "—";
   const q3Text = r.test_answers?.["3.2"]?.text ?? "";
   const q1Ids = Object.keys(r.q1 ?? {}).sort();
+  const so = screenOut(r);
+  const q1aText = r.test_answers?.["1"]?.text ?? "";
+  const aiFlag = looksAiWritten(q1aText);
+  // Q1a and Q2 responses; 1b–1e are in the graded table and Q3 has its own block.
+  const otherItems = ["1", "2.1", "2.2", "2.3", "2.4"].filter(
+    (id) => r.test_answers?.[id]
+  );
 
   return (
-    <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-mono text-sm font-bold text-stone-800">
-          {shortId(r)}…
-        </h3>
-        <span className="text-xs font-semibold text-stone-500">
-          Form {r.form} ({r.test || "—"}) · motivation: {r.motivation ?? "—"}
+    <details className="rounded-xl border-2 border-stone-200 bg-white">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 p-4 text-sm">
+        <span className="font-mono font-bold text-stone-800">{shortId(r)}…</span>
+        <span className="font-semibold text-stone-500">Form {r.form}</span>
+        <span className="text-stone-600">
+          Q1 {r.q1_correct}/{r.q1_total}
         </span>
-      </div>
+        {so.out ? (
+          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">
+            screen-out
+          </span>
+        ) : (
+          <span className="rounded-full bg-lime-100 px-2 py-0.5 text-xs font-bold text-lime-700">
+            eligible
+          </span>
+        )}
+        {aiFlag && (
+          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
+            Q1a looks AI-written
+          </span>
+        )}
+        {so.out && (
+          <span className="w-full text-xs text-stone-400">
+            {so.reasons.join(" · ")}
+          </span>
+        )}
+      </summary>
 
-      <div className="mt-3 rounded-lg bg-stone-50 p-3">
+      <div className="border-t border-stone-100 p-5 pt-4">
+      <div className="rounded-lg bg-stone-50 p-3">
         <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
           Math background (self-reported)
         </p>
@@ -186,6 +280,27 @@ function ParticipantCard({ r }: { r: Row }) {
         </table>
       </div>
 
+      <div className="mt-4 space-y-2">
+        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+          Q1a &amp; Q2 responses
+        </p>
+        {otherItems.map((id) => (
+          <div key={id} className="rounded-lg bg-stone-50 p-3 text-sm">
+            <p className="flex items-center gap-2 text-xs font-semibold text-stone-500">
+              {ITEM_LABELS[id] ?? id}
+              {id === "1" && aiFlag && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                  looks AI-written
+                </span>
+              )}
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-stone-800">
+              {renderAnswer(r.test_answers?.[id])}
+            </p>
+          </div>
+        ))}
+      </div>
+
       <div className="mt-4 rounded-lg bg-stone-50 p-3">
         <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
           AI-conversation question (Q3)
@@ -238,7 +353,8 @@ function ParticipantCard({ r }: { r: Row }) {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </details>
   );
 }
 
@@ -487,6 +603,74 @@ export default function PilotAnalysisPage() {
                   Collected in the pilot, not screened on.
                 </p>
               </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+              <h2 className="text-base font-bold text-stone-800">
+                Screening &amp; correctness
+              </h2>
+              <p className="mt-1 text-xs text-stone-400">
+                Who the real study&apos;s rule would screen out, and how the rest
+                did. Q1a flagged where the written solution looks AI-generated.
+              </p>
+              <table className="mt-3 w-full border-collapse text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-stone-400">
+                    <th className="py-1 pr-3 font-semibold">Participant</th>
+                    <th className="py-1 pr-3 font-semibold">Form</th>
+                    <th className="py-1 pr-3 font-semibold">Q1</th>
+                    <th className="py-1 pr-3 font-semibold">Screen-out?</th>
+                    <th className="py-1 pr-3 font-semibold">Reason / AI flag</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {view.completed.map((r) => {
+                    const so = screenOut(r);
+                    const ai = looksAiWritten(r.test_answers?.["1"]?.text ?? "");
+                    return (
+                      <tr
+                        key={r.subject}
+                        className="border-t border-stone-100 align-top"
+                      >
+                        <td className="py-1 pr-3 font-mono text-stone-600">
+                          {shortId(r)}…
+                        </td>
+                        <td className="py-1 pr-3 text-stone-600">{r.form}</td>
+                        <td className="py-1 pr-3 text-stone-800">
+                          {r.q1_correct}/{r.q1_total}
+                        </td>
+                        <td className="py-1 pr-3">
+                          {so.out ? (
+                            <span className="font-bold text-rose-700">out</span>
+                          ) : (
+                            <span className="font-bold text-lime-700">keep</span>
+                          )}
+                        </td>
+                        <td className="py-1 pr-3 text-xs text-stone-500">
+                          {[...so.reasons, ai ? "Q1a looks AI-written" : ""]
+                            .filter(Boolean)
+                            .join("; ") || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-3 text-sm text-stone-600">
+                Eligible (not screened out):{" "}
+                <span className="font-bold">
+                  {view.completed.filter((r) => !screenOut(r).out).length}
+                </span>{" "}
+                of {view.completed.length}. Mean new-Q1 among those kept:{" "}
+                {pct(
+                  mean(
+                    view.completed
+                      .filter((r) => !screenOut(r).out && r.q1_total > 0)
+                      .map((r) => r.q1_correct / r.q1_total)
+                  )
+                )}
+                .
+              </p>
             </div>
 
             <div>
