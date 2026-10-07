@@ -63,6 +63,11 @@ const CRIT_SPECS: { item: string; label: string; crits: [string, string][] }[] =
   },
 ];
 
+/** item id -> its [criterionId, label] list, for per-step display. */
+const CRIT_LABELS: Record<string, [string, string][]> = Object.fromEntries(
+  CRIT_SPECS.map((s) => [s.item, s.crits])
+);
+
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
   ["2.1", "Q2.1 revenue model (MC)"],
@@ -179,7 +184,11 @@ function Tick({ ok }: { ok: boolean }) {
 
 /** The real study's screen-out rule (lib/surveys/eligibility.ts), applied here. */
 const INELIGIBLE: Record<string, string[]> = {
-  highest_math: ["Calculus II", "Calculus III or higher"],
+  highest_math: [
+    "Calculus II",
+    "Calculus III or higher",
+    "Other college-level mathematics (e.g., linear algebra, differential equations)",
+  ],
   calculus_courses: ["3 or more"],
   math_courses: ["3 or more"],
   calc_history: ["I am currently enrolled in a calculus course"],
@@ -350,7 +359,7 @@ function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
               <th className="py-1 pr-3 font-semibold">Response</th>
               <th className="py-1 pr-3 font-semibold">Time</th>
               <th className="py-1 pr-3 font-semibold">Result</th>
-              <th className="py-1 font-semibold">AI score</th>
+              <th className="py-1 font-semibold">Rubric score</th>
             </tr>
           </thead>
           <tbody>
@@ -396,10 +405,37 @@ function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
                         <span className="text-stone-300">—</span>
                       )}
                     </td>
-                    <td className="py-1 whitespace-nowrap text-stone-600">
-                      {grade?.items?.[id] && grade.items[id].points != null
-                        ? `${grade.items[id].points}/${grade.items[id].max}`
-                        : "—"}
+                    <td className="py-1 text-stone-600">
+                      {grade?.items?.[id] && grade.items[id].points != null ? (
+                        <>
+                          <span className="whitespace-nowrap font-semibold">
+                            {grade.items[id].points}/{grade.items[id].max}
+                          </span>
+                          {grade.items[id].kind !== "open" && (
+                            <span className="text-[10px] text-stone-400">
+                              {" "}
+                              (key)
+                            </span>
+                          )}
+                          {grade.items[id].criteria &&
+                            CRIT_LABELS[id] && (
+                              <div className="mt-0.5 space-y-0.5 text-[10px] leading-tight text-stone-500">
+                                {CRIT_LABELS[id].map(([cid, clabel]) => (
+                                  <div key={cid}>
+                                    <Tick
+                                      ok={
+                                        grade.items[id].criteria?.[cid] === "met"
+                                      }
+                                    />{" "}
+                                    {clabel}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                        </>
+                      ) : (
+                        <span className="text-stone-300">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -538,10 +574,24 @@ export default function PilotAnalysisPage() {
     const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
     const lines: string[] = [];
     lines.push("ITEM-LEVEL (mean % of max; higher = did better)");
-    lines.push(["item", "label", "max", "mean_points", "pct_of_max"].map(q).join(","));
+    lines.push(
+      ["item", "label", "max", "mean_points", "pct_of_max", "score_distribution", "median_seconds"]
+        .map(q)
+        .join(",")
+    );
     for (const it of analysis.items)
       lines.push(
-        [it.id, it.label, it.max, it.meanPts.toFixed(2), `${it.pct}%`].map(q).join(",")
+        [
+          it.id,
+          it.label,
+          it.max,
+          it.meanPts.toFixed(2),
+          `${it.pct}%`,
+          it.dist.filter((d) => d.count > 0).map((d) => `${d.points}pt x${d.count}`).join(" "),
+          it.medianSec ?? "",
+        ]
+          .map(q)
+          .join(",")
       );
     lines.push("");
     lines.push("CRITERION-LEVEL (show-work items; % of participants who met each rubric point)");
@@ -619,7 +669,24 @@ export default function PilotAnalysisPage() {
       const meanPts = vals.length
         ? vals.reduce((a, i) => a + (i.points ?? 0), 0) / vals.length
         : 0;
-      return { id, label, max, meanPts, pct: pctOf(meanPts, max), n: vals.length };
+      // Score distribution: count at each point value 0..max.
+      const dist = Array.from({ length: max + 1 }, (_, p) => ({
+        points: p,
+        count: vals.filter((i) => (i.points ?? -1) === p).length,
+      }));
+      const medianSec = median(
+        subs.map((r) => r.item_timings?.[id]?.seconds ?? null)
+      );
+      return {
+        id,
+        label,
+        max,
+        meanPts,
+        pct: pctOf(meanPts, max),
+        n: vals.length,
+        dist,
+        medianSec,
+      };
     }).sort((a, b) => b.pct - a.pct);
 
     const crit = CRIT_SPECS.flatMap((spec) =>
@@ -787,7 +854,8 @@ export default function PilotAnalysisPage() {
                   <tr className="text-left text-xs text-stone-400">
                     <th className="py-1 pr-3 font-semibold">Participant</th>
                     <th className="py-1 pr-3 font-semibold">Form</th>
-                    <th className="py-1 pr-3 font-semibold">Q1</th>
+                    <th className="py-1 pr-3 font-semibold">New Q1</th>
+                    <th className="py-1 pr-3 font-semibold">Rubric /20</th>
                     <th className="py-1 pr-3 font-semibold">Screen-out?</th>
                     <th className="py-1 pr-3 font-semibold">Reason / AI flag</th>
                   </tr>
@@ -807,6 +875,11 @@ export default function PilotAnalysisPage() {
                         <td className="py-1 pr-3 text-stone-600">{r.form}</td>
                         <td className="py-1 pr-3 text-stone-800">
                           {r.q1_correct}/{r.q1_total}
+                        </td>
+                        <td className="py-1 pr-3 text-stone-800">
+                          {grades[r.subject]
+                            ? `${grades[r.subject].total}/${grades[r.subject].max}`
+                            : "—"}
                         </td>
                         <td className="py-1 pr-3">
                           {so.out ? (
@@ -865,7 +938,11 @@ export default function PilotAnalysisPage() {
                     <tr className="text-left text-xs text-stone-400">
                       <th className="py-1 pr-3 font-semibold">Question</th>
                       <th className="py-1 pr-3 font-semibold">Mean</th>
-                      <th className="py-1 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">
+                        Score distribution
+                      </th>
+                      <th className="py-1 font-semibold">Median time</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -875,8 +952,17 @@ export default function PilotAnalysisPage() {
                         <td className="py-1 pr-3 text-stone-600">
                           {it.meanPts.toFixed(2)}/{it.max}
                         </td>
-                        <td className="py-1 font-semibold text-stone-800">
+                        <td className="py-1 pr-3 font-semibold text-stone-800">
                           {it.pct}%
+                        </td>
+                        <td className="py-1 pr-3 text-xs text-stone-500">
+                          {it.dist
+                            .filter((d) => d.count > 0)
+                            .map((d) => `${d.points}pt×${d.count}`)
+                            .join("  ")}
+                        </td>
+                        <td className="py-1 whitespace-nowrap text-stone-500">
+                          {fmtSec(it.medianSec)}
                         </td>
                       </tr>
                     ))}
@@ -911,6 +997,67 @@ export default function PilotAnalysisPage() {
                 </table>
               </div>
             )}
+
+            <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
+              <h2 className="text-base font-bold text-stone-800">
+                By question — all responses
+              </h2>
+              <p className="mt-1 text-xs text-stone-400">
+                Every completed participant&apos;s answer to one question, with
+                its score and time. Click a question to expand.
+              </p>
+              {ALL_ITEMS.map((id) => {
+                const answered = view.completed.filter(
+                  (r) => r.test_answers?.[id] || r.q1?.[id]
+                );
+                if (!answered.length) return null;
+                return (
+                  <details
+                    key={id}
+                    className="mt-2 rounded-lg border border-stone-200"
+                  >
+                    <summary className="cursor-pointer p-2 text-sm font-semibold text-stone-700">
+                      {ITEM_LABELS[id] ?? id}{" "}
+                      <span className="font-normal text-stone-400">
+                        ({answered.length})
+                      </span>
+                    </summary>
+                    <div className="space-y-2 p-3 pt-0">
+                      {answered.map((r) => {
+                        const g = grades[r.subject]?.items?.[id];
+                        const q1g = r.q1?.[id];
+                        return (
+                          <div
+                            key={r.subject}
+                            className="rounded bg-stone-50 p-2 text-sm"
+                          >
+                            <div className="flex flex-wrap justify-between gap-2 text-xs text-stone-500">
+                              <span className="font-mono">
+                                {shortId(r)} ({r.form})
+                              </span>
+                              <span>
+                                {g
+                                  ? `${g.points}/${g.max}`
+                                  : q1g
+                                    ? q1g.correct
+                                      ? "correct"
+                                      : `wrong (exp ${q1g.expected})`
+                                    : "—"}
+                                {" · "}
+                                {fmtSec(r.item_timings?.[id]?.seconds)}
+                              </span>
+                            </div>
+                            <p className="mt-1 whitespace-pre-wrap text-stone-800">
+                              {renderAnswer(r.test_answers?.[id])}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
 
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2">
