@@ -42,6 +42,15 @@ const CRIT_SPECS: { item: string; label: string; crits: [string, string][] }[] =
     ],
   },
   {
+    item: "2.1",
+    label: "Q2.1 — revenue model (choice + explanation)",
+    crits: [
+      ["chose-c", "chose C (the function)"],
+      ["uses-examples", "uses the table's numbers"],
+      ["price-times-quantity", "revenue = price × quantity"],
+    ],
+  },
+  {
     item: "2.2",
     label: "Q2.2 — explain the concept (show work)",
     crits: [
@@ -70,7 +79,7 @@ const CRIT_LABELS: Record<string, [string, string][]> = Object.fromEntries(
 
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
-  ["2.1", "Q2.1 revenue model (MC)"],
+  ["2.1", "Q2.1 revenue model (choice + explanation)"],
   ["2.2", "Q2.2 explain concept (show work)"],
   ["2.3", "Q2.3 matching"],
   ["2.4", "Q2.4 interpret domain (MC)"],
