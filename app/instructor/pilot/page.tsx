@@ -791,8 +791,7 @@ export default function PilotAnalysisPage() {
             <div className="rounded-xl border-2 border-lime-300 bg-lime-50/50 p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-base font-bold text-stone-800">
-                  AI difficulty analysis — are the pre- and post-test equally
-                  hard?
+                  AI overall results check — screening & pretest review
                 </h2>
                 <Button
                   onClick={() => runAi(true)}

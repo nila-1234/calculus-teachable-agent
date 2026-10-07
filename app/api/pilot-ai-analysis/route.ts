@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import getFirestore from "@/lib/firestore";
 import { authorizeInstructor } from "@/lib/instructor-auth";
 import { PILOT_Q1_ANSWERS } from "@/lib/pilot/tests";
-import { SKILL_CHECK_ANSWERS } from "@/lib/surveys/eligibility";
+import {
+  SKILL_CHECK_ANSWERS,
+  evaluateEligibility,
+} from "@/lib/surveys/eligibility";
+import type { SurveyAnswers } from "@/lib/surveys/types";
 import { resolveGraderClient } from "@/lib/tests/grading-model";
 
 /**
@@ -47,23 +51,32 @@ type Participant = {
   calc_history: unknown;
   algebra_check_ok: boolean;
   power_rule_check_ok: boolean;
+  would_be_screened_out: boolean;
+  screen_out_reasons: string[];
   new_q1_score: string;
   new_q1_items: Record<string, boolean>;
+  rubric_total: number | null;
+  rubric_max: number | null;
+  rubric_items: Record<string, string> | null;
   q3_ai_choice: string | null;
   q3_ai_correct: boolean;
   self_difficulty: unknown;
   self_confidence: unknown;
 };
 
-const SYSTEM_PROMPT = `You are a measurement/psychometrics analyst for an educational-research pilot on calculus optimization.
+const SYSTEM_PROMPT = `You are a measurement/assessment analyst reviewing a calculus-optimization assessment pilot. You help the research team decide whether the SCREENING and the PRETEST are working.
 
-The study has two test forms: Form A is the PRETEST and Form B is the POSTTEST. They are meant to be of EQUAL difficulty so pre/post score changes reflect learning, not form differences. Each form's "new Question 1" has four short optimization items spanning the same four topics (particle motion, profit, fencing area, rectangle area); each topic appears as a "within-range" variant on one form and an "on-the-edge" variant (optimum at a domain boundary) on the other.
+Context:
+- Participants are screened before the test. The intended population is learners around Calculus I / high-school level: not past Calculus II, not currently taking calculus, and passing two skill checks (a basic algebra expression and a power-rule derivative). Advanced students and those who fail the skill checks are screened out.
+- The test has: new Q1 items (four short numeric optimization problems, right/wrong), Q1a (a full show-your-work optimization), Q2.1 (choose the revenue model + explain, graded as a whole out of 3), Q2.2 (explain the method, /5), Q2.3 (matching, /4), Q2.4 (interpret the domain, MC /1), Q3.1 (whether to question the AI, MC /1, C correct), Q3.2 (rebut the AI using the constraint, /3). Total 22 per form.
+- Each participant record includes: assigned form, self-reported background, the two skill checks, whether the current rule WOULD screen them out (and why), their numeric-Q1 score, their full rubric score (total/max and per-item points), their Q3 choice, and self-reported difficulty/confidence. (Form A = pretest, Form B = posttest.)
 
-You are given, per participant: assigned form, self-reported math background (highest level, # calculus courses, calculus history), two screening skill checks (algebra, power rule), their score on the four new Q1 items (and which items), their choice on the Q3 "should the student question the AI?" item (C is correct) and whether it was correct, and self-reported difficulty/confidence.
+Answer these questions, each as its own short section, grounded in the data:
+1. SCREENING — is it faithful, overly strict, or overly loose? Did the people the rule would keep actually perform well, and did those it would screen out actually do poorly? Call out any mismatch (e.g., a kept participant who scored near zero, or a screened-out one who did fine).
+2. PRETEST COVERAGE — is it capturing what we want? Which items discriminate between stronger and weaker participants? Which are too easy (near-ceiling, everyone right) or too hard (near-floor, nobody right)? Where are scores clustered per item (floor/ceiling/bimodal)? Which items, if any, should be made harder or easier, and why?
+3. OTHER CONSIDERATIONS — data-quality or design issues to watch: likely AI-written or very low-effort responses, the very small sample, MC items that are guessable, redundant items, or anything else notable.
 
-Your job: judge whether Form A and Form B are of equivalent difficulty. Critically, the two groups may differ in ability, so DO NOT just compare raw mean scores — compare like with like by conditioning on math background and the skill-check/Q3 signals of ability. Base your conclusion on BOTH the math-level evidence and the results evidence. Be explicit about the small sample and its limits, and about any confound (e.g., one form drawing more novices).
-
-Write a concise report with: (1) a one-line verdict, (2) the ability composition of each form, (3) difficulty evidence once ability is accounted for (including item-level signal if visible), (4) confounds/limitations, (5) a concrete recommendation. Use plain prose and short lists; no preamble.`;
+Be concrete and cite the specific participants/items. Use plain prose and short lists; no preamble. Note the small sample as a caveat, not a reason to say nothing.`;
 
 export async function GET(req: NextRequest) {
   const denied = authorizeInstructor(req);
@@ -79,6 +92,17 @@ export async function GET(req: NextRequest) {
       if (!s) continue;
       bySubject.set(s, [...(bySubject.get(s) ?? []), e]);
     }
+
+    // AI rubric scores, if they have been computed (see /api/pilot-grade).
+    const gradeDoc = (await getFirestore().doc("pilot_meta/grades").get()).data();
+    const gradeScores = (gradeDoc?.scores ?? {}) as Record<
+      string,
+      {
+        total?: number;
+        max?: number;
+        items?: Record<string, { points?: number | null; max?: number }>;
+      }
+    >;
 
     const rows: { subject: string; p: Participant }[] = [];
     for (const [subject, evs] of bySubject) {
@@ -120,6 +144,17 @@ export async function GET(req: NextRequest) {
 
       const q3 = (testAnswers["3.1"] as { choiceId?: string })?.choiceId ?? null;
 
+      const elig = evaluateEligibility(screening as SurveyAnswers);
+      const g = gradeScores[subject];
+      const rubricItems = g?.items
+        ? Object.fromEntries(
+            Object.entries(g.items).map(([id, v]) => [
+              id,
+              `${v.points ?? "?"}/${v.max ?? "?"}`,
+            ])
+          )
+        : null;
+
       rows.push({
         subject,
         p: {
@@ -131,8 +166,13 @@ export async function GET(req: NextRequest) {
             screening.algebra_check === SKILL_CHECK_ANSWERS.algebra_check,
           power_rule_check_ok:
             screening.power_rule_check === SKILL_CHECK_ANSWERS.power_rule_check,
+          would_be_screened_out: !elig.eligible,
+          screen_out_reasons: elig.reasons,
           new_q1_score: `${correct}/${total}`,
           new_q1_items: items,
+          rubric_total: g?.total ?? null,
+          rubric_max: g?.max ?? null,
+          rubric_items: rubricItems,
           q3_ai_choice: q3,
           q3_ai_correct: q3 === "C",
           self_difficulty: diff.difficulty ?? null,
@@ -182,15 +222,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const user = `Pilot data (full-flow completers only).
+    const user = `Pilot data — ${participants.length} full-flow completers (Form A = pretest, Form B = posttest; A n=${formA.length}, B n=${formB.length}).
 
-Form A — PRETEST (n=${formA.length}):
-${JSON.stringify(formA, null, 2)}
+${JSON.stringify(participants, null, 2)}
 
-Form B — POSTTEST (n=${formB.length}):
-${JSON.stringify(formB, null, 2)}
-
-Answer: Are Form A (pretest) and Form B (posttest) of the same difficulty? Conclude from both the math-level evidence and the results, conditioning on ability rather than comparing raw means.`;
+Review this assessment pilot and answer the three questions (screening faithful/strict/loose; pretest coverage and item difficulty/discrimination/clustering; other considerations). Ground every claim in the specific participants and items above.`;
 
     const client = resolveGraderClient();
     const analysis = await client.complete(SYSTEM_PROMPT, user);
