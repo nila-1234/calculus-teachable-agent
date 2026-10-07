@@ -502,6 +502,8 @@ export default function PilotAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [showTestRuns, setShowTestRuns] = useState(false);
   const [onlyEligible, setOnlyEligible] = useState(false);
+  // Shared toggle for the analysis + by-question sections.
+  const [analysisEligibleOnly, setAnalysisEligibleOnly] = useState(false);
   const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
     null
   );
@@ -666,7 +668,9 @@ export default function PilotAnalysisPage() {
   // participants shown (preview/test runs already excluded by `view`).
   const analysis = useMemo(() => {
     if (!view) return null;
-    const subs = view.completed;
+    const subs = view.completed.filter(
+      (r) => !analysisEligibleOnly || !screenOut(r).out
+    );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
     const items = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
@@ -713,8 +717,8 @@ export default function PilotAnalysisPage() {
       })
     );
 
-    return { items, crit };
-  }, [view, grades]);
+    return { items, crit, n: subs.length };
+  }, [view, grades, analysisEligibleOnly]);
 
   return (
     <main className="min-h-screen bg-stone-100">
@@ -929,13 +933,27 @@ export default function PilotAnalysisPage() {
                   <h2 className="text-base font-bold text-stone-800">
                     Answer-key analysis (AI rubric)
                   </h2>
-                  <Button onClick={downloadAnalysisCsv}>
-                    Download analysis (CSV)
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs text-stone-600">
+                      <input
+                        type="checkbox"
+                        checked={analysisEligibleOnly}
+                        onChange={(e) =>
+                          setAnalysisEligibleOnly(e.target.checked)
+                        }
+                        className="h-4 w-4 accent-lime-600"
+                      />
+                      Only not-screened-out
+                    </label>
+                    <Button onClick={downloadAnalysisCsv}>
+                      Download analysis (CSV)
+                    </Button>
+                  </div>
                 </div>
                 <p className="mt-1 text-xs text-stone-400">
-                  Across {view.completed.length} completed participants. Higher =
-                  students did better against the answer-key rubric.
+                  Across {analysis.n} {analysisEligibleOnly ? "eligible" : "completed"}{" "}
+                  participant{analysis.n === 1 ? "" : "s"}. Higher = students did
+                  better against the answer-key rubric.
                 </p>
 
                 <h3 className="mt-3 text-sm font-bold text-stone-700">
@@ -1007,16 +1025,29 @@ export default function PilotAnalysisPage() {
             )}
 
             <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
-              <h2 className="text-base font-bold text-stone-800">
-                By question — all responses
-              </h2>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-bold text-stone-800">
+                  By question — all responses
+                </h2>
+                <label className="flex items-center gap-2 text-xs text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={analysisEligibleOnly}
+                    onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
+                    className="h-4 w-4 accent-lime-600"
+                  />
+                  Only not-screened-out
+                </label>
+              </div>
               <p className="mt-1 text-xs text-stone-400">
                 Every completed participant&apos;s answer to one question, with
                 its score and time. Click a question to expand.
               </p>
               {ALL_ITEMS.map((id) => {
                 const answered = view.completed.filter(
-                  (r) => r.test_answers?.[id] || r.q1?.[id]
+                  (r) =>
+                    (!analysisEligibleOnly || !screenOut(r).out) &&
+                    (r.test_answers?.[id] || r.q1?.[id])
                 );
                 if (!answered.length) return null;
                 return (
