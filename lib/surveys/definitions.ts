@@ -66,6 +66,7 @@ const SCREENING_SURVEY: SurveyDefinition = {
             "Calculus I",
             "Calculus II",
             "Calculus III or higher",
+            "Other college-level mathematics (e.g., linear algebra, differential equations)",
           ]
         ),
         choiceItem(

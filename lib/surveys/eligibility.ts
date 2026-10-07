@@ -54,8 +54,14 @@ export const SKILL_CHECK_ANSWERS: Record<string, string> = {
  */
 export const INELIGIBLE_OPTIONS: Record<string, string[]> = {
   // Ceiling: Calculus II or beyond is past the applied-optimization material
-  // this study teaches (0929, Ken).
-  "highest-math": ["Calculus II", "Calculus III or higher"],
+  // this study teaches (0929, Ken). "Other college-level mathematics" (linear
+  // algebra, differential equations) is also beyond the target, re-added after
+  // the pilot showed such a participant slipping through (1006, Gaode).
+  "highest-math": [
+    "Calculus II",
+    "Calculus III or higher",
+    "Other college-level mathematics (e.g., linear algebra, differential equations)",
+  ],
   // Ceiling: too many calculus courses.
   "calculus-courses": ["3 or more"],
   // Ceiling: too many college mathematics courses of any kind.
