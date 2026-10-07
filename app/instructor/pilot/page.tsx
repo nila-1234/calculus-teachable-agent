@@ -183,12 +183,11 @@ function Tick({ ok }: { ok: boolean }) {
 }
 
 /** The real study's screen-out rule (lib/surveys/eligibility.ts), applied here. */
+// Matches the rule as these pilot participants were actually run. The
+// "Other college-level mathematics" re-add (screening-readd-other) is for
+// future participants only, so it is deliberately NOT applied to this data.
 const INELIGIBLE: Record<string, string[]> = {
-  highest_math: [
-    "Calculus II",
-    "Calculus III or higher",
-    "Other college-level mathematics (e.g., linear algebra, differential equations)",
-  ],
+  highest_math: ["Calculus II", "Calculus III or higher"],
   calculus_courses: ["3 or more"],
   math_courses: ["3 or more"],
   calc_history: ["I am currently enrolled in a calculus course"],
