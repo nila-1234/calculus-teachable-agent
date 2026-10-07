@@ -1089,6 +1089,16 @@ export default function PilotAnalysisPage() {
                             <p className="mt-1 whitespace-pre-wrap text-stone-800">
                               {renderAnswer(r.test_answers?.[id])}
                             </p>
+                            {g?.criteria && CRIT_LABELS[id] && (
+                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-stone-500">
+                                {CRIT_LABELS[id].map(([cid, clabel]) => (
+                                  <span key={cid}>
+                                    <Tick ok={g.criteria?.[cid] === "met"} />{" "}
+                                    {clabel}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         );
                       })}
