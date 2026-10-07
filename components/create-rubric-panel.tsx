@@ -2,13 +2,14 @@
 
 import MathDisplay from "@/components/math-display";
 import ScenarioCard from "@/components/scenario-card";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRightIcon, CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { RubricOption } from "@/lib/scenarios/types";
 import Button from "@/components/button";
 import TwoStateToggle from "@/components/two-state-toggle";
 import HintButton from "@/components/hint-button";
 import SampleAnswerModal from "@/components/sample-answer-modal";
+import { shuffleWithSeed } from "@/lib/shuffle";
 
 export type RubricDecision = "include" | "exclude";
 
@@ -55,6 +56,14 @@ export default function CreateRubricPanel({
 }: CreateRubricPanelProps) {
   const feedbackRef = useRef<HTMLDivElement | null>(null);
   const [hintOpen, setHintOpen] = useState(false);
+  const shuffledOptions = useMemo(
+    () =>
+      shuffleWithSeed(
+        rubricOptions,
+        rubricOptions.map((option) => option.id).join("|")
+      ),
+    [rubricOptions]
+  );
 
   useEffect(() => {
     if (submitted && feedbackRef.current) {
@@ -92,7 +101,7 @@ export default function CreateRubricPanel({
         </div>
 
         <div className="flex flex-col gap-3">
-          {rubricOptions.map((option) => {
+          {shuffledOptions.map((option) => {
             const decision = rubricDecisions[option.id];
             const included = decision === "include";
             const excluded = decision === "exclude";

@@ -24,7 +24,7 @@ export default function TwoStateToggle<T extends string>({
         type="button"
         disabled={disabled}
         onClick={() => onChange(positive.value)}
-        className={`rounded-lg border-2 px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
+        className={`cursor-pointer rounded-lg border-2 px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
           isPositive
             ? "border-green-600 bg-green-50 text-green-700"
             : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"
@@ -36,7 +36,7 @@ export default function TwoStateToggle<T extends string>({
         type="button"
         disabled={disabled}
         onClick={() => onChange(negative.value)}
-        className={`rounded-lg border-2 px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
+        className={`cursor-pointer rounded-lg border-2 px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed ${
           isNegative
             ? "border-red-600 bg-red-50 text-red-700"
             : "border-stone-200 bg-white text-stone-500 hover:border-stone-300"

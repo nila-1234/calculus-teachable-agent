@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import HintButton from "@/components/hint-button";
 import MathDisplay from "@/components/math-display";
 import { logEvent } from "@/lib/logger";
 import type {
@@ -340,13 +341,7 @@ function QuestionCard({
           </button>
         )}
         {question.hints.length > state.hintsShown && !locked && (
-          <button
-            type="button"
-            onClick={onHint}
-            className="text-sm font-semibold text-lime-700 hover:text-lime-800"
-          >
-            Show a hint
-          </button>
+          <HintButton onClick={onHint} label="Show a hint" />
         )}
       </div>
     </div>
