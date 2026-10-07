@@ -45,7 +45,8 @@ const PRE_TEST: TestDefinition = {
         rows: [
           ["$2", "180", "$360"],
           ["$4", "160", "$640"],
-          ["\\(p\\) dollars", "\\(200 - 10p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(200 - 10p\\)", "?"],
         ],
       },
       tableNote:
@@ -96,7 +97,7 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -20\\)\nSince \\(R''(p)\\) is negative, the shape of the graph is a downward-opening parabola. So \\(p = 10\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 200p - 10p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 10\\) produces a maximum.",
             },
           ],
           choices: [
@@ -107,7 +108,7 @@ const PRE_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; R″(p) = −20 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
@@ -117,7 +118,7 @@ const PRE_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $20 would make the model predict a negative number of lunch boxes sold.",
+              text: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
             },
             {
               id: "B",
@@ -125,11 +126,11 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $20.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
           reference:
-            "A. The price cannot be less than $0. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
+            "A. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
         },
       ],
     },
@@ -218,7 +219,8 @@ const POST_TEST: TestDefinition = {
         rows: [
           ["$10", "100", "$1000"],
           ["$20", "80", "$1600"],
-          ["\\(p\\) dollars", "\\(120 - 2p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(120 - 2p\\)", "?"],
         ],
       },
       tableNote:
@@ -269,7 +271,7 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -4\\)\nSince \\(R''(p)\\) is negative, the revenue function is concave down, so \\(p = 30\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 120p - 2p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 30\\) produces a maximum.",
             },
           ],
           choices: [
@@ -280,7 +282,7 @@ const POST_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; R″(p) = −4 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
@@ -290,7 +292,7 @@ const POST_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $60 would make the model predict a negative number of units sold.",
+              text: "A price above $60 would make the model predict a negative number of units sold.",
             },
             {
               id: "B",
@@ -298,13 +300,13 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $60.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
           explanationPrompt: "Briefly explain your choice.",
           placeholder: "Briefly explain your choice…",
           reference:
-            "A. The price cannot be less than $0. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
+            "A. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
         },
       ],
     },
