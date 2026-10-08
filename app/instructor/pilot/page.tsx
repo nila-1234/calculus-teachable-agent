@@ -86,28 +86,34 @@ const MC_ITEMS: { item: string; label: string; options: string[]; correct: strin
   ];
 
 /**
- * Short, form-neutral gloss of what each MC option says, so a reader can tell
- * what A/B/C/D mean from the distribution chart without opening the test.
- * (Q2.1's formula constant differs by form — 200−10p vs 120−2p — so the gloss
- * describes the structure, which is the same on both forms.)
+ * The actual option text shown to participants, so the distribution chart
+ * reproduces exactly what each A/B/C/D said (what the instructor asked to see),
+ * not a paraphrase. Transcribed from lib/tests/definitions.ts. Q2.4 and Q3.1
+ * are identical across forms; Q2.1's formula constant differs (200−10p on the
+ * pretest, 120−2p on the posttest), noted on the item.
  */
-const MC_OPTION_GLOSS: Record<string, Record<string, string>> = {
+const MC_OPTION_TEXT: Record<string, Record<string, string>> = {
   "2.1": {
-    A: "R = p + (demand)",
-    B: "R = demand only",
-    C: "R = p × demand",
+    A: "R(p) = p + (200 − 10p)",
+    B: "R(p) = 200 − 10p",
+    C: "R(p) = p(200 − 10p)",
   },
   "2.4": {
-    A: "p too high ⇒ negative units sold",
-    B: "revenue must be $0–$20",
-    C: "derivative only defined on interval",
+    A: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
+    B: "The company’s revenue must always be between $0 and $20.",
+    C: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
   },
   "3.1": {
-    A: "accept 25 as final",
-    B: "ask AI for more detail",
-    C: "question the recommendation",
-    D: "start over without AI",
+    A: "Accept the AI’s recommendation and use 25 chairs as the final answer.",
+    B: "Ask the AI to explain its calculations in more detail before deciding.",
+    C: "Question the AI’s recommendation before accepting it.",
+    D: "Start the problem over and solve it independently without the AI.",
   },
+};
+
+/** Items whose wording differs by form, shown as a caption under the question. */
+const MC_FORM_NOTE: Record<string, string> = {
+  "2.1": "Posttest form uses R(p) = p(120 − 2p); structure is identical.",
 };
 
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
@@ -1379,7 +1385,7 @@ export default function PilotAnalysisPage() {
                   ✓ = correct option; the most-chosen wrong option is the main
                   distractor.
                 </p>
-                <div className="mt-1 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                <div className="mt-1 space-y-4">
                   {analysis.optionDist.map((q) => {
                     const mc = Math.max(1, ...q.options.map((o) => o.count));
                     return (
@@ -1387,31 +1393,49 @@ export default function PilotAnalysisPage() {
                         <p className="text-[11px] font-semibold text-stone-500">
                           {q.label} (correct {q.correct})
                         </p>
+                        {MC_FORM_NOTE[q.item] && (
+                          <p className="text-[10px] text-stone-400">
+                            {MC_FORM_NOTE[q.item]}
+                          </p>
+                        )}
                         <div className="mt-0.5 space-y-0.5">
-                          {q.options.map((o) => (
-                            <div
-                              key={o.id}
-                              className="flex items-center gap-2"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <BarRow
-                                  label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
-                                  count={o.count}
-                                  max={mc}
-                                  highlight={
-                                    o.isCorrect
-                                      ? "good"
-                                      : o.id === q.mainDistractor
-                                        ? "warn"
-                                        : undefined
-                                  }
-                                />
+                          {q.options.map((o) => {
+                            const color = o.isCorrect
+                              ? "bg-lime-500"
+                              : o.id === q.mainDistractor
+                                ? "bg-amber-500"
+                                : "bg-stone-400";
+                            const mark = o.isCorrect
+                              ? " ✓"
+                              : o.id === q.mainDistractor
+                                ? " ◆"
+                                : "";
+                            return (
+                              <div
+                                key={o.id}
+                                className="flex items-start gap-2 text-xs"
+                              >
+                                <span className="w-8 shrink-0 pt-0.5 text-right font-medium text-stone-600">
+                                  {o.id}
+                                  {mark}
+                                </span>
+                                <div className="mt-0.5 h-3 w-28 shrink-0 rounded bg-stone-100">
+                                  <div
+                                    className={`h-3 rounded ${color}`}
+                                    style={{
+                                      width: `${mc ? Math.min(100, (o.count / mc) * 100) : 0}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-6 shrink-0 pt-0.5 text-stone-600">
+                                  {o.count}
+                                </span>
+                                <span className="flex-1 pt-0.5 text-stone-500">
+                                  {MC_OPTION_TEXT[q.item]?.[o.id] ?? ""}
+                                </span>
                               </div>
-                              <span className="w-32 shrink-0 truncate text-[11px] text-stone-400">
-                                {MC_OPTION_GLOSS[q.item]?.[o.id] ?? ""}
-                              </span>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
