@@ -85,6 +85,31 @@ const MC_ITEMS: { item: string; label: string; options: string[]; correct: strin
     { item: "3.1", label: "Q3.1 question the AI", options: ["A", "B", "C", "D"], correct: "C" },
   ];
 
+/**
+ * Short, form-neutral gloss of what each MC option says, so a reader can tell
+ * what A/B/C/D mean from the distribution chart without opening the test.
+ * (Q2.1's formula constant differs by form — 200−10p vs 120−2p — so the gloss
+ * describes the structure, which is the same on both forms.)
+ */
+const MC_OPTION_GLOSS: Record<string, Record<string, string>> = {
+  "2.1": {
+    A: "R = p + (demand)",
+    B: "R = demand only",
+    C: "R = p × demand",
+  },
+  "2.4": {
+    A: "p too high ⇒ negative units sold",
+    B: "revenue must be $0–$20",
+    C: "derivative only defined on interval",
+  },
+  "3.1": {
+    A: "accept 25 as final",
+    B: "ask AI for more detail",
+    C: "question the recommendation",
+    D: "start over without AI",
+  },
+};
+
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
   ["2.1", "Q2.1 revenue model (choice + explanation)"],
@@ -1203,19 +1228,28 @@ export default function PilotAnalysisPage() {
                         </p>
                         <div className="mt-0.5 space-y-0.5">
                           {q.options.map((o) => (
-                            <BarRow
+                            <div
                               key={o.id}
-                              label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
-                              count={o.count}
-                              max={mc}
-                              highlight={
-                                o.isCorrect
-                                  ? "good"
-                                  : o.id === q.mainDistractor
-                                    ? "warn"
-                                    : undefined
-                              }
-                            />
+                              className="flex items-center gap-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <BarRow
+                                  label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
+                                  count={o.count}
+                                  max={mc}
+                                  highlight={
+                                    o.isCorrect
+                                      ? "good"
+                                      : o.id === q.mainDistractor
+                                        ? "warn"
+                                        : undefined
+                                  }
+                                />
+                              </div>
+                              <span className="w-32 shrink-0 truncate text-[11px] text-stone-400">
+                                {MC_OPTION_GLOSS[q.item]?.[o.id] ?? ""}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1253,7 +1287,53 @@ export default function PilotAnalysisPage() {
                 <h3 className="mt-5 text-sm font-bold text-stone-700">
                   Time per question (spread)
                 </h3>
-                <table className="mt-1 w-full border-collapse text-sm">
+                <p className="mt-1 text-xs text-stone-400">
+                  Each bar spans the fastest to slowest completer; the dot marks
+                  the median. Longer bars = more spread in how long people took.
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {(() => {
+                    const gmax = Math.max(
+                      1,
+                      ...analysis.items.map((it) => it.maxSec ?? 0)
+                    );
+                    return [...analysis.items]
+                      .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
+                      .map((it) => {
+                        const lo = it.minSec ?? 0;
+                        const hi = it.maxSec ?? 0;
+                        const med = it.medianSec ?? lo;
+                        return (
+                          <div
+                            key={it.id}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-24 shrink-0 truncate text-right text-stone-500">
+                              {it.label.replace(/ \(.*\)/, "")}
+                            </span>
+                            <div className="relative h-3 flex-1 rounded bg-stone-100">
+                              <div
+                                className="absolute h-3 rounded bg-sky-200"
+                                style={{
+                                  left: `${(lo / gmax) * 100}%`,
+                                  width: `${((hi - lo) / gmax) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-600"
+                                style={{ left: `${(med / gmax) * 100}%` }}
+                                title={`median ${fmtSec(med)}`}
+                              />
+                            </div>
+                            <span className="w-28 shrink-0 text-stone-500">
+                              {fmtSec(it.minSec)}–{fmtSec(it.maxSec)}
+                            </span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+                <table className="mt-3 w-full border-collapse text-sm">
                   <thead>
                     <tr className="text-left text-xs text-stone-400">
                       <th className="py-1 pr-3 font-semibold">Question</th>
