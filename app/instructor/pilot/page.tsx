@@ -730,9 +730,12 @@ export default function PilotAnalysisPage() {
         points: p,
         count: vals.filter((i) => (i.points ?? -1) === p).length,
       }));
-      const medianSec = median(
-        subs.map((r) => r.item_timings?.[id]?.seconds ?? null)
-      );
+      const itemSecs = subs
+        .map((r) => r.item_timings?.[id]?.seconds)
+        .filter((s): s is number => s != null);
+      const medianSec = median(itemSecs);
+      const minSec = itemSecs.length ? Math.min(...itemSecs) : null;
+      const maxSec = itemSecs.length ? Math.max(...itemSecs) : null;
       return {
         id,
         label,
@@ -742,6 +745,8 @@ export default function PilotAnalysisPage() {
         n: vals.length,
         dist,
         medianSec,
+        minSec,
+        maxSec,
       };
     }).sort((a, b) => b.pct - a.pct);
 
@@ -1246,27 +1251,38 @@ export default function PilotAnalysisPage() {
 
                 {/* ---- Time per question ---- */}
                 <h3 className="mt-5 text-sm font-bold text-stone-700">
-                  Median time per question
+                  Time per question (spread)
                 </h3>
-                <div className="mt-1 space-y-1">
-                  {(() => {
-                    const mt = Math.max(
-                      1,
-                      ...analysis.items.map((it) => it.medianSec ?? 0)
-                    );
-                    return [...analysis.items]
+                <table className="mt-1 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Question</th>
+                      <th className="py-1 pr-3 font-semibold">Min</th>
+                      <th className="py-1 pr-3 font-semibold">Median</th>
+                      <th className="py-1 font-semibold">Max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...analysis.items]
                       .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
                       .map((it) => (
-                        <BarRow
-                          key={it.id}
-                          label={it.label.replace(/ \(.*\)/, "")}
-                          count={it.medianSec ?? 0}
-                          max={mt}
-                          suffix={fmtSec(it.medianSec)}
-                        />
-                      ));
-                  })()}
-                </div>
+                        <tr key={it.id} className="border-t border-stone-100">
+                          <td className="py-1 pr-3 text-stone-700">
+                            {it.label}
+                          </td>
+                          <td className="py-1 pr-3 text-stone-500">
+                            {fmtSec(it.minSec)}
+                          </td>
+                          <td className="py-1 pr-3 font-semibold text-stone-800">
+                            {fmtSec(it.medianSec)}
+                          </td>
+                          <td className="py-1 text-stone-500">
+                            {fmtSec(it.maxSec)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
 
                 {/* ---- Screen-out reasons ---- */}
                 {analysis.screenReasons.length > 0 && (
