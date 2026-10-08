@@ -121,6 +121,19 @@ const ITEM_ANALYSIS_LABELS: [string, string][] = [
 ];
 
 /**
+ * The four short numeric Q1 items (1b–1e). Graded right/wrong by numeric match
+ * (lib/pilot/tests.ts), so they live on each row's `q1`, NOT in the rubric
+ * grades — they must be folded into the item analyses separately. Topic is the
+ * same across forms; only the within-range / on-the-edge variant swaps.
+ */
+const NUMERIC_Q1_LABELS: [string, string][] = [
+  ["1b", "Q1b particle motion (numeric)"],
+  ["1c", "Q1c profit (numeric)"],
+  ["1d", "Q1d fencing (numeric)"],
+  ["1e", "Q1e rectangle (numeric)"],
+];
+
+/**
  * AI rubric grades (gradeTest + answer key, LiteLLM/claude-sonnet) computed
  * 2026-10-06 and hard-coded so the view shows them without a live model call.
  * Any newer grades from /api/pilot-grade override these by subject.
@@ -778,7 +791,15 @@ export default function PilotAnalysisPage() {
     );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
-    const items = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+    const itemSecsOf = (id: string) =>
+      subs
+        .map((r) => r.item_timings?.[id]?.seconds)
+        .filter((s): s is number => s != null);
+
+    // Rubric items (from the AI grades) and the four numeric Q1 items (0/1, from
+    // each row's `q1`) are built the same shape so the charts treat Q1b–Q1e like
+    // any other question.
+    const rubricItems = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
       const vals = subs
         .map((r) => grades[r.subject]?.items?.[id])
         .filter((x): x is NonNullable<typeof x> => Boolean(x));
@@ -791,12 +812,7 @@ export default function PilotAnalysisPage() {
         points: p,
         count: vals.filter((i) => (i.points ?? -1) === p).length,
       }));
-      const itemSecs = subs
-        .map((r) => r.item_timings?.[id]?.seconds)
-        .filter((s): s is number => s != null);
-      const medianSec = median(itemSecs);
-      const minSec = itemSecs.length ? Math.min(...itemSecs) : null;
-      const maxSec = itemSecs.length ? Math.max(...itemSecs) : null;
+      const itemSecs = itemSecsOf(id);
       return {
         id,
         label,
@@ -805,11 +821,40 @@ export default function PilotAnalysisPage() {
         pct: pctOf(meanPts, max),
         n: vals.length,
         dist,
-        medianSec,
-        minSec,
-        maxSec,
+        medianSec: median(itemSecs),
+        minSec: itemSecs.length ? Math.min(...itemSecs) : null,
+        maxSec: itemSecs.length ? Math.max(...itemSecs) : null,
       };
-    }).sort((a, b) => b.pct - a.pct);
+    });
+
+    const numericItems = NUMERIC_Q1_LABELS.map(([id, label]) => {
+      const vals = subs
+        .map((r) => r.q1?.[id])
+        .filter((x): x is Q1Item => Boolean(x));
+      const correct = vals.filter((v) => v.correct).length;
+      const meanPts = vals.length ? correct / vals.length : 0; // max is 1
+      const dist = [0, 1].map((p) => ({
+        points: p,
+        count: vals.filter((v) => (v.correct ? 1 : 0) === p).length,
+      }));
+      const itemSecs = itemSecsOf(id);
+      return {
+        id,
+        label,
+        max: 1,
+        meanPts,
+        pct: pctOf(correct, vals.length),
+        n: vals.length,
+        dist,
+        medianSec: median(itemSecs),
+        minSec: itemSecs.length ? Math.min(...itemSecs) : null,
+        maxSec: itemSecs.length ? Math.max(...itemSecs) : null,
+      };
+    });
+
+    const items = [...rubricItems, ...numericItems].sort(
+      (a, b) => b.pct - a.pct
+    );
 
     const crit = CRIT_SPECS.flatMap((spec) =>
       spec.crits.map(([cid, clabel]) => {
@@ -880,15 +925,12 @@ export default function PilotAnalysisPage() {
       const v = list.map(totalOf).filter((t): t is number => t != null);
       return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
     };
-    const discrimination = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
-      const withItem = subs.filter((r) => grades[r.subject]?.items?.[id]);
-      const max = grades[withItem[0]?.subject]?.items?.[id]?.max ?? 0;
-      const got = withItem.filter(
-        (r) => (grades[r.subject].items[id].points ?? 0) >= max / 2
-      );
-      const notGot = withItem.filter(
-        (r) => (grades[r.subject].items[id].points ?? 0) < max / 2
-      );
+    const discrimRow = (
+      id: string,
+      label: string,
+      got: Row[],
+      notGot: Row[]
+    ) => {
       const mg = meanTotal(got);
       const mn = meanTotal(notGot);
       return {
@@ -900,7 +942,31 @@ export default function PilotAnalysisPage() {
         nNot: notGot.length,
         gap: mg != null && mn != null ? mg - mn : null,
       };
-    }).sort((a, b) => (b.gap ?? -99) - (a.gap ?? -99));
+    };
+    const rubricDiscrim = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+      const withItem = subs.filter((r) => grades[r.subject]?.items?.[id]);
+      const max = grades[withItem[0]?.subject]?.items?.[id]?.max ?? 0;
+      return discrimRow(
+        id,
+        label,
+        withItem.filter((r) => (grades[r.subject].items[id].points ?? 0) >= max / 2),
+        withItem.filter((r) => (grades[r.subject].items[id].points ?? 0) < max / 2)
+      );
+    });
+    // Numeric Q1 items split strong/weak against the SAME rubric total (which
+    // excludes them), so the gap is a genuine discrimination, not part-whole.
+    const numericDiscrim = NUMERIC_Q1_LABELS.map(([id, label]) => {
+      const withItem = subs.filter((r) => r.q1?.[id]);
+      return discrimRow(
+        id,
+        label,
+        withItem.filter((r) => r.q1[id].correct),
+        withItem.filter((r) => !r.q1[id].correct)
+      );
+    });
+    const discrimination = [...rubricDiscrim, ...numericDiscrim].sort(
+      (a, b) => (b.gap ?? -99) - (a.gap ?? -99)
+    );
 
     // Screen-out reasons across the shown participants.
     const reasonCounts: Record<string, number> = {};
