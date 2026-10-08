@@ -77,6 +77,14 @@ const CRIT_LABELS: Record<string, [string, string][]> = Object.fromEntries(
   CRIT_SPECS.map((s) => [s.item, s.crits])
 );
 
+/** Multiple-choice items, for the option (distractor) distribution. */
+const MC_ITEMS: { item: string; label: string; options: string[]; correct: string }[] =
+  [
+    { item: "2.1", label: "Q2.1 revenue model", options: ["A", "B", "C"], correct: "C" },
+    { item: "2.4", label: "Q2.4 interpret domain", options: ["A", "B", "C"], correct: "A" },
+    { item: "3.1", label: "Q3.1 question the AI", options: ["A", "B", "C", "D"], correct: "C" },
+  ];
+
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
   ["2.1", "Q2.1 revenue model (choice + explanation)"],
@@ -188,6 +196,42 @@ function Tick({ ok }: { ok: boolean }) {
     <span className={ok ? "text-lime-700" : "text-rose-600"}>
       {ok ? "✓" : "✗"}
     </span>
+  );
+}
+
+/** A labelled horizontal bar for the distribution charts. */
+function BarRow({
+  label,
+  count,
+  max,
+  suffix,
+  highlight,
+}: {
+  label: string;
+  count: number;
+  max: number;
+  suffix?: string;
+  highlight?: "good" | "warn";
+}) {
+  const color =
+    highlight === "good"
+      ? "bg-lime-500"
+      : highlight === "warn"
+        ? "bg-amber-500"
+        : "bg-stone-400";
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-24 shrink-0 truncate text-right text-stone-500">
+        {label}
+      </span>
+      <div className="h-3 flex-1 rounded bg-stone-100">
+        <div
+          className={`h-3 rounded ${color}`}
+          style={{ width: `${max ? Math.min(100, (count / max) * 100) : 0}%` }}
+        />
+      </div>
+      <span className="w-14 shrink-0 text-stone-600">{suffix ?? count}</span>
+    </div>
   );
 }
 
@@ -717,7 +761,102 @@ export default function PilotAnalysisPage() {
       })
     );
 
-    return { items, crit, n: subs.length };
+    // Overall test-total distribution (bucketed on the /max scale).
+    const totals = subs
+      .map((r) => grades[r.subject]?.total)
+      .filter((t): t is number => t != null);
+    const totalMax =
+      subs.map((r) => grades[r.subject]?.max).find((m) => m != null) ?? 22;
+    const step = Math.max(1, Math.ceil((totalMax + 1) / 6));
+    const totalDist: { label: string; count: number }[] = [];
+    for (let lo = 0; lo <= totalMax; lo += step) {
+      const hi = Math.min(lo + step - 1, totalMax);
+      totalDist.push({
+        label: lo === hi ? `${lo}` : `${lo}–${hi}`,
+        count: totals.filter((t) => t >= lo && t <= hi).length,
+      });
+    }
+
+    // Option (distractor) distribution for the MC items.
+    const optionDist = MC_ITEMS.map((spec) => {
+      const counts: Record<string, number> = {};
+      for (const r of subs) {
+        const c = r.test_answers?.[spec.item]?.choiceId;
+        if (c) counts[c] = (counts[c] ?? 0) + 1;
+      }
+      const options = spec.options.map((id) => ({
+        id,
+        count: counts[id] ?? 0,
+        isCorrect: id === spec.correct,
+      }));
+      const maxWrong = Math.max(
+        0,
+        ...options.filter((o) => !o.isCorrect).map((o) => o.count)
+      );
+      return {
+        item: spec.item,
+        label: spec.label,
+        correct: spec.correct,
+        options,
+        mainDistractor:
+          maxWrong > 0
+            ? options.find((o) => !o.isCorrect && o.count === maxWrong)?.id ??
+              null
+            : null,
+      };
+    });
+
+    // Item discrimination: mean TEST TOTAL of those who got the item (>= half
+    // its max) vs those who did not. A positive gap = the item separates
+    // stronger from weaker students.
+    const totalOf = (r: Row) => grades[r.subject]?.total ?? null;
+    const meanTotal = (list: Row[]) => {
+      const v = list.map(totalOf).filter((t): t is number => t != null);
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    };
+    const discrimination = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+      const withItem = subs.filter((r) => grades[r.subject]?.items?.[id]);
+      const max = grades[withItem[0]?.subject]?.items?.[id]?.max ?? 0;
+      const got = withItem.filter(
+        (r) => (grades[r.subject].items[id].points ?? 0) >= max / 2
+      );
+      const notGot = withItem.filter(
+        (r) => (grades[r.subject].items[id].points ?? 0) < max / 2
+      );
+      const mg = meanTotal(got);
+      const mn = meanTotal(notGot);
+      return {
+        id,
+        label,
+        meanGot: mg,
+        meanNot: mn,
+        nGot: got.length,
+        nNot: notGot.length,
+        gap: mg != null && mn != null ? mg - mn : null,
+      };
+    }).sort((a, b) => (b.gap ?? -99) - (a.gap ?? -99));
+
+    // Screen-out reasons across the shown participants.
+    const reasonCounts: Record<string, number> = {};
+    for (const r of subs)
+      for (const reason of screenOut(r).reasons)
+        reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
+    const screenReasons = Object.entries(reasonCounts)
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count);
+    const eligibleCount = subs.filter((r) => !screenOut(r).out).length;
+
+    return {
+      items,
+      crit,
+      n: subs.length,
+      totalMax,
+      totalDist,
+      optionDist,
+      discrimination,
+      screenReasons,
+      eligibleCount,
+    };
   }, [view, grades, analysisEligibleOnly]);
 
   return (
@@ -994,8 +1133,173 @@ export default function PilotAnalysisPage() {
                   </tbody>
                 </table>
 
-                <h3 className="mt-4 text-sm font-bold text-stone-700">
-                  Show-work rubric — % who met each point
+                {/* ---- Score distribution ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Score distribution
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-stone-500">
+                  Overall test (/{analysis.totalMax}) — participants per band
+                </p>
+                <div className="mt-1 space-y-1">
+                  {(() => {
+                    const mc = Math.max(
+                      1,
+                      ...analysis.totalDist.map((b) => b.count)
+                    );
+                    return analysis.totalDist.map((b) => (
+                      <BarRow
+                        key={b.label}
+                        label={b.label}
+                        count={b.count}
+                        max={mc}
+                        highlight="good"
+                      />
+                    ));
+                  })()}
+                </div>
+                <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {analysis.items.map((it) => {
+                    const mc = Math.max(1, ...it.dist.map((d) => d.count));
+                    return (
+                      <div key={it.id}>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {it.label} (/{it.max})
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          {it.dist.map((d) => (
+                            <BarRow
+                              key={d.points}
+                              label={`${d.points} pt`}
+                              count={d.count}
+                              max={mc}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Option / distractor distribution ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Option distribution (multiple choice)
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  ✓ = correct option; the most-chosen wrong option is the main
+                  distractor.
+                </p>
+                <div className="mt-1 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {analysis.optionDist.map((q) => {
+                    const mc = Math.max(1, ...q.options.map((o) => o.count));
+                    return (
+                      <div key={q.item}>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {q.label} (correct {q.correct})
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          {q.options.map((o) => (
+                            <BarRow
+                              key={o.id}
+                              label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
+                              count={o.count}
+                              max={mc}
+                              highlight={
+                                o.isCorrect
+                                  ? "good"
+                                  : o.id === q.mainDistractor
+                                    ? "warn"
+                                    : undefined
+                              }
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Item discrimination ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Item discrimination
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Mean test total of those who got the item (≥ half marks) minus
+                  those who didn&apos;t. A bigger positive gap = the item better
+                  separates strong from weak students.
+                </p>
+                <div className="mt-1 space-y-1">
+                  {analysis.discrimination.map((d) => (
+                    <BarRow
+                      key={d.id}
+                      label={d.label.replace(/ \(.*\)/, "")}
+                      count={Math.max(0, d.gap ?? 0)}
+                      max={analysis.totalMax}
+                      highlight={(d.gap ?? 0) > 0 ? "good" : "warn"}
+                      suffix={
+                        d.gap == null
+                          ? "—"
+                          : `+${d.gap.toFixed(1)} (${d.meanGot?.toFixed(0) ?? "–"} vs ${d.meanNot?.toFixed(0) ?? "–"})`
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* ---- Time per question ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Median time per question
+                </h3>
+                <div className="mt-1 space-y-1">
+                  {(() => {
+                    const mt = Math.max(
+                      1,
+                      ...analysis.items.map((it) => it.medianSec ?? 0)
+                    );
+                    return [...analysis.items]
+                      .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
+                      .map((it) => (
+                        <BarRow
+                          key={it.id}
+                          label={it.label.replace(/ \(.*\)/, "")}
+                          count={it.medianSec ?? 0}
+                          max={mt}
+                          suffix={fmtSec(it.medianSec)}
+                        />
+                      ));
+                  })()}
+                </div>
+
+                {/* ---- Screen-out reasons ---- */}
+                {analysis.screenReasons.length > 0 && (
+                  <>
+                    <h3 className="mt-5 text-sm font-bold text-stone-700">
+                      Screen-out reasons
+                    </h3>
+                    <p className="mt-1 text-xs text-stone-400">
+                      How many of the {analysis.n} completers each rule would
+                      exclude ({analysis.eligibleCount} would be kept).
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {(() => {
+                        const mc = Math.max(
+                          1,
+                          ...analysis.screenReasons.map((s) => s.count)
+                        );
+                        return analysis.screenReasons.map((s) => (
+                          <BarRow
+                            key={s.reason}
+                            label={s.reason}
+                            count={s.count}
+                            max={mc}
+                            highlight="warn"
+                          />
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Rubric distribution — % who met each criterion
                 </h3>
                 <table className="mt-1 w-full border-collapse text-sm">
                   <thead>
