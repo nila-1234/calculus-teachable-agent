@@ -85,6 +85,31 @@ const MC_ITEMS: { item: string; label: string; options: string[]; correct: strin
     { item: "3.1", label: "Q3.1 question the AI", options: ["A", "B", "C", "D"], correct: "C" },
   ];
 
+/**
+ * Short, form-neutral gloss of what each MC option says, so a reader can tell
+ * what A/B/C/D mean from the distribution chart without opening the test.
+ * (Q2.1's formula constant differs by form — 200−10p vs 120−2p — so the gloss
+ * describes the structure, which is the same on both forms.)
+ */
+const MC_OPTION_GLOSS: Record<string, Record<string, string>> = {
+  "2.1": {
+    A: "R = p + (demand)",
+    B: "R = demand only",
+    C: "R = p × demand",
+  },
+  "2.4": {
+    A: "p too high ⇒ negative units sold",
+    B: "revenue must be $0–$20",
+    C: "derivative only defined on interval",
+  },
+  "3.1": {
+    A: "accept 25 as final",
+    B: "ask AI for more detail",
+    C: "question the recommendation",
+    D: "start over without AI",
+  },
+};
+
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
   ["2.1", "Q2.1 revenue model (choice + explanation)"],
@@ -196,6 +221,35 @@ function Tick({ ok }: { ok: boolean }) {
     <span className={ok ? "text-lime-700" : "text-rose-600"}>
       {ok ? "✓" : "✗"}
     </span>
+  );
+}
+
+/**
+ * Q2.1 is one test question but two graded parts: the multiple-choice pick
+ * (1 pt) and the written explanation (2 pts). Showing them on separate lines,
+ * each with its own sub-score, keeps a wrong choice from looking like a failed
+ * explanation (and vice versa) — the two are judged independently.
+ */
+function Q21Breakdown({ verdicts }: { verdicts: Record<string, string> }) {
+  const choice = verdicts["chose-c"] === "met" ? 1 : 0;
+  const expl =
+    (verdicts["uses-examples"] === "met" ? 1 : 0) +
+    (verdicts["price-times-quantity"] === "met" ? 1 : 0);
+  return (
+    <>
+      <div>
+        <span className="font-semibold text-stone-500">Choice {choice}/1:</span>{" "}
+        <Tick ok={verdicts["chose-c"] === "met"} /> chose C
+      </div>
+      <div>
+        <span className="font-semibold text-stone-500">
+          Explanation {expl}/2:
+        </span>{" "}
+        <Tick ok={verdicts["uses-examples"] === "met"} /> uses the table&apos;s
+        numbers <Tick ok={verdicts["price-times-quantity"] === "met"} /> revenue =
+        price × quantity
+      </div>
+    </>
   );
 }
 
@@ -472,16 +526,23 @@ function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
                           {grade.items[id].criteria &&
                             CRIT_LABELS[id] && (
                               <div className="mt-0.5 space-y-0.5 text-[10px] leading-tight text-stone-500">
-                                {CRIT_LABELS[id].map(([cid, clabel]) => (
-                                  <div key={cid}>
-                                    <Tick
-                                      ok={
-                                        grade.items[id].criteria?.[cid] === "met"
-                                      }
-                                    />{" "}
-                                    {clabel}
-                                  </div>
-                                ))}
+                                {id === "2.1" ? (
+                                  <Q21Breakdown
+                                    verdicts={grade.items[id].criteria ?? {}}
+                                  />
+                                ) : (
+                                  CRIT_LABELS[id].map(([cid, clabel]) => (
+                                    <div key={cid}>
+                                      <Tick
+                                        ok={
+                                          grade.items[id].criteria?.[cid] ===
+                                          "met"
+                                        }
+                                      />{" "}
+                                      {clabel}
+                                    </div>
+                                  ))
+                                )}
                               </div>
                             )}
                         </>
@@ -1138,6 +1199,65 @@ export default function PilotAnalysisPage() {
                   </tbody>
                 </table>
 
+                {/* ---- Conclusions: item difficulty / discrimination ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Conclusions — which items are too easy / too hard
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Difficulty = mean % of max. Discrimination = test-total gap
+                  between those who got the item and those who didn&apos;t
+                  (bigger = separates strong from weak better). Small sample
+                  ({analysis.n}) — read as signal, not proof.
+                </p>
+                <table className="mt-1 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Question</th>
+                      <th className="py-1 pr-3 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">Discrim.</th>
+                      <th className="py-1 font-semibold">Read</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.items.map((it) => {
+                      const d = analysis.discrimination.find(
+                        (x) => x.id === it.id
+                      );
+                      const gap = d?.gap ?? null;
+                      const verdict =
+                        it.pct >= 75
+                          ? { t: "Too easy — near ceiling", c: "text-amber-600" }
+                          : gap != null && gap < 2
+                            ? { t: "Weak discriminator", c: "text-amber-600" }
+                            : it.pct <= 30
+                              ? { t: "Hard — floor-leaning", c: "text-stone-600" }
+                              : { t: "Good spread", c: "text-lime-700" };
+                      return (
+                        <tr key={it.id} className="border-t border-stone-100">
+                          <td className="py-1 pr-3 text-stone-700">
+                            {it.label}
+                          </td>
+                          <td className="py-1 pr-3 font-semibold text-stone-800">
+                            {it.pct}%
+                          </td>
+                          <td className="py-1 pr-3 text-stone-500">
+                            {gap == null ? "—" : `+${gap.toFixed(1)}`}
+                          </td>
+                          <td className={`py-1 font-medium ${verdict.c}`}>
+                            {verdict.t}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="mt-1 text-xs text-stone-400">
+                  Takeaway: the pretest mostly captures what we want — the
+                  show-your-work items separate strong from weak. Watch the
+                  near-ceiling MC (Q2.4) and the single guessable MC (Q3.1) as
+                  candidates to harden.
+                </p>
+
                 {/* ---- Score distribution ---- */}
                 <h3 className="mt-5 text-sm font-bold text-stone-700">
                   Score distribution
@@ -1203,19 +1323,28 @@ export default function PilotAnalysisPage() {
                         </p>
                         <div className="mt-0.5 space-y-0.5">
                           {q.options.map((o) => (
-                            <BarRow
+                            <div
                               key={o.id}
-                              label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
-                              count={o.count}
-                              max={mc}
-                              highlight={
-                                o.isCorrect
-                                  ? "good"
-                                  : o.id === q.mainDistractor
-                                    ? "warn"
-                                    : undefined
-                              }
-                            />
+                              className="flex items-center gap-2"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <BarRow
+                                  label={`${o.id}${o.isCorrect ? " ✓" : o.id === q.mainDistractor ? " ◆" : ""}`}
+                                  count={o.count}
+                                  max={mc}
+                                  highlight={
+                                    o.isCorrect
+                                      ? "good"
+                                      : o.id === q.mainDistractor
+                                        ? "warn"
+                                        : undefined
+                                  }
+                                />
+                              </div>
+                              <span className="w-32 shrink-0 truncate text-[11px] text-stone-400">
+                                {MC_OPTION_GLOSS[q.item]?.[o.id] ?? ""}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1253,7 +1382,53 @@ export default function PilotAnalysisPage() {
                 <h3 className="mt-5 text-sm font-bold text-stone-700">
                   Time per question (spread)
                 </h3>
-                <table className="mt-1 w-full border-collapse text-sm">
+                <p className="mt-1 text-xs text-stone-400">
+                  Each bar spans the fastest to slowest completer; the dot marks
+                  the median. Longer bars = more spread in how long people took.
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {(() => {
+                    const gmax = Math.max(
+                      1,
+                      ...analysis.items.map((it) => it.maxSec ?? 0)
+                    );
+                    return [...analysis.items]
+                      .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
+                      .map((it) => {
+                        const lo = it.minSec ?? 0;
+                        const hi = it.maxSec ?? 0;
+                        const med = it.medianSec ?? lo;
+                        return (
+                          <div
+                            key={it.id}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-24 shrink-0 truncate text-right text-stone-500">
+                              {it.label.replace(/ \(.*\)/, "")}
+                            </span>
+                            <div className="relative h-3 flex-1 rounded bg-stone-100">
+                              <div
+                                className="absolute h-3 rounded bg-sky-200"
+                                style={{
+                                  left: `${(lo / gmax) * 100}%`,
+                                  width: `${((hi - lo) / gmax) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-600"
+                                style={{ left: `${(med / gmax) * 100}%` }}
+                                title={`median ${fmtSec(med)}`}
+                              />
+                            </div>
+                            <span className="w-28 shrink-0 text-stone-500">
+                              {fmtSec(it.minSec)}–{fmtSec(it.maxSec)}
+                            </span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+                <table className="mt-3 w-full border-collapse text-sm">
                   <thead>
                     <tr className="text-left text-xs text-stone-400">
                       <th className="py-1 pr-3 font-semibold">Question</th>
@@ -1410,12 +1585,16 @@ export default function PilotAnalysisPage() {
                             </p>
                             {g?.criteria && CRIT_LABELS[id] && (
                               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-stone-500">
-                                {CRIT_LABELS[id].map(([cid, clabel]) => (
-                                  <span key={cid}>
-                                    <Tick ok={g.criteria?.[cid] === "met"} />{" "}
-                                    {clabel}
-                                  </span>
-                                ))}
+                                {id === "2.1" ? (
+                                  <Q21Breakdown verdicts={g.criteria ?? {}} />
+                                ) : (
+                                  CRIT_LABELS[id].map(([cid, clabel]) => (
+                                    <span key={cid}>
+                                      <Tick ok={g.criteria?.[cid] === "met"} />{" "}
+                                      {clabel}
+                                    </span>
+                                  ))
+                                )}
                               </div>
                             )}
                           </div>

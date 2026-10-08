@@ -103,7 +103,7 @@ function q21Criteria(func: string): CriterionSpec[] {
 }
 
 const q21ScoringNote =
-  "Full credit needs the correct choice C AND an explanation that uses the table values and states revenue = price × quantity. The chosen option appears in the answer as \"Selected: ...\".";
+  "Score the two parts independently. The choice part (criterion chose-c, 1 pt) is judged only from the selected option, shown in the answer as \"Selected: ...\". The explanation part (criteria uses-examples and price-times-quantity, 2 pts) is judged ONLY on the written reasoning: award each explanation criterion it satisfies even when the student selected the wrong option, and withhold it when the reasoning is absent even if the student selected C.";
 
 export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
   pretest: {
