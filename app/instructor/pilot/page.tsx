@@ -86,34 +86,50 @@ const MC_ITEMS: { item: string; label: string; options: string[]; correct: strin
   ];
 
 /**
- * The actual option text shown to participants, so the distribution chart
- * reproduces exactly what each A/B/C/D said (what the instructor asked to see),
- * not a paraphrase. Transcribed from lib/tests/definitions.ts. Q2.4 and Q3.1
- * are identical across forms; Q2.1's formula constant differs (200−10p on the
- * pretest, 120−2p on the posttest), noted on the item.
+ * The actual option text shown to participants, per form, so the distribution
+ * chart reproduces exactly what each A/B/C/D said (what the instructor asked to
+ * see), not a paraphrase. Transcribed from lib/tests/definitions.ts. The two
+ * forms are structurally parallel — same correct letter, same role per
+ * distractor — but the numbers/context differ, so a form-specific view shows
+ * that form's exact wording. "A" = pretest, "B" = posttest.
  */
-const MC_OPTION_TEXT: Record<string, Record<string, string>> = {
-  "2.1": {
-    A: "R(p) = p + (200 − 10p)",
-    B: "R(p) = 200 − 10p",
-    C: "R(p) = p(200 − 10p)",
+const MC_OPTION_TEXT: Record<"A" | "B", Record<string, Record<string, string>>> = {
+  A: {
+    "2.1": {
+      A: "R(p) = p + (200 − 10p)",
+      B: "R(p) = 200 − 10p",
+      C: "R(p) = p(200 − 10p)",
+    },
+    "2.4": {
+      A: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
+      B: "The company’s revenue must always be between $0 and $20.",
+      C: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
+    },
+    "3.1": {
+      A: "Accept the AI’s recommendation and use 25 chairs as the final answer.",
+      B: "Ask the AI to explain its calculations in more detail before deciding.",
+      C: "Question the AI’s recommendation before accepting it.",
+      D: "Start the problem over and solve it independently without the AI.",
+    },
   },
-  "2.4": {
-    A: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
-    B: "The company’s revenue must always be between $0 and $20.",
-    C: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
+  B: {
+    "2.1": {
+      A: "R(p) = p + (120 − 2p)",
+      B: "R(p) = 120 − 2p",
+      C: "R(p) = p(120 − 2p)",
+    },
+    "2.4": {
+      A: "A price above $60 would make the model predict a negative number of units sold.",
+      B: "The company’s revenue must always be between $0 and $60.",
+      C: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
+    },
+    "3.1": {
+      A: "Accept the AI’s recommendation and use 80 posters as the final answer.",
+      B: "Ask the AI to explain its calculations in more detail before deciding.",
+      C: "Question the AI’s recommendation before accepting it.",
+      D: "Start the problem over and solve it independently without the AI.",
+    },
   },
-  "3.1": {
-    A: "Accept the AI’s recommendation and use 25 chairs as the final answer.",
-    B: "Ask the AI to explain its calculations in more detail before deciding.",
-    C: "Question the AI’s recommendation before accepting it.",
-    D: "Start the problem over and solve it independently without the AI.",
-  },
-};
-
-/** Items whose wording differs by form, shown as a caption under the question. */
-const MC_FORM_NOTE: Record<string, string> = {
-  "2.1": "Posttest form uses R(p) = p(120 − 2p); structure is identical.",
 };
 
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
@@ -304,6 +320,47 @@ function BarRow({
         />
       </div>
       <span className="w-14 shrink-0 text-stone-600">{suffix ?? count}</span>
+    </div>
+  );
+}
+
+/**
+ * Segmented control for which assessment form the analysis covers. The forms
+ * are parallel but not identical, so A and B are read separately; "Both" pools.
+ */
+function FormSelect({
+  value,
+  onChange,
+  counts,
+}: {
+  value: "all" | "A" | "B";
+  onChange: (v: "all" | "A" | "B") => void;
+  counts: { A: number; B: number };
+}) {
+  const opts: ["all" | "A" | "B", string][] = [
+    ["all", `Both (${counts.A + counts.B})`],
+    ["A", `A · pretest (${counts.A})`],
+    ["B", `B · posttest (${counts.B})`],
+  ];
+  return (
+    <div className="flex items-center gap-1 text-xs text-stone-600">
+      <span className="text-stone-500">Form</span>
+      <div className="inline-flex overflow-hidden rounded border border-stone-200">
+        {opts.map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            className={`px-2 py-0.5 ${
+              value === v
+                ? "bg-lime-600 text-white"
+                : "bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -626,8 +683,13 @@ export default function PilotAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [showTestRuns, setShowTestRuns] = useState(false);
   const [onlyEligible, setOnlyEligible] = useState(false);
-  // Shared toggle for the analysis + by-question sections.
+  // Shared toggles for the analysis + by-question sections.
   const [analysisEligibleOnly, setAnalysisEligibleOnly] = useState(false);
+  // Which form's participants the analysis covers. The two forms are parallel
+  // but not identical (numbers/context differ, and Q1b–Q1e are deliberately
+  // within-range vs on-the-edge variants), so viewing A or B separately is the
+  // methodologically correct read; "all" pools them.
+  const [analysisForm, setAnalysisForm] = useState<"all" | "A" | "B">("all");
   const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
     null
   );
@@ -793,7 +855,9 @@ export default function PilotAnalysisPage() {
   const analysis = useMemo(() => {
     if (!view) return null;
     const subs = view.completed.filter(
-      (r) => !analysisEligibleOnly || !screenOut(r).out
+      (r) =>
+        (!analysisEligibleOnly || !screenOut(r).out) &&
+        (analysisForm === "all" || r.form === analysisForm)
     );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
@@ -995,7 +1059,7 @@ export default function PilotAnalysisPage() {
       screenReasons,
       eligibleCount,
     };
-  }, [view, grades, analysisEligibleOnly]);
+  }, [view, grades, analysisEligibleOnly, analysisForm]);
 
   return (
     <main className="min-h-screen bg-stone-100">
@@ -1210,6 +1274,11 @@ export default function PilotAnalysisPage() {
                     Answer-key analysis (AI rubric)
                   </h2>
                   <div className="flex flex-wrap items-center gap-3">
+                    <FormSelect
+                      value={analysisForm}
+                      onChange={setAnalysisForm}
+                      counts={{ A: view.formA, B: view.formB }}
+                    />
                     <label className="flex items-center gap-2 text-xs text-stone-600">
                       <input
                         type="checkbox"
@@ -1227,9 +1296,17 @@ export default function PilotAnalysisPage() {
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-stone-400">
-                  Across {analysis.n} {analysisEligibleOnly ? "eligible" : "completed"}{" "}
+                  Across {analysis.n}{" "}
+                  {analysisForm === "all"
+                    ? "pooled"
+                    : analysisForm === "A"
+                      ? "Form A (pretest)"
+                      : "Form B (posttest)"}{" "}
+                  {analysisEligibleOnly ? "eligible" : "completed"}{" "}
                   participant{analysis.n === 1 ? "" : "s"}. Higher = students did
                   better against the answer-key rubric.
+                  {analysisForm === "all" &&
+                    " Forms A and B are parallel but not identical (numbers/context differ; Q1b–Q1e are within-range vs on-the-edge variants) — view a single form for an exact read."}
                 </p>
 
                 <h3 className="mt-3 text-sm font-bold text-stone-700">
@@ -1384,20 +1461,19 @@ export default function PilotAnalysisPage() {
                 <p className="mt-1 text-xs text-stone-400">
                   ✓ = correct option; the most-chosen wrong option is the main
                   distractor.
+                  {analysisForm === "all"
+                    ? " Counts pool both forms by option letter (the letters play the same role on both); wording shown is Form A — switch to a single form for that form's exact options."
+                    : ` Wording and counts are Form ${analysisForm}.`}
                 </p>
                 <div className="mt-1 space-y-4">
                   {analysis.optionDist.map((q) => {
                     const mc = Math.max(1, ...q.options.map((o) => o.count));
+                    const textForm = analysisForm === "B" ? "B" : "A";
                     return (
                       <div key={q.item}>
                         <p className="text-[11px] font-semibold text-stone-500">
                           {q.label} (correct {q.correct})
                         </p>
-                        {MC_FORM_NOTE[q.item] && (
-                          <p className="text-[10px] text-stone-400">
-                            {MC_FORM_NOTE[q.item]}
-                          </p>
-                        )}
                         <div className="mt-0.5 space-y-0.5">
                           {q.options.map((o) => {
                             const color = o.isCorrect
@@ -1431,7 +1507,7 @@ export default function PilotAnalysisPage() {
                                   {o.count}
                                 </span>
                                 <span className="flex-1 pt-0.5 text-stone-500">
-                                  {MC_OPTION_TEXT[q.item]?.[o.id] ?? ""}
+                                  {MC_OPTION_TEXT[textForm][q.item]?.[o.id] ?? ""}
                                 </span>
                               </div>
                             );
@@ -1613,15 +1689,22 @@ export default function PilotAnalysisPage() {
                 <h2 className="text-base font-bold text-stone-800">
                   By question — all responses
                 </h2>
-                <label className="flex items-center gap-2 text-xs text-stone-600">
-                  <input
-                    type="checkbox"
-                    checked={analysisEligibleOnly}
-                    onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
-                    className="h-4 w-4 accent-lime-600"
+                <div className="flex flex-wrap items-center gap-3">
+                  <FormSelect
+                    value={analysisForm}
+                    onChange={setAnalysisForm}
+                    counts={{ A: view.formA, B: view.formB }}
                   />
-                  Only not-screened-out
-                </label>
+                  <label className="flex items-center gap-2 text-xs text-stone-600">
+                    <input
+                      type="checkbox"
+                      checked={analysisEligibleOnly}
+                      onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
+                      className="h-4 w-4 accent-lime-600"
+                    />
+                    Only not-screened-out
+                  </label>
+                </div>
               </div>
               <p className="mt-1 text-xs text-stone-400">
                 Every completed participant&apos;s answer to one question, with
@@ -1631,6 +1714,7 @@ export default function PilotAnalysisPage() {
                 const answered = view.completed.filter(
                   (r) =>
                     (!analysisEligibleOnly || !screenOut(r).out) &&
+                    (analysisForm === "all" || r.form === analysisForm) &&
                     (r.test_answers?.[id] || r.q1?.[id])
                 );
                 if (!answered.length) return null;

@@ -303,8 +303,6 @@ const POST_TEST: TestDefinition = {
               text: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
-          explanationPrompt: "Briefly explain your choice.",
-          placeholder: "Briefly explain your choice…",
           reference:
             "A. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
         },
