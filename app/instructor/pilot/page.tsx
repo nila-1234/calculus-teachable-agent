@@ -853,9 +853,7 @@ export default function PilotAnalysisPage() {
   const analysis = useMemo(() => {
     if (!view) return null;
     const subs = view.completed.filter(
-      (r) =>
-        (!analysisEligibleOnly || !screenOut(r).out) &&
-        r.form === analysisForm
+      (r) => !analysisEligibleOnly || !screenOut(r).out
     );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
@@ -956,10 +954,13 @@ export default function PilotAnalysisPage() {
       });
     }
 
-    // Option (distractor) distribution for the MC items.
+    // Option (distractor) distribution for the MC items — scoped to the single
+    // selected form, since the forms' options differ in numbers/context and
+    // pooling by letter would mix two different questions.
+    const optionSubs = subs.filter((r) => r.form === analysisForm);
     const optionDist = MC_ITEMS.map((spec) => {
       const counts: Record<string, number> = {};
-      for (const r of subs) {
+      for (const r of optionSubs) {
         const c = r.test_answers?.[spec.item]?.choiceId;
         if (c) counts[c] = (counts[c] ?? 0) + 1;
       }
@@ -1272,11 +1273,6 @@ export default function PilotAnalysisPage() {
                     Answer-key analysis (AI rubric)
                   </h2>
                   <div className="flex flex-wrap items-center gap-3">
-                    <FormSelect
-                      value={analysisForm}
-                      onChange={setAnalysisForm}
-                      counts={{ A: view.formA, B: view.formB }}
-                    />
                     <label className="flex items-center gap-2 text-xs text-stone-600">
                       <input
                         type="checkbox"
@@ -1294,13 +1290,9 @@ export default function PilotAnalysisPage() {
                   </div>
                 </div>
                 <p className="mt-1 text-xs text-stone-400">
-                  Across {analysis.n}{" "}
-                  {analysisForm === "A"
-                    ? "Form A (pretest)"
-                    : "Form B (posttest)"}{" "}
-                  {analysisEligibleOnly ? "eligible" : "completed"}{" "}
-                  participant{analysis.n === 1 ? "" : "s"}. Higher = students did
-                  better against the answer-key rubric.
+                  Across {analysis.n} {analysisEligibleOnly ? "eligible" : "completed"}{" "}
+                  participant{analysis.n === 1 ? "" : "s"} (both forms). Higher =
+                  students did better against the answer-key rubric.
                 </p>
 
                 <h3 className="mt-3 text-sm font-bold text-stone-700">
@@ -1449,12 +1441,21 @@ export default function PilotAnalysisPage() {
                 </div>
 
                 {/* ---- Option / distractor distribution ---- */}
-                <h3 className="mt-5 text-sm font-bold text-stone-700">
-                  Option distribution (multiple choice)
-                </h3>
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-stone-700">
+                    Option distribution (multiple choice)
+                  </h3>
+                  <FormSelect
+                    value={analysisForm}
+                    onChange={setAnalysisForm}
+                    counts={{ A: view.formA, B: view.formB }}
+                  />
+                </div>
                 <p className="mt-1 text-xs text-stone-400">
                   ✓ = correct option; the most-chosen wrong option is the main
-                  distractor. Wording and counts are Form {analysisForm}.
+                  distractor. Shown per form (the forms&apos; options differ, so
+                  pooling would mix two questions) — these are Form {analysisForm}
+                  .
                 </p>
                 <div className="mt-1 space-y-4">
                   {analysis.optionDist.map((q) => {
@@ -1680,22 +1681,15 @@ export default function PilotAnalysisPage() {
                 <h2 className="text-base font-bold text-stone-800">
                   By question — all responses
                 </h2>
-                <div className="flex flex-wrap items-center gap-3">
-                  <FormSelect
-                    value={analysisForm}
-                    onChange={setAnalysisForm}
-                    counts={{ A: view.formA, B: view.formB }}
+                <label className="flex items-center gap-2 text-xs text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={analysisEligibleOnly}
+                    onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
+                    className="h-4 w-4 accent-lime-600"
                   />
-                  <label className="flex items-center gap-2 text-xs text-stone-600">
-                    <input
-                      type="checkbox"
-                      checked={analysisEligibleOnly}
-                      onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
-                      className="h-4 w-4 accent-lime-600"
-                    />
-                    Only not-screened-out
-                  </label>
-                </div>
+                  Only not-screened-out
+                </label>
               </div>
               <p className="mt-1 text-xs text-stone-400">
                 Every completed participant&apos;s answer to one question, with
@@ -1705,7 +1699,6 @@ export default function PilotAnalysisPage() {
                 const answered = view.completed.filter(
                   (r) =>
                     (!analysisEligibleOnly || !screenOut(r).out) &&
-                    r.form === analysisForm &&
                     (r.test_answers?.[id] || r.q1?.[id])
                 );
                 if (!answered.length) return null;
