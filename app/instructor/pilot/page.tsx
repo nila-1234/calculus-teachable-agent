@@ -333,12 +333,11 @@ function FormSelect({
   onChange,
   counts,
 }: {
-  value: "all" | "A" | "B";
-  onChange: (v: "all" | "A" | "B") => void;
+  value: "A" | "B";
+  onChange: (v: "A" | "B") => void;
   counts: { A: number; B: number };
 }) {
-  const opts: ["all" | "A" | "B", string][] = [
-    ["all", `Both (${counts.A + counts.B})`],
+  const opts: ["A" | "B", string][] = [
     ["A", `A · pretest (${counts.A})`],
     ["B", `B · posttest (${counts.B})`],
   ];
@@ -687,9 +686,8 @@ export default function PilotAnalysisPage() {
   const [analysisEligibleOnly, setAnalysisEligibleOnly] = useState(false);
   // Which form's participants the analysis covers. The two forms are parallel
   // but not identical (numbers/context differ, and Q1b–Q1e are deliberately
-  // within-range vs on-the-edge variants), so viewing A or B separately is the
-  // methodologically correct read; "all" pools them.
-  const [analysisForm, setAnalysisForm] = useState<"all" | "A" | "B">("all");
+  // within-range vs on-the-edge variants), so they are always read separately.
+  const [analysisForm, setAnalysisForm] = useState<"A" | "B">("A");
   const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
     null
   );
@@ -857,7 +855,7 @@ export default function PilotAnalysisPage() {
     const subs = view.completed.filter(
       (r) =>
         (!analysisEligibleOnly || !screenOut(r).out) &&
-        (analysisForm === "all" || r.form === analysisForm)
+        r.form === analysisForm
     );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
@@ -1297,16 +1295,12 @@ export default function PilotAnalysisPage() {
                 </div>
                 <p className="mt-1 text-xs text-stone-400">
                   Across {analysis.n}{" "}
-                  {analysisForm === "all"
-                    ? "pooled"
-                    : analysisForm === "A"
-                      ? "Form A (pretest)"
-                      : "Form B (posttest)"}{" "}
+                  {analysisForm === "A"
+                    ? "Form A (pretest)"
+                    : "Form B (posttest)"}{" "}
                   {analysisEligibleOnly ? "eligible" : "completed"}{" "}
                   participant{analysis.n === 1 ? "" : "s"}. Higher = students did
                   better against the answer-key rubric.
-                  {analysisForm === "all" &&
-                    " Forms A and B are parallel but not identical (numbers/context differ; Q1b–Q1e are within-range vs on-the-edge variants) — view a single form for an exact read."}
                 </p>
 
                 <h3 className="mt-3 text-sm font-bold text-stone-700">
@@ -1460,15 +1454,12 @@ export default function PilotAnalysisPage() {
                 </h3>
                 <p className="mt-1 text-xs text-stone-400">
                   ✓ = correct option; the most-chosen wrong option is the main
-                  distractor.
-                  {analysisForm === "all"
-                    ? " Counts pool both forms by option letter (the letters play the same role on both); wording shown is Form A — switch to a single form for that form's exact options."
-                    : ` Wording and counts are Form ${analysisForm}.`}
+                  distractor. Wording and counts are Form {analysisForm}.
                 </p>
                 <div className="mt-1 space-y-4">
                   {analysis.optionDist.map((q) => {
                     const mc = Math.max(1, ...q.options.map((o) => o.count));
-                    const textForm = analysisForm === "B" ? "B" : "A";
+                    const textForm = analysisForm;
                     return (
                       <div key={q.item}>
                         <p className="text-[11px] font-semibold text-stone-500">
@@ -1714,7 +1705,7 @@ export default function PilotAnalysisPage() {
                 const answered = view.completed.filter(
                   (r) =>
                     (!analysisEligibleOnly || !screenOut(r).out) &&
-                    (analysisForm === "all" || r.form === analysisForm) &&
+                    r.form === analysisForm &&
                     (r.test_answers?.[id] || r.q1?.[id])
                 );
                 if (!answered.length) return null;
