@@ -171,6 +171,7 @@ function QuestionCard({
   onSubmit,
   onRetry,
   onHint,
+  inSet = false,
 }: {
   question: LessonQuestion;
   index: number;
@@ -179,16 +180,27 @@ function QuestionCard({
   onSubmit: () => void;
   onRetry: () => void;
   onHint: () => void;
+  /** Rendered inside a QuestionSet card: drop the nested card chrome and the
+   *  "Question N" label, since the set's pills already number the questions. */
+  inSet?: boolean;
 }) {
   const chosen = question.choices?.find((c) => c.id === state.response);
   const locked = state.submitted && state.correct;
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div
+      className={
+        inSet ? "" : "rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+      }
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
-          Question {index}
-        </span>
+        {inSet ? (
+          <span />
+        ) : (
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+            Question {index}
+          </span>
+        )}
         {state.submitted && (
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -351,6 +363,112 @@ function QuestionCard({
   );
 }
 
+/**
+ * A group of related questions shown one at a time with Q1/Q2/… pills, matching
+ * the LearnVia "question set" layout: a single card, a done/total count, pill
+ * navigation, and a "Next question →" control. Multi-part questions stay
+ * together instead of being split into separate stacked cards.
+ */
+function QuestionSet({
+  questions,
+  states,
+  onChange,
+  onSubmit,
+  onRetry,
+  onHint,
+}: {
+  questions: LessonQuestion[];
+  states: Record<string, QuestionState>;
+  onChange: (id: string, value: string) => void;
+  onSubmit: (q: LessonQuestion) => void;
+  onRetry: (id: string) => void;
+  onHint: (q: LessonQuestion) => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const total = questions.length;
+  const done = questions.filter((q) => states[q.id]?.submitted).length;
+  const allDone = done === total;
+  const q = questions[current];
+  const curState = states[q.id] ?? EMPTY;
+  const hasNext = current + 1 < total;
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600">
+          Question set
+        </h3>
+        <span className="text-sm text-gray-500">
+          {allDone ? "✓ " : ""}
+          {done} / {total} answered
+        </span>
+      </header>
+
+      {total > 1 && (
+        <div className="my-3 flex flex-wrap items-center gap-1">
+          {questions.map((qq, i) => {
+            const isCurrent = i === current;
+            const st = states[qq.id];
+            const answeredQ = Boolean(st?.submitted);
+            const correctQ = Boolean(st?.correct);
+            return (
+              <button
+                key={qq.id}
+                type="button"
+                onClick={() => setCurrent(i)}
+                aria-current={isCurrent}
+                className={[
+                  "h-9 min-w-[40px] rounded-md border px-2 text-xs font-semibold transition",
+                  isCurrent
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : correctQ
+                      ? "border-green-300 bg-green-50 text-green-800"
+                      : answeredQ
+                        ? "border-amber-300 bg-amber-50 text-amber-800"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400",
+                ].join(" ")}
+              >
+                {correctQ ? "✓ " : ""}Q{i + 1}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <QuestionCard
+        key={q.id}
+        question={q}
+        index={current + 1}
+        inSet
+        state={curState}
+        onChange={(value) => onChange(q.id, value)}
+        onSubmit={() => onSubmit(q)}
+        onRetry={() => onRetry(q.id)}
+        onHint={() => onHint(q)}
+      />
+
+      {total > 1 && (
+        <div className="mt-6 flex items-center justify-center">
+          {allDone ? (
+            <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+              <span aria-hidden>🏁</span> All questions answered
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => hasNext && setCurrent((c) => c + 1)}
+              disabled={!curState.submitted || !hasNext}
+              className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              Next question →
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function LessonRunner({
   lesson,
   onComplete,
@@ -374,14 +492,6 @@ export default function LessonRunner({
     () => lesson.sections.flatMap((s) => s.questions ?? []),
     [lesson]
   );
-
-  // Question numbers run across the whole lesson, so they are derived up front
-  // rather than by incrementing a variable while rendering.
-  const numberOf = useMemo(() => {
-    const map = new Map<string, number>();
-    questions.forEach((q, i) => map.set(q.id, i + 1));
-    return map;
-  }, [questions]);
 
   const answered = questions.filter((q) => states[q.id]?.submitted).length;
   const correct = questions.filter((q) => states[q.id]?.correct).length;
@@ -487,31 +597,25 @@ export default function LessonRunner({
             )
           )}
 
-          {(section.questions ?? []).map((question) => {
-            const state = states[question.id] ?? EMPTY;
-            return (
-              <QuestionCard
-                key={question.id}
-                question={question}
-                index={numberOf.get(question.id) ?? 0}
-                state={state}
-                onChange={(value) =>
-                  update(question.id, { response: value, submitted: false })
-                }
-                onSubmit={() => submit(question)}
-                onRetry={() =>
-                  update(question.id, { submitted: false, response: "" })
-                }
-                onHint={() => {
-                  update(question.id, { hintsShown: state.hintsShown + 1 });
-                  logEvent("lesson_hint_shown", lesson.id, {
-                    item_id: question.id,
-                    hint_index: state.hintsShown + 1,
-                  });
-                }}
-              />
-            );
-          })}
+          {(section.questions ?? []).length > 0 && (
+            <QuestionSet
+              questions={section.questions ?? []}
+              states={states}
+              onChange={(id, value) =>
+                update(id, { response: value, submitted: false })
+              }
+              onSubmit={(question) => submit(question)}
+              onRetry={(id) => update(id, { submitted: false, response: "" })}
+              onHint={(question) => {
+                const hintsShown = states[question.id]?.hintsShown ?? 0;
+                update(question.id, { hintsShown: hintsShown + 1 });
+                logEvent("lesson_hint_shown", lesson.id, {
+                  item_id: question.id,
+                  hint_index: hintsShown + 1,
+                });
+              }}
+            />
+          )}
         </div>
       ))}
 
