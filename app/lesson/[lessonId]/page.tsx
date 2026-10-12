@@ -90,12 +90,25 @@ function LessonPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-stone-100">
+    <main className="min-h-screen bg-gray-100">
       <AppHeader />
-      <div className="mx-auto max-w-4xl overflow-y-auto p-3 py-6 sm:px-6">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-400">
-          Lesson {position + 1} of {LESSON_SEQUENCE.length}
-        </p>
+      {/* LearnVia-style breadcrumb chrome. The source unit is deliberately not
+          shown (see lib/condition.ts) — only the neutral course/topic. */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3 text-sm text-gray-600">
+          <nav className="flex flex-wrap items-center gap-1">
+            <span>CMU Calculus Study</span>
+            <span aria-hidden>/</span>
+            <span className="font-medium text-gray-900">
+              Applied Optimization
+            </span>
+          </nav>
+          <span className="shrink-0 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">
+            Lesson {position + 1} of {LESSON_SEQUENCE.length}
+          </span>
+        </div>
+      </div>
+      <div className="mx-auto max-w-3xl px-6 py-8">
         <LessonRunner
           lesson={lesson}
           onComplete={handleComplete}

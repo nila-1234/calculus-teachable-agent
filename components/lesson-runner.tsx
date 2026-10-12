@@ -144,7 +144,7 @@ function Body({ items }: { items: LessonBodyItem[] }) {
                 <li key={j}>
                   <MathDisplay
                     text={li}
-                    className="text-base leading-7 text-stone-700"
+                    className="text-base leading-7 text-gray-700"
                   />
                 </li>
               ))}
@@ -155,7 +155,7 @@ function Body({ items }: { items: LessonBodyItem[] }) {
           <MathDisplay
             key={i}
             text={item.text}
-            className="my-3 text-base leading-7 text-stone-700"
+            className="my-3 text-base leading-7 text-gray-700"
           />
         );
       })}
@@ -184,9 +184,9 @@ function QuestionCard({
   const locked = state.submitted && state.correct;
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
+        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
           Question {index}
         </span>
         {state.submitted && (
@@ -204,7 +204,7 @@ function QuestionCard({
 
       <MathDisplay
         text={question.prompt}
-        className="text-base leading-7 text-stone-800"
+        className="text-base leading-7 text-gray-800"
       />
 
       {question.promptImages.map((src) => (
@@ -234,8 +234,8 @@ function QuestionCard({
                     : reveal
                       ? "border-amber-500 bg-amber-50"
                       : selected
-                        ? "border-lime-600 bg-white"
-                        : "border-stone-200 bg-white hover:border-stone-300"
+                        ? "border-blue-600 bg-blue-50"
+                        : "border-gray-200 bg-white hover:border-gray-300"
                 } ${locked ? "cursor-default opacity-90" : ""}`}
               >
                 {choice.labelImage ? (
@@ -248,7 +248,7 @@ function QuestionCard({
                 ) : (
                   <MathDisplay
                     text={choice.label}
-                    className="text-sm text-stone-800"
+                    className="text-sm text-gray-800"
                   />
                 )}
               </button>
@@ -265,7 +265,7 @@ function QuestionCard({
             if (e.key === "Enter" && state.response.trim()) onSubmit();
           }}
           placeholder="Type your answer — use ^ for powers, e.g. x^2"
-          className="mt-4 w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-base text-stone-800 placeholder:text-stone-400 focus:border-lime-600 focus:outline-none focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50"
+          className="mt-4 w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50"
         />
       )}
 
@@ -279,7 +279,7 @@ function QuestionCard({
         >
           <MathDisplay
             text={chosen.explanation}
-            className="text-sm leading-6 text-stone-700"
+            className="text-sm leading-6 text-gray-700"
           />
         </div>
       )}
@@ -291,14 +291,14 @@ function QuestionCard({
           }`}
         >
           {!state.correct && question.answers?.length ? (
-            <p className="mb-1 text-sm font-semibold text-stone-700">
+            <p className="mb-1 text-sm font-semibold text-gray-700">
               Answer: {question.answers[0]}
             </p>
           ) : null}
           {question.correctExplanation && (
             <MathDisplay
               text={question.correctExplanation}
-              className="text-sm leading-6 text-stone-700"
+              className="text-sm leading-6 text-gray-700"
             />
           )}
         </div>
@@ -307,10 +307,10 @@ function QuestionCard({
       {state.hintsShown > 0 && (
         <div className="mt-3 space-y-2">
           {question.hints.slice(0, state.hintsShown).map((hint, i) => (
-            <div key={i} className="rounded-lg bg-stone-50 p-3">
+            <div key={i} className="rounded-lg bg-gray-50 p-3">
               <MathDisplay
                 text={`Hint ${i + 1}: ${hint}`}
-                className="text-sm leading-6 text-stone-600"
+                className="text-sm leading-6 text-gray-600"
               />
             </div>
           ))}
@@ -323,7 +323,7 @@ function QuestionCard({
             type="button"
             onClick={onSubmit}
             disabled={!state.response.trim()}
-            className="rounded-lg bg-lime-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-lime-700 disabled:bg-stone-200 disabled:text-stone-400"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
           >
             {state.submitted ? "Check again" : "Submit"}
           </button>
@@ -332,7 +332,7 @@ function QuestionCard({
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-lg border-2 border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:border-stone-300"
+            className="rounded-lg border-2 border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:border-gray-300"
           >
             Try again
           </button>
@@ -341,7 +341,7 @@ function QuestionCard({
           <button
             type="button"
             onClick={onHint}
-            className="text-sm font-semibold text-lime-700 hover:text-lime-800"
+            className="text-sm font-semibold text-blue-700 hover:text-blue-800"
           >
             Show a hint
           </button>
@@ -438,36 +438,52 @@ export default function LessonRunner({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-2xl font-bold text-stone-800">{lesson.title}</h1>
-          <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-            {answered} of {questions.length} answered · about{" "}
-            {lesson.durationMin} min
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">
+            Lesson
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            about {lesson.durationMin} min · {answered} of {questions.length}{" "}
+            answered
           </span>
         </div>
+        <h1 className="mt-1 text-3xl font-bold text-gray-900">
+          {lesson.title}
+        </h1>
       </div>
 
       {lesson.sections.map((section, si) => (
         <div key={si} className="flex flex-col gap-4">
           {section.kind === "video" ? (
-            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
-                Walkthrough
-              </span>
+            <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <span
+                  aria-hidden
+                  className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700"
+                >
+                  ▶
+                </span>
+                Video walkthrough
+                <span className="font-normal text-gray-400">
+                  · {section.durationMin} min
+                </span>
+              </div>
               {/* The source animation is not a video file and cannot be
                   reproduced outside the original player, so the narration is
                   shown as text rather than dropping the content entirely. */}
-              <MathDisplay
-                text={section.transcript}
-                className="text-base leading-7 text-stone-700"
-              />
-            </div>
+              <div className="rounded-md bg-gray-50 p-4">
+                <MathDisplay
+                  text={section.transcript}
+                  className="text-base leading-7 text-gray-700"
+                />
+              </div>
+            </section>
           ) : (
             section.body.length > 0 && (
-              <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <section className="my-1 text-gray-800">
                 <Body items={section.body} />
-              </div>
+              </section>
             )
           )}
 
@@ -499,8 +515,8 @@ export default function LessonRunner({
         </div>
       ))}
 
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-stone-500">
+      <div className="mt-4 flex items-center justify-between gap-4 border-t border-gray-200 pt-6">
+        <p className="text-sm text-gray-500">
           {answered === questions.length
             ? "All questions answered."
             : `${questions.length - answered} question${
@@ -511,7 +527,7 @@ export default function LessonRunner({
           type="button"
           onClick={finish}
           disabled={answered < questions.length}
-          className="rounded-lg bg-lime-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-lime-700 disabled:bg-stone-200 disabled:text-stone-400"
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           {completeLabel}
         </button>
