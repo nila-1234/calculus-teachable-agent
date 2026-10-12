@@ -58,11 +58,6 @@ export const INELIGIBLE_OPTIONS: Record<string, string[]> = {
   "highest-math": ["Calculus II", "Calculus III or higher"],
   // Ceiling: too many calculus courses.
   "calculus-courses": ["3 or more"],
-  // Ceiling: too many college mathematics courses of any kind.
-  math_courses: ["3 or more"],
-  // Currently taking calculus, so the material would be concurrent coursework
-  // rather than something learned in the study.
-  calc_history: ["I am currently enrolled in a calculus course"],
 };
 
 export type EligibilityResult = {
