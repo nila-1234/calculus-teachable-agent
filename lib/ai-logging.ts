@@ -21,6 +21,11 @@ const AI_ROUTES = [
   "grade-chat",
   "grade-lines-comment",
   "grade-lines-feedback",
+  // The grade-lines scenario also classifies and explains the student's line
+  // edits through a model, so those exchanges are part of the AI conversation
+  // and must be recorded too.
+  "placement-classify",
+  "placement-explain",
   "question-feedback",
 ];
 
