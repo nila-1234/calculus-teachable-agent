@@ -365,14 +365,12 @@ function FormSelect({
 }
 
 /** The real study's screen-out rule (lib/surveys/eligibility.ts), applied here. */
-// Matches the rule as these pilot participants were actually run. The
-// "Other college-level mathematics" re-add (screening-readd-other) is for
-// future participants only, so it is deliberately NOT applied to this data.
+// The math-courses and calc-history questions were removed from screening, so
+// they no longer disqualify anyone — including the previously collected data,
+// which is re-evaluated against the current rule below.
 const INELIGIBLE: Record<string, string[]> = {
   highest_math: ["Calculus II", "Calculus III or higher"],
   calculus_courses: ["3 or more"],
-  math_courses: ["3 or more"],
-  calc_history: ["I am currently enrolled in a calculus course"],
 };
 
 function screenOut(r: Row): { out: boolean; reasons: string[] } {
@@ -381,10 +379,6 @@ function screenOut(r: Row): { out: boolean; reasons: string[] } {
     reasons.push(`highest math: ${r.highest_math}`);
   if (INELIGIBLE.calculus_courses.includes(String(r.calculus_courses)))
     reasons.push(`${r.calculus_courses} calculus courses`);
-  if (INELIGIBLE.math_courses.includes(String(r.math_courses)))
-    reasons.push(`${r.math_courses} math courses`);
-  if (INELIGIBLE.calc_history.includes(String(r.calc_history)))
-    reasons.push("currently enrolled in calculus");
   if (!r.screening_algebra_correct) reasons.push("algebra check failed");
   if (!r.screening_power_rule_correct) reasons.push("power-rule check failed");
   return { out: reasons.length > 0, reasons };

@@ -73,22 +73,6 @@ const SCREENING_SURVEY: SurveyDefinition = {
           "How many college-level calculus courses have you taken?",
           ["None", "1", "2", "3 or more"]
         ),
-        choiceItem(
-          "math_courses",
-          "How many college-level mathematics courses have you taken? Include all college-level mathematics (calculus, linear algebra, statistics, discrete mathematics, and so on).",
-          ["0", "1", "2", "3 or more"]
-        ),
-        choiceItem(
-          "calc_history",
-          "Have you ever taken a calculus course?",
-          [
-            "Never",
-            "In high school",
-            "In college",
-            "Both",
-            "I am currently enrolled in a calculus course",
-          ]
-        ),
         // Skill checks (floor). Options come from eligibility.ts so the graded
         // correct answer is always one of the presented options.
         choiceItem(
