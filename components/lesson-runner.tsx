@@ -564,30 +564,23 @@ export default function LessonRunner({
       </div>
 
       {lesson.sections.map((section, si) => (
-        <div key={si} className="flex flex-col gap-4">
+        <div
+          key={si}
+          className={
+            si > 0
+              ? "flex flex-col gap-4 border-t border-gray-200 pt-6"
+              : "flex flex-col gap-4"
+          }
+        >
           {section.kind === "video" ? (
-            <section className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <span
-                  aria-hidden
-                  className="grid h-6 w-6 place-items-center rounded-full bg-blue-100 text-xs text-blue-700"
-                >
-                  ▶
-                </span>
-                Video walkthrough
-                <span className="font-normal text-gray-400">
-                  · {section.durationMin} min
-                </span>
-              </div>
-              {/* The source animation is not a video file and cannot be
-                  reproduced outside the original player, so the narration is
-                  shown as text rather than dropping the content entirely. */}
-              <div className="rounded-md bg-gray-50 p-4">
-                <MathDisplay
-                  text={section.transcript}
-                  className="text-base leading-7 text-gray-700"
-                />
-              </div>
+            /* There is no playable video — the source animation is an Arc
+               resource that cannot be reproduced here — so the narration is
+               shown as the lesson's reading content, not framed as a video. */
+            <section className="my-1 text-gray-800">
+              <MathDisplay
+                text={section.transcript}
+                className="text-base leading-7 text-gray-700"
+              />
             </section>
           ) : (
             section.body.length > 0 && (
