@@ -85,7 +85,7 @@ export const MAX_DWELL_MS = 30 * 60 * 1000;
  * within a session. This needs no exit event, so an abruptly closed tab costs
  * at most the final step rather than the whole session's timings.
  */
-function minutesPerPhase(docs: LogDoc[]): Record<Phase, number> {
+export function minutesPerPhase(docs: LogDoc[]): Record<Phase, number> {
   const ms: Record<string, number> = {};
 
   const bySession = new Map<string, LogDoc[]>();
