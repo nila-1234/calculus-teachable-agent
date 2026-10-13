@@ -49,7 +49,16 @@ export function phaseFromPath(path: string | undefined): Phase {
   if (path.startsWith("/survey/post")) return "post_survey";
   if (path.startsWith("/test/pretest")) return "pretest";
   if (path.startsWith("/test/posttest")) return "posttest";
-  if (path === "/scenarios" || /^\/\d+(\/|$)/.test(path)) return "scenarios";
+  // The instruction phase ("scenarios") covers both arms: the teachable-agent
+  // scenario (/scenarios, /5/…) and the lesson arm (/lesson/1, /lesson/2).
+  // Without /lesson here, the lesson arm's instruction time fell into "other"
+  // and never counted toward active_min.
+  if (
+    path === "/scenarios" ||
+    /^\/\d+(\/|$)/.test(path) ||
+    path.startsWith("/lesson")
+  )
+    return "scenarios";
   return "other";
 }
 
