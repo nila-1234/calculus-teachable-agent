@@ -487,7 +487,6 @@ export default function InstructorAnalysisPage() {
     link.click();
   };
 
-  const rows = summary?.subjects.rows ?? [];
   const view: ArmView | null =
     summary == null
       ? null
@@ -541,32 +540,8 @@ export default function InstructorAnalysisPage() {
 
         {summary && view && (
           <>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { label: "Participants", value: rows.length },
-                { label: "Submissions graded", value: summary.submissions },
-                { label: "Events logged", value: summary.events },
-                {
-                  label: "Fully graded",
-                  value: summary.allComplete ? "Yes" : "No",
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
-                >
-                  <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
-                    {stat.label}
-                  </p>
-                  <p className="mt-1 text-2xl font-bold text-stone-800">
-                    {stat.value}
-                  </p>
-                </div>
-              ))}
-            </div>
-
             {/* Analyse each arm separately. Lesson is the control condition. */}
-            <div className="mt-6 flex flex-wrap items-center gap-2">
+            <div className="mt-8 flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
                 Arm
               </span>
@@ -630,27 +605,6 @@ export default function InstructorAnalysisPage() {
                   {view.flow.totalParticipants} who started).
                 </p>
 
-                {/* Funnel */}
-                <h3 className="mt-5 text-base font-bold text-stone-800">
-                  Completion funnel
-                </h3>
-                <div className="mt-2 space-y-1">
-                  {(() => {
-                    const mc = Math.max(
-                      1,
-                      ...view.flow.funnel.map((f) => f.reached)
-                    );
-                    return view.flow.funnel.map((f) => (
-                      <BarRow
-                        key={f.step}
-                        label={f.step}
-                        count={f.reached}
-                        max={mc}
-                      />
-                    ));
-                  })()}
-                </div>
-
                 {/* Time per phase */}
                 <h3 className="mt-5 text-base font-bold text-stone-800">
                   Median time per phase (completers)
@@ -673,42 +627,10 @@ export default function InstructorAnalysisPage() {
                   </tbody>
                 </table>
 
-                {/* Instruction */}
-                <h3 className="mt-5 text-base font-bold text-stone-800">
-                  Instruction
-                </h3>
-                <p className="mt-1 text-xs text-stone-500">
-                  Arm: {view.flow.instruction.armCounts.lesson} lesson,{" "}
-                  {view.flow.instruction.armCounts.agent} agent.
-                  {view.flow.instruction.lessonMedianMin != null && (
-                    <>
-                      {" "}
-                      Lesson median{" "}
-                      {view.flow.instruction.lessonMedianMin.toFixed(1)} min,{" "}
-                      {view.flow.instruction.lessonMedianHints ?? 0} hints.
-                    </>
-                  )}
-                </p>
-                {view.flow.instruction.lessonFirstTry.length > 0 && (
-                  <div className="mt-2 space-y-1">
-                    <p className="text-xs font-semibold text-stone-500">
-                      Lesson first-try correctness per item
-                    </p>
-                    {view.flow.instruction.lessonFirstTry.map((it) => (
-                      <MiniBar
-                        key={it.itemId}
-                        label={`Q${it.itemId} (${Math.round(it.firstTryRate * 100)}%, n=${it.n})`}
-                        count={Math.round(it.firstTryRate * 100)}
-                        max={100}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                {/* Survey breakdowns */}
+                {/* Survey breakdowns (screening lives only in the per-participant
+                    detail below, since every completer passed screening). */}
                 {(
                   [
-                    ["Screening responses", view.flow.screening],
                     ["Pre-survey responses", view.flow.preSurvey],
                     ["Post-survey responses", view.flow.postSurvey],
                   ] as const
@@ -901,58 +823,6 @@ export default function InstructorAnalysisPage() {
                     ))}
                 </div>
 
-                {/* ---- Conclusions ---- */}
-                <h3 className="mt-10 text-base font-bold text-stone-800">
-                  Conclusions — which items are too easy / too hard
-                </h3>
-                <p className="mt-1 text-xs leading-5 text-stone-500">
-                  Difficulty = mean % of max (pooled). Discrimination = the gap
-                  above. Small sample — read as signal, not proof.
-                </p>
-                <table className="mt-2 w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-stone-400">
-                      <th className="py-1 pr-3 font-semibold">Item</th>
-                      <th className="py-1 pr-3 font-semibold">% of max</th>
-                      <th className="py-1 pr-3 font-semibold">Discrim.</th>
-                      <th className="py-1 font-semibold">Read</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...view.insights.items]
-                      .sort((a, b) => b.accuracy - a.accuracy)
-                      .map((item) => {
-                        const acc = item.accuracy * 100;
-                        const gap = item.discriminationGap;
-                        const v =
-                          acc >= 75
-                            ? { t: "Too easy — near ceiling", c: "text-amber-600" }
-                            : gap != null && gap < 2
-                              ? { t: "Weak discriminator", c: "text-amber-600" }
-                              : acc <= 30
-                                ? { t: "Hard — floor-leaning", c: "text-stone-600" }
-                                : { t: "Good spread", c: "text-lime-700" };
-                        return (
-                          <tr
-                            key={item.itemId}
-                            className="border-t border-stone-100"
-                          >
-                            <td className="py-1 pr-3 text-stone-700">
-                              Q{item.itemId}
-                            </td>
-                            <td className="py-1 pr-3 font-semibold text-stone-800">
-                              {Math.round(acc)}%
-                            </td>
-                            <td className="py-1 pr-3 text-stone-500">
-                              {gap == null ? "—" : `+${gap.toFixed(1)}`}
-                            </td>
-                            <td className={`py-1 font-medium ${v.c}`}>{v.t}</td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-
                 <h3 className="mt-12 text-base font-bold text-stone-800">
                   Every item
                 </h3>
@@ -960,45 +830,72 @@ export default function InstructorAnalysisPage() {
                   <table className="w-full border-collapse text-left text-sm">
                     <thead className="bg-stone-50">
                       <tr>
-                        {["item", "goal", "accuracy", "mean points", "median time", "n"].map(
-                          (h) => (
-                            <th
-                              key={h}
-                              className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
-                            >
-                              {h}
-                            </th>
-                          )
-                        )}
+                        {[
+                          "item",
+                          "goal",
+                          "pre %",
+                          "post %",
+                          "gain",
+                          "median time",
+                          "n",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
+                          >
+                            {h}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
-                      {view.insights.items.map((item) => (
-                        <tr
-                          key={item.itemId}
-                          onClick={() => setOpenItem(item.itemId)}
-                          className="cursor-pointer border-b border-stone-100 last:border-b-0 hover:bg-stone-50"
-                        >
-                          <td className="px-3 py-2 font-semibold text-stone-800 underline decoration-stone-300 underline-offset-2">
-                            Q{item.itemId}
-                          </td>
-                          <td className="px-3 py-2 text-stone-500">
-                            {GOAL_LABELS[item.goal]}
-                          </td>
-                          <td className="px-3 py-2 text-stone-700">
-                            {pct(item.accuracy)}
-                          </td>
-                          <td className="px-3 py-2 text-stone-700">
-                            {item.meanPoints.toFixed(1)} / {item.maxPoints}
-                          </td>
-                          <td className="px-3 py-2 text-stone-700">
-                            {item.medianSeconds === null
-                              ? "—"
-                              : `${Math.round(item.medianSeconds)}s`}
-                          </td>
-                          <td className="px-3 py-2 text-stone-400">{item.n}</td>
-                        </tr>
-                      ))}
+                      {view.insights.items.map((item) => {
+                        const gain =
+                          item.preAccuracy != null && item.postAccuracy != null
+                            ? (item.postAccuracy - item.preAccuracy) * 100
+                            : null;
+                        return (
+                          <tr
+                            key={item.itemId}
+                            onClick={() => setOpenItem(item.itemId)}
+                            className="cursor-pointer border-b border-stone-100 last:border-b-0 hover:bg-stone-50"
+                          >
+                            <td className="px-3 py-2 font-semibold text-stone-800 underline decoration-stone-300 underline-offset-2">
+                              Q{item.itemId}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {GOAL_LABELS[item.goal]}
+                            </td>
+                            <td className="px-3 py-2 text-stone-700">
+                              {pct(item.preAccuracy)}{" "}
+                              <span className="text-xs text-stone-400">
+                                ({item.preN})
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-stone-700">
+                              {pct(item.postAccuracy)}{" "}
+                              <span className="text-xs text-stone-400">
+                                ({item.postN})
+                              </span>
+                            </td>
+                            <td
+                              className={`px-3 py-2 font-medium ${gain != null && gain > 0 ? "text-lime-700" : gain != null && gain < 0 ? "text-rose-600" : "text-stone-400"}`}
+                            >
+                              {gain == null
+                                ? "—"
+                                : `${gain > 0 ? "+" : ""}${gain.toFixed(0)}%`}
+                            </td>
+                            <td className="px-3 py-2 text-stone-700">
+                              {item.medianSeconds === null
+                                ? "—"
+                                : `${Math.round(item.medianSeconds)}s`}
+                            </td>
+                            <td className="px-3 py-2 text-stone-400">
+                              {item.n}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

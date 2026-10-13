@@ -80,6 +80,11 @@ export type ItemStat = {
   maxPoints: number;
   /** How many graded submissions this is averaged over. */
   n: number;
+  /** Per-test accuracy (proportion of marks), split pre vs post. */
+  preAccuracy: number | null;
+  postAccuracy: number | null;
+  preN: number;
+  postN: number;
   /** Median seconds spent, or null when it could not be measured. */
   medianSeconds: number | null;
   timedN: number;
@@ -388,11 +393,15 @@ export function buildInsights(
   const timing = secondsPerItem(completeDocs);
   const overall = accuracyByItem(graded);
   const discrimination = discriminationByItem(graded);
+  const pre = accuracyByItem(graded, "pretest");
+  const post = accuracyByItem(graded, "posttest");
 
   const items: ItemStat[] = [...overall.entries()]
     .map(([itemId, { total, max, n }]) => {
       const seconds = timing.get(itemId) ?? [];
       const disc = discrimination.get(itemId);
+      const p = pre.get(itemId);
+      const q = post.get(itemId);
       return {
         itemId,
         goal: goalForItem(itemId),
@@ -400,6 +409,10 @@ export function buildInsights(
         meanPoints: n > 0 ? total / n : 0,
         maxPoints: n > 0 ? max / n : 0,
         n,
+        preAccuracy: p && p.max > 0 ? p.total / p.max : null,
+        postAccuracy: q && q.max > 0 ? q.total / q.max : null,
+        preN: p?.n ?? 0,
+        postN: q?.n ?? 0,
         medianSeconds: median(seconds),
         timedN: seconds.length,
         discriminationGap: disc?.gap ?? null,
@@ -411,9 +424,6 @@ export function buildInsights(
       };
     })
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));
-
-  const pre = accuracyByItem(graded, "pretest");
-  const post = accuracyByItem(graded, "posttest");
 
   const subjects = new Map<string, Set<TestId>>();
   for (const { submission, result } of graded) {
