@@ -30,7 +30,7 @@ type Condition = (typeof CONDITIONS)[number];
  * "lesson"/"agent" collects that arm only; set back to null to restore the
  * balanced split. (A matching override exists in lib/condition.ts — flip both.)
  */
-const FORCE_CONDITION: Condition | null = "lesson";
+const FORCE_CONDITION: Condition | null = "agent";
 
 const ASSIGNMENTS = "assignments";
 const COUNTS_DOC = "assignment_counts/global";
