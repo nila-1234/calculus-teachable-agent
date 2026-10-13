@@ -30,7 +30,7 @@ export type Condition = (typeof CONDITIONS)[number];
  * balanced split. (A matching override exists in app/api/assign/route.ts —
  * flip both.)
  */
-const FORCE_CONDITION: Condition | null = "agent";
+const FORCE_CONDITION: Condition | null = "lesson";
 
 /** Lets the instructor preview a specific arm: ?cond=lesson */
 const CONDITION_PARAM = "cond";
