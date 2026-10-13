@@ -10,6 +10,7 @@ import {
   type Insights,
   type ItemStat,
 } from "@/lib/tests/insights";
+import type { FlowSummary, SurveyItemSummary } from "@/lib/tests/flow";
 
 /**
  * Instructor analysis view.
@@ -40,6 +41,7 @@ type Summary = {
   subjects: Sheet;
   pairs: Sheet;
   insights: Insights;
+  flow: FlowSummary;
 };
 
 const pct = (value: number | null) =>
@@ -103,6 +105,73 @@ const SHOWN = [
   "phases_missing",
 ];
 
+
+/** A simple labelled bar row with a full (wrapping) label, for survey items. */
+function MiniBar({ label, count, max }: { label: string; count: number; max: number }) {
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="flex-1 text-stone-600">{label}</span>
+      <div className="h-3 w-28 shrink-0 rounded bg-stone-100">
+        <div
+          className="h-3 rounded bg-stone-400"
+          style={{ width: `${max ? Math.min(100, (count / max) * 100) : 0}%` }}
+        />
+      </div>
+      <span className="w-6 shrink-0 text-right text-stone-600">{count}</span>
+    </div>
+  );
+}
+
+/** One survey question's response distribution. */
+function SurveyItemView({ item }: { item: SurveyItemSummary }) {
+  return (
+    <div className="mt-3 border-t border-stone-100 pt-3 first:border-t-0 first:pt-0">
+      <p className="text-xs font-semibold text-stone-600">
+        {item.prompt}{" "}
+        <span className="font-normal text-stone-400">(n={item.n})</span>
+      </p>
+      {item.kind === "choice" && item.choices && (
+        <div className="mt-1 space-y-1">
+          {(() => {
+            const mc = Math.max(1, ...item.choices.map((c) => c.count));
+            return item.choices.map((c) => (
+              <MiniBar key={c.label} label={c.label} count={c.count} max={mc} />
+            ));
+          })()}
+        </div>
+      )}
+      {item.kind === "likert" && item.likertCounts && (
+        <div className="mt-1">
+          <p className="text-xs text-stone-500">
+            mean{" "}
+            {item.likertMean != null ? item.likertMean.toFixed(1) : "—"} /{" "}
+            {item.likertMax}
+          </p>
+          <div className="mt-1 space-y-1">
+            {(() => {
+              const mc = Math.max(1, ...item.likertCounts!.map((c) => c.count));
+              return item.likertCounts!.map((c) => (
+                <MiniBar key={c.label} label={c.label} count={c.count} max={mc} />
+              ));
+            })()}
+          </div>
+        </div>
+      )}
+      {item.kind === "open" && (
+        <div className="mt-1 text-xs text-stone-500">
+          {item.answered ?? 0} answered.
+          {item.samples && item.samples.length > 0 && (
+            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-stone-600">
+              {item.samples.map((s, i) => (
+                <li key={i}>&ldquo;{s}&rdquo;</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** A ranked row that opens the item's detail. */
 function ItemRow({
@@ -509,6 +578,126 @@ export default function InstructorAnalysisPage() {
                 </tbody>
               </table>
             </div>
+
+            {summary.flow && (
+              <>
+                <h2 className="mt-10 text-xl font-bold text-stone-800">
+                  Full flow — step by step
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-stone-500">
+                  Every step from screening to post-survey. The response
+                  breakdowns below cover only the{" "}
+                  <span className="font-semibold">
+                    {summary.flow.completers}
+                  </span>{" "}
+                  participant(s) who finished the whole flow (of{" "}
+                  {summary.flow.totalParticipants} who started).
+                </p>
+
+                {/* Funnel */}
+                <h3 className="mt-5 text-base font-bold text-stone-800">
+                  Completion funnel
+                </h3>
+                <div className="mt-2 space-y-1">
+                  {(() => {
+                    const mc = Math.max(
+                      1,
+                      ...summary.flow.funnel.map((f) => f.reached)
+                    );
+                    return summary.flow.funnel.map((f) => (
+                      <BarRow
+                        key={f.step}
+                        label={f.step}
+                        count={f.reached}
+                        max={mc}
+                      />
+                    ));
+                  })()}
+                </div>
+
+                {/* Time per phase */}
+                <h3 className="mt-5 text-base font-bold text-stone-800">
+                  Median time per phase (completers)
+                </h3>
+                <table className="mt-2 w-full border-collapse text-sm">
+                  <tbody>
+                    {summary.flow.phases.map((p) => (
+                      <tr key={p.phase} className="border-t border-stone-100">
+                        <td className="py-1 pr-3 text-stone-700">{p.label}</td>
+                        <td className="py-1 pr-3 font-semibold text-stone-800">
+                          {p.medianMin == null
+                            ? "—"
+                            : `${p.medianMin.toFixed(1)} min`}
+                        </td>
+                        <td className="py-1 text-xs text-stone-400">
+                          n={p.n}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Instruction */}
+                <h3 className="mt-5 text-base font-bold text-stone-800">
+                  Instruction
+                </h3>
+                <p className="mt-1 text-xs text-stone-500">
+                  Arm: {summary.flow.instruction.armCounts.lesson} lesson,{" "}
+                  {summary.flow.instruction.armCounts.agent} agent.
+                  {summary.flow.instruction.lessonMedianMin != null && (
+                    <>
+                      {" "}
+                      Lesson median{" "}
+                      {summary.flow.instruction.lessonMedianMin.toFixed(1)} min,{" "}
+                      {summary.flow.instruction.lessonMedianHints ?? 0} hints.
+                    </>
+                  )}
+                </p>
+                {summary.flow.instruction.lessonFirstTry.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-semibold text-stone-500">
+                      Lesson first-try correctness per item
+                    </p>
+                    {summary.flow.instruction.lessonFirstTry.map((it) => (
+                      <MiniBar
+                        key={it.itemId}
+                        label={`Q${it.itemId} (${Math.round(it.firstTryRate * 100)}%, n=${it.n})`}
+                        count={Math.round(it.firstTryRate * 100)}
+                        max={100}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Survey breakdowns */}
+                {(
+                  [
+                    ["Screening responses", summary.flow.screening],
+                    ["Pre-survey responses", summary.flow.preSurvey],
+                    ["Post-survey responses", summary.flow.postSurvey],
+                  ] as const
+                ).map(([label, items]) => (
+                  <div key={label}>
+                    <h3 className="mt-5 text-base font-bold text-stone-800">
+                      {label}
+                    </h3>
+                    <div className="mt-2 rounded-xl border-2 border-stone-100 bg-white p-4">
+                      {items.length === 0 ? (
+                        <p className="text-xs text-stone-400">No data yet.</p>
+                      ) : (
+                        items.map((item) => (
+                          <SurveyItemView key={item.id} item={item} />
+                        ))
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <p className="mt-4 text-xs text-stone-400">
+                  The pre-test and post-test item analysis is below.
+                </p>
+              </>
+            )}
 
             {summary.insights && (
               <>
