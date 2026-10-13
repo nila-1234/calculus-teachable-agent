@@ -1,4 +1,5 @@
 import { getTest } from "./definitions";
+import { fullFlowSubjects } from "./export";
 import { findItem, formatAnswer } from "./format";
 import type { GradedSubmission, LogDoc } from "./report";
 import type { TestId } from "./types";
@@ -459,16 +460,10 @@ export function buildInsights(
   docs: LogDoc[],
   gradedAll: GradedSubmission[]
 ): Insights {
-  // Only participants who finished the WHOLE flow (reached and submitted the
-  // post-survey) are analysed — partial drop-offs would skew every item, timing,
-  // and goal stat. The post-survey is the last step, so its completion is the
-  // "did the whole study" signal.
-  const flowComplete = new Set(
-    docs
-      .filter((d) => d.event === "survey_completed" && d.scenario_id === "post")
-      .map((d) => d.subject_id)
-      .filter((s): s is string => Boolean(s))
-  );
+  // Only participants who finished EVERY step of the flow are analysed —
+  // partial drop-offs would skew every item, timing, and goal stat, and this
+  // also excludes instructor preview / dev runs (see fullFlowSubjects).
+  const flowComplete = fullFlowSubjects(docs);
   const graded = gradedAll.filter((g) =>
     flowComplete.has(g.submission.subjectId)
   );
