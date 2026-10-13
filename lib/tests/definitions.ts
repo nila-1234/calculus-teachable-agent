@@ -72,8 +72,8 @@ const PRE_TEST: TestDefinition = {
           id: "2.2",
           kind: "free-response",
           prompt:
-            "The company’s daily revenue is modeled by \\(R(p) = p(200 - 10p)\\), where \\(p\\) is the price of one lunch box.\n\nWhat are the key concepts needed to determine the price that maximizes the company’s daily revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price. Describe a general plan for finding a maximum.",
-          placeholder: "Identify the key concepts, explain why they are relevant, and describe a general plan for finding a maximum…",
+            "The company’s daily revenue is modeled by \\(R(p) = p(200 - 10p)\\), where \\(p\\) is the price of one lunch box.\n\nWhat are the key concepts needed to determine the price that maximizes the company’s daily revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price.",
+          placeholder: "Identify the key concepts and explain why they are relevant…",
           reference:
             "The company should use the derivative of the revenue function to find a critical point. A critical point occurs where the derivative equals zero or is undefined. It is relevant because it is a point where revenue could reach a maximum or minimum, but the point must be checked to confirm that it is a maximum. Do not require the student to calculate p.",
         },
@@ -246,8 +246,8 @@ const POST_TEST: TestDefinition = {
           id: "2.2",
           kind: "free-response",
           prompt:
-            "The company's weekly revenue is modeled by \\(R(p) = p(120 - 2p)\\), where \\(p\\) is the price of one unit.\n\nWhat are the key concepts needed to determine the price that maximizes the company's weekly revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price. Describe a general plan for finding a maximum.",
-          placeholder: "Identify the key concepts, explain why they are relevant, and describe a general plan for finding a maximum…",
+            "The company's weekly revenue is modeled by \\(R(p) = p(120 - 2p)\\), where \\(p\\) is the price of one unit.\n\nWhat are the key concepts needed to determine the price that maximizes the company's weekly revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price.",
+          placeholder: "Identify the key concepts and explain why they are relevant…",
           reference:
             "The company should use the derivative of the revenue function to find a critical point. A critical point occurs where the derivative equals zero or is undefined. It is relevant because it is a point where revenue could reach a maximum or minimum, but the point must be checked to confirm that it is a maximum. Do not require the student to calculate p.",
         },

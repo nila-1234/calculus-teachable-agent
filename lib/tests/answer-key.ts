@@ -64,7 +64,7 @@ const q22Criteria: CriterionSpec[] = [
 ];
 
 const q22ScoringNote =
-  "A complete general plan covers all five criteria. Do not require the student to calculate the price, and a zero derivative alone does not prove a maximum.";
+  "A complete answer covers all five criteria. Do not require the student to calculate the price, and a zero derivative alone does not prove a maximum.";
 
 /** Q2.3 uses the same purpose options and the same 3, 5, 1, 4 key on both forms. */
 const q23Matches = {
