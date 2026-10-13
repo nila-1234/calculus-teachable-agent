@@ -38,6 +38,12 @@ export type LogEntry = {
   scenario_id: string;
   /** "pilot" for events from the /pilot flow, kept in a separate store. */
   study?: string;
+  /**
+   * Monotonic per-browser counter. Several events are often logged in the same
+   * millisecond (e.g. a reply, the decision it triggers, and the AI's next
+   * line), so the timestamp alone cannot order them; this can.
+   */
+  seq?: number;
   data: Record<string, unknown>;
 };
 
@@ -74,6 +80,22 @@ export function subscribeLogState(listener: () => void) {
   return () => {
     listeners.delete(listener);
   };
+}
+
+const SEQ_KEY = "logSeq";
+let memorySeq = 0;
+
+/** Next value of the per-browser event counter (falls back to in-memory). */
+function nextSeq(): number {
+  try {
+    const next = Math.max(Number(localStorage.getItem(SEQ_KEY)) || 0, memorySeq) + 1;
+    localStorage.setItem(SEQ_KEY, String(next));
+    memorySeq = next;
+    return next;
+  } catch {
+    memorySeq += 1;
+    return memorySeq;
+  }
 }
 
 function newEventId(): string {
@@ -213,6 +235,7 @@ export async function logEvent(
     prolific_study_id: prolific.studyId,
     prolific_session_id: prolific.sessionId,
     timestamp: new Date().toISOString(),
+    seq: nextSeq(),
     event,
     scenario_id: String(scenarioId),
     // Events from the /pilot flow are tagged so the server routes them to a

@@ -140,3 +140,69 @@ test("newer runs use the exact logged transcript", () => {
   assert.ok(lines.includes("participant:Exactly what I typed"));
   assert.ok(!lines.some((l) => /not saved/.test(l)));
 });
+
+// The database returns same-millisecond events in arbitrary order. Reproduce the
+// worst case: each discussion step logged in the same instant as the grade /
+// reading that caused it, and delivered BEFORE it.
+test("same-millisecond ties delivered out of order keep reply-after-question", () => {
+  const out = docs.map((d) => ({ ...d }));
+  const isT = (d: LogDoc) => d.event === "grade_lines_placement_transition";
+  const isG = (d: LogDoc) => d.event === "ai_exchange" && d.data?.route === "grade-lines-feedback";
+  const isC = (d: LogDoc) => d.event === "ai_exchange" && d.data?.route === "placement-classify";
+  for (let i = 0; i < out.length; i++) {
+    // grade -> DROP transition, and classify -> REPLY transition: tie + swap.
+    if ((isG(out[i]) || isC(out[i])) && out[i + 1] && isT(out[i + 1])) {
+      out[i + 1].timestamp = out[i].timestamp;
+      [out[i], out[i + 1]] = [out[i + 1], out[i]];
+      i++;
+    }
+  }
+  // The unchallenged acceptance also ties with (and precedes) its grade.
+  const ui = out.findIndex((d) => d.event === "grade_lines_placement_unchallenged");
+  const gi = out.findIndex((d, j) => j > 10 && isG(d));
+  out[ui].timestamp = out[gi].timestamp;
+  [out[ui], out[gi]] = [out[gi], out[ui]];
+
+  const a = buildFlowSummary(out).participants[0].instruction.agentTasks.find(
+    (x) => x.task === "Apply Rubric"
+  )!;
+  const lines = a.items[0].turns.map((x) => `${x.speaker}:${x.text}`);
+  const idx = (re: RegExp) => lines.findIndex((l) => re.test(l));
+  assert.ok(idx(/participant:Dragged .* step 3 — wrong/) === 0, lines.join("\n"));
+  assert.ok(idx(/professor:Are you sure/) < idx(/participant:yeah step 3/), lines.join("\n"));
+  assert.ok(idx(/participant:yeah step 3/) < idx(/professor:Why do you think/), lines.join("\n"));
+  assert.ok(idx(/professor:Why do you think/) < idx(/participant:because it differentiates/));
+  assert.ok(idx(/participant:because it differentiates/) < idx(/professor:Consider where/));
+  assert.ok(idx(/professor:Take another look/) < idx(/participant:Dragged .* step 2 — correct/));
+  assert.match(a.items[0].trigger, /questioned a drag onto the wrong step/);
+});
+
+test("exact transcript: AI line, then the participant's reply, even on ties", () => {
+  const T = "2026-10-13T13:00:00.000Z";
+  const base = docs.slice(0, -3).filter((d) => !String(d.event).startsWith("grade_lines_") && d.data?.route !== "grade-lines-feedback" && d.data?.route !== "placement-classify" && d.data?.route !== "placement-explain");
+  const m = (role: string, text: string, ts: string, seq?: number) =>
+    ({ ...ev("grade_lines_flow_message", "5", { kind: "placement", answer_id: "a1", criterion_id: "c1", role, text }), timestamp: ts, ...(seq ? { seq } : {}) }) as LogDoc;
+  const tr = (from: object, event: object, ts: string, seq?: number) =>
+    ({ ...ev("grade_lines_placement_transition", "5", { answer_id: "a1", criterion_id: "c1", from, event }), timestamp: ts, ...(seq ? { seq } : {}) }) as LogDoc;
+  const g = { ...grade(2, 3, false), timestamp: T } as LogDoc;
+  // Quick reply: the reply, the transition and the AI's next line share one
+  // millisecond; delivered in reverse.
+  const sure = { kind: "chat", node: "askSure", attempt: 1, correct: false, unclear: 0 };
+  const tail = [
+    m("professor", "Why do you think step 3 is the right place for it?", "2026-10-13T13:00:05.000Z"),
+    tr(sure, { type: "REPLY", label: "yes" }, "2026-10-13T13:00:05.000Z"),
+    m("user", "Yes, I'm sure", "2026-10-13T13:00:05.000Z"),
+    m("professor", "Are you sure \"Finds the derivative\" belongs on step 3?", T),
+    tr({ kind: "dragging", attempt: 1 }, { type: "DROP", correct: false }, T),
+    g,
+  ];
+  const flow = buildFlowSummary([...base, ...tail, ...docs.slice(-3)]);
+  const a = flow.participants[0].instruction.agentTasks.find((x) => x.task === "Apply Rubric")!;
+  const lines = a.items[0].turns.map((x) => `${x.speaker}:${x.text}`);
+  assert.deepEqual(lines, [
+    'participant:Dragged "Finds the derivative" onto step 3 — wrong (it belongs on step 2).',
+    'professor:Are you sure "Finds the derivative" belongs on step 3?',
+    "participant:Yes, I'm sure",
+    "professor:Why do you think step 3 is the right place for it?",
+  ]);
+});
