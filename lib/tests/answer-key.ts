@@ -51,23 +51,20 @@ const q1Criteria: CriterionSpec[] = [
 ];
 
 /**
- * Q2.2 is graded on the PRE-TEST rubric on both forms, by decision.
- *
- * The pre-test doc lists these five gradeable bullets; the post-test PDF states
- * four requirements that are a subset of them. Rather than grade the two forms
- * against different rubrics — which would make pre/post scores incomparable —
- * the pre-test rubric is authoritative and the post-test is matched to it.
+ * Q2.2 asks for the key concepts in a general plan for finding the maximum, and
+ * a full answer is expected to cover ALL of the following (assessment doc,
+ * revised 10/12). Graded the same way on both forms so pre/post stay comparable.
  */
 const q22Criteria: CriterionSpec[] = [
   { id: "derivative", description: "Identifies the derivative as the relevant calculus concept." },
-  { id: "critical-point", description: "Identifies a critical point as the quantity to find." },
-  { id: "definition", description: "Explains that a critical point occurs where the derivative is zero or undefined." },
-  { id: "candidate-only", description: "States that a critical point is only a candidate, not automatically a maximum." },
-  { id: "verify", description: "States that the candidate must be checked or confirmed to be a maximum." },
+  { id: "critical-point", description: "Explains that you need to find a critical point — that is, where the derivative is zero or undefined." },
+  { id: "candidate-only", description: "States that an identified critical point is only a possible maximum, not automatically a maximum." },
+  { id: "verify", description: "States that the point must be checked or confirmed to be a maximum." },
+  { id: "endpoints", description: "Mentions checking whether the endpoints of the allowed range could give the maximum." },
 ];
 
 const q22ScoringNote =
-  "Do not require the student to calculate the price. A zero derivative alone does not prove a maximum.";
+  "A complete general plan covers all five criteria. Do not require the student to calculate the price, and a zero derivative alone does not prove a maximum.";
 
 /** Q2.3 uses the same purpose options and the same 3, 5, 1, 4 key on both forms. */
 const q23Matches = {
