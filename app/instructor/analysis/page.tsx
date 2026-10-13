@@ -9,6 +9,7 @@ import {
   GOAL_LABELS,
   type Insights,
   type ItemStat,
+  type ItemResponse,
 } from "@/lib/tests/insights";
 import type {
   FlowSummary,
@@ -57,6 +58,99 @@ const pct = (value: number | null) =>
 
 const signed = (value: number | null) =>
   value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)} pts`;
+
+/** Seconds → "Xm Ys" (or "Ys" under a minute). */
+function fmtSec(s: number | null | undefined): string {
+  if (s == null) return "—";
+  const r = Math.round(s);
+  const m = Math.floor(r / 60);
+  const sec = r % 60;
+  return m > 0 ? `${m}m ${sec}s` : `${sec}s`;
+}
+
+/**
+ * Human-readable labels for the rubric criterion ids, so the per-criterion
+ * tables read as prose rather than slugs. Unknown ids fall back to the id.
+ */
+const CRIT_LABELS: Record<string, string> = {
+  model: "sets up the constraint",
+  "one-variable": "reduces to one variable",
+  derivative: "differentiates & solves",
+  extremum: "justifies it is a maximum",
+  quantities: "reports dimensions & area",
+  "chose-c": "chose the correct function",
+  "uses-examples": "uses the table's numbers",
+  "price-times-quantity": "revenue = price × quantity",
+  "critical-point": "identifies critical point",
+  definition: "defines critical point (deriv = 0)",
+  "candidate-only": "critical point only a candidate",
+  verify: "must verify it is a max",
+  "names-constraint": "names the range constraint",
+  "identifies-conflict": "identifies the AI's conflict",
+  "prompts-revision": "prompts a revision",
+};
+const critLabel = (id: string) => CRIT_LABELS[id] ?? id;
+
+/** A ✓ / ✗ mark. */
+function Tick({ ok }: { ok: boolean }) {
+  return (
+    <span className={ok ? "text-lime-700" : "text-rose-600"}>
+      {ok ? "✓" : "✗"}
+    </span>
+  );
+}
+
+/** One question's pre/post graded responses for a single participant. */
+type SubjectItemRow = {
+  itemId: string;
+  label: string;
+  maxPoints: number;
+  pre?: ItemResponse;
+  post?: ItemResponse;
+};
+
+/**
+ * Re-key the item-level graded responses by participant, so each person's card
+ * can show every question they answered with its score and rubric verdicts —
+ * the pilot's "all responses" table. The insights group responses by item; this
+ * inverts that grouping to group by subject instead.
+ */
+function responsesBySubject(items: ItemStat[]): Map<string, SubjectItemRow[]> {
+  const bySubject = new Map<string, SubjectItemRow[]>();
+  for (const item of items) {
+    for (const r of item.detail.responses) {
+      const list = bySubject.get(r.subjectId) ?? [];
+      let row = list.find((x) => x.itemId === item.itemId);
+      if (!row) {
+        row = { itemId: item.itemId, label: item.label, maxPoints: item.maxPoints };
+        list.push(row);
+      }
+      if (r.testId === "pretest") row.pre = r;
+      else row.post = r;
+      bySubject.set(r.subjectId, list);
+    }
+  }
+  for (const list of bySubject.values())
+    list.sort((a, b) =>
+      a.itemId.localeCompare(b.itemId, undefined, { numeric: true })
+    );
+  return bySubject;
+}
+
+/** Sum of awarded / available points across a set of responses. */
+function totalOf(rows: SubjectItemRow[], test: "pre" | "post") {
+  let got = 0;
+  let max = 0;
+  let any = false;
+  for (const row of rows) {
+    const r = row[test];
+    if (!r) continue;
+    any = true;
+    got += r.points ?? 0;
+    max += r.maxPoints;
+  }
+  return any ? { got, max } : null;
+}
 
 /** A labelled horizontal bar for the distribution/discrimination charts. */
 function BarRow({
@@ -276,20 +370,111 @@ function InstructionBlock({
   );
 }
 
-/** One completer's full step-by-step answers, collapsed by default. */
-function ParticipantCard({ p }: { p: ParticipantDetail }) {
+/**
+ * One test's graded answers for a participant, in the pilot's table shape:
+ * each question with the written response, its awarded score, and the
+ * per-criterion rubric verdicts underneath (the ✓/✗ that say *why* the score).
+ */
+function ResponseTable({
+  title,
+  rows,
+  test,
+}: {
+  title: string;
+  rows: SubjectItemRow[];
+  test: "pre" | "post";
+}) {
+  const present = rows.filter((row) => row[test]);
+  if (present.length === 0) return null;
+  const total = totalOf(rows, test);
   return (
-    <details className="rounded-xl border-2 border-stone-200 bg-white p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-stone-800">
-        {p.subjectId}{" "}
-        <span className="font-normal text-stone-400">· {p.arm ?? "—"}</span>
+    <div className="mt-4">
+      <div className="flex flex-wrap items-center justify-between gap-1">
+        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+          {title}
+        </p>
+        {total && (
+          <p className="text-xs font-semibold text-stone-600">
+            Total {total.got}/{total.max}
+          </p>
+        )}
+      </div>
+      <table className="mt-2 w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-xs text-stone-400">
+            <th className="py-1 pr-3 font-semibold">Question</th>
+            <th className="py-1 pr-3 font-semibold">Response</th>
+            <th className="py-1 font-semibold">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {present.map((row) => {
+            const r = row[test]!;
+            return (
+              <tr key={row.itemId} className="border-t border-stone-100 align-top">
+                <td className="py-1 pr-3 font-mono text-xs text-stone-600">
+                  {row.label}
+                </td>
+                <td className="py-1 pr-3 text-stone-800">
+                  <span className="whitespace-pre-wrap">{r.answer || "—"}</span>
+                </td>
+                <td className="py-1 text-stone-600">
+                  <span className="whitespace-nowrap font-semibold">
+                    {r.points ?? "—"}/{r.maxPoints}
+                  </span>
+                  {r.verdicts.length > 0 && (
+                    <div className="mt-0.5 space-y-0.5 text-[10px] leading-tight text-stone-500">
+                      {r.verdicts.map((v) => (
+                        <div key={v.id}>
+                          <Tick ok={v.verdict === "met"} /> {critLabel(v.id)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** One completer's full step-by-step answers, collapsed by default. */
+function ParticipantCard({
+  p,
+  rows,
+}: {
+  p: ParticipantDetail;
+  rows: SubjectItemRow[];
+}) {
+  const pre = totalOf(rows, "pre");
+  const post = totalOf(rows, "post");
+  return (
+    <details className="rounded-xl border-2 border-stone-200 bg-white">
+      <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 p-4 text-sm">
+        <span className="font-mono font-bold text-stone-800">{p.subjectId}</span>
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-bold text-stone-600">
+          {p.arm ?? "—"}
+        </span>
+        {pre && (
+          <span className="text-stone-600">
+            pre <span className="font-semibold">{pre.got}/{pre.max}</span>
+          </span>
+        )}
+        {post && (
+          <span className="text-stone-600">
+            → post <span className="font-semibold">{post.got}/{post.max}</span>
+          </span>
+        )}
       </summary>
-      <div className="mt-2 border-t border-stone-100 pt-1">
-        <AnswerBlock title="Screening" lines={p.screening} />
+      <div className="border-t border-stone-100 p-5 pt-4">
+        <AnswerBlock title="Math background (self-reported) — screening" lines={p.screening} />
         <AnswerBlock title="Pre-survey" lines={p.preSurvey} />
-        <AnswerBlock title="Pre-test" lines={p.preTest} />
+        <ResponseTable title="Pre-test — all responses" rows={rows} test="pre" />
         <InstructionBlock instr={p.instruction} />
-        <AnswerBlock title="Post-test" lines={p.postTest} />
+        <ResponseTable title="Post-test — all responses" rows={rows} test="post" />
         <AnswerBlock title="Post-survey" lines={p.postSurvey} />
       </div>
     </details>
@@ -573,6 +758,11 @@ export default function InstructorAnalysisPage() {
       : arm === "all"
         ? { insights: summary.insights, flow: summary.flow }
         : summary.armViews[arm];
+
+  // Graded responses re-keyed by participant, for the per-participant cards.
+  const subjectRows = view?.insights
+    ? responsesBySubject(view.insights.items)
+    : new Map<string, SubjectItemRow[]>();
 
   return (
     <main className="flex min-h-screen flex-col bg-stone-100">
@@ -1027,6 +1217,255 @@ export default function InstructorAnalysisPage() {
                     </tbody>
                   </table>
                 </div>
+
+                {/* ---- By question — mean % of max (best first) ---- */}
+                <h3 className="mt-12 text-base font-bold text-stone-800">
+                  By question — mean % of max (best first)
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  Pooled across pre and post. Higher = participants scored closer
+                  to full marks.
+                </p>
+                <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        {[
+                          "question",
+                          "mean",
+                          "% of max",
+                          "score distribution",
+                          "median time",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...view.insights.items]
+                        .sort((a, b) => b.accuracy - a.accuracy)
+                        .map((item) => (
+                          <tr
+                            key={item.itemId}
+                            className="border-b border-stone-100 last:border-b-0"
+                          >
+                            <td className="px-3 py-2 text-stone-700">
+                              {item.label}
+                            </td>
+                            <td className="px-3 py-2 text-stone-600">
+                              {item.meanPoints.toFixed(2)}/{item.maxPoints}
+                            </td>
+                            <td className="px-3 py-2 font-semibold text-stone-800">
+                              {pct(item.accuracy)}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-stone-500">
+                              {item.dist
+                                .filter((d) => d.count > 0)
+                                .map((d) => `${d.points}pt×${d.count}`)
+                                .join("  ") || "—"}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-stone-500">
+                              {fmtSec(item.medianSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ---- Score distribution by question ---- */}
+                <h3 className="mt-12 text-base font-bold text-stone-800">
+                  Score distribution by question
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  How many completers landed at each point value, per question
+                  (pooled pre + post).
+                </p>
+                <div className="mt-3 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                  {view.insights.items.map((item) => {
+                    const mc = Math.max(1, ...item.dist.map((d) => d.count));
+                    return (
+                      <div key={item.itemId}>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {item.label} (/{item.maxPoints})
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          {item.dist.map((d) => (
+                            <BarRow
+                              key={d.points}
+                              label={`${d.points} pt`}
+                              count={d.count}
+                              max={mc}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Time per question (spread) ---- */}
+                <h3 className="mt-12 text-base font-bold text-stone-800">
+                  Time per question (spread)
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  Each bar spans the fastest to slowest completer; the dot marks
+                  the median. Longer bars = more spread in how long people took.
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {(() => {
+                    const timed = view.insights.items.filter(
+                      (it) => it.medianSeconds != null
+                    );
+                    const gmax = Math.max(
+                      1,
+                      ...timed.map((it) => it.maxSeconds ?? 0)
+                    );
+                    return [...timed]
+                      .sort(
+                        (a, b) => (b.medianSeconds ?? 0) - (a.medianSeconds ?? 0)
+                      )
+                      .map((it) => {
+                        const lo = it.minSeconds ?? 0;
+                        const hi = it.maxSeconds ?? 0;
+                        const med = it.medianSeconds ?? lo;
+                        return (
+                          <div
+                            key={it.itemId}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-28 shrink-0 truncate text-right text-stone-500">
+                              {it.label}
+                            </span>
+                            <div className="relative h-3 flex-1 rounded bg-stone-100">
+                              <div
+                                className="absolute h-3 rounded bg-sky-200"
+                                style={{
+                                  left: `${(lo / gmax) * 100}%`,
+                                  width: `${((hi - lo) / gmax) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-600"
+                                style={{ left: `${(med / gmax) * 100}%` }}
+                                title={`median ${fmtSec(med)}`}
+                              />
+                            </div>
+                            <span className="w-28 shrink-0 text-stone-500">
+                              {fmtSec(it.minSeconds)}–{fmtSec(it.maxSeconds)}
+                            </span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+                <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+                  <table className="w-full border-collapse text-left text-sm">
+                    <thead className="bg-stone-50">
+                      <tr>
+                        {["question", "min", "median", "max"].map((h) => (
+                          <th
+                            key={h}
+                            className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...view.insights.items]
+                        .filter((it) => it.medianSeconds != null)
+                        .sort(
+                          (a, b) =>
+                            (b.medianSeconds ?? 0) - (a.medianSeconds ?? 0)
+                        )
+                        .map((it) => (
+                          <tr
+                            key={it.itemId}
+                            className="border-b border-stone-100 last:border-b-0"
+                          >
+                            <td className="px-3 py-2 text-stone-700">
+                              {it.label}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {fmtSec(it.minSeconds)}
+                            </td>
+                            <td className="px-3 py-2 font-semibold text-stone-800">
+                              {fmtSec(it.medianSeconds)}
+                            </td>
+                            <td className="px-3 py-2 text-stone-500">
+                              {fmtSec(it.maxSeconds)}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* ---- Rubric distribution — % who met each criterion ---- */}
+                {view.insights.items.some(
+                  (item) => item.detail.criteria.length > 0
+                ) && (
+                  <>
+                    <h3 className="mt-12 text-base font-bold text-stone-800">
+                      Rubric distribution — % who met each criterion
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-stone-500">
+                      For the show-work items: the share of participants who met
+                      each rubric point (pooled pre + post).
+                    </p>
+                    <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+                      <table className="w-full border-collapse text-left text-sm">
+                        <thead className="bg-stone-50">
+                          <tr>
+                            {["item", "rubric criterion", "% met"].map((h) => (
+                              <th
+                                key={h}
+                                className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
+                              >
+                                {h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {view.insights.items
+                            .flatMap((item) =>
+                              item.detail.criteria.map((c) => ({ item, c }))
+                            )
+                            .map(({ item, c }) => {
+                              const met = Math.round(c.metRate * c.n);
+                              return (
+                                <tr
+                                  key={`${item.itemId}-${c.id}`}
+                                  className="border-b border-stone-100 last:border-b-0"
+                                >
+                                  <td className="px-3 py-2 text-stone-500">
+                                    {item.label}
+                                  </td>
+                                  <td className="px-3 py-2 text-stone-700">
+                                    {critLabel(c.id)}
+                                  </td>
+                                  <td className="px-3 py-2 font-semibold text-stone-800">
+                                    {Math.round(c.metRate * 100)}%{" "}
+                                    <span className="text-xs font-normal text-stone-400">
+                                      ({met}/{c.n})
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
@@ -1051,7 +1490,11 @@ export default function InstructorAnalysisPage() {
                 </p>
                 <div className="mt-3 space-y-2">
                   {view.flow.participants.map((p) => (
-                    <ParticipantCard key={p.subjectId} p={p} />
+                    <ParticipantCard
+                      key={p.subjectId}
+                      p={p}
+                      rows={subjectRows.get(p.subjectId) ?? []}
+                    />
                   ))}
                 </div>
               </>

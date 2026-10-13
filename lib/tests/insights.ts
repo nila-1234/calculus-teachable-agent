@@ -38,6 +38,25 @@ export function goalForItem(itemId: string): Goal {
   return "communication";
 }
 
+/** Friendly per-item labels, matching the pilot analysis. */
+export const ITEM_LABELS: Record<string, string> = {
+  "1": "Q1a optimization (show work)",
+  "1b": "Q1b particle motion (numeric)",
+  "1c": "Q1c profit (numeric)",
+  "1d": "Q1d fencing (numeric)",
+  "1e": "Q1e rectangle (numeric)",
+  "2.1": "Q2.1 revenue model (choice + explanation)",
+  "2.2": "Q2.2 explain concept (show work)",
+  "2.3": "Q2.3 matching",
+  "2.4": "Q2.4 interpret domain (MC)",
+  "3.1": "Q3.1 question the AI (MC)",
+  "3.2": "Q3.2 rebut the AI (show work)",
+};
+
+export function labelForItem(itemId: string): string {
+  return ITEM_LABELS[itemId] ?? `Q${itemId}`;
+}
+
 /** How often each rubric criterion was met — why an open item is missed. */
 export type CriterionStat = {
   id: string;
@@ -73,7 +92,12 @@ export type ItemDetail = {
 
 export type ItemStat = {
   itemId: string;
+  label: string;
   goal: Goal;
+  /** Count of submissions at each point value, 0..maxPoints (pooled pre+post). */
+  dist: { points: number; count: number }[];
+  minSeconds: number | null;
+  maxSeconds: number | null;
   /** Mean proportion of available points, 0–1. */
   accuracy: number;
   meanPoints: number;
@@ -202,6 +226,22 @@ function accuracyByItem(graded: GradedSubmission[], testId?: TestId) {
   }
 
   return points;
+}
+
+/** Per-item point values across graded submissions, with the item's max. */
+function pointValuesByItem(graded: GradedSubmission[]) {
+  const out = new Map<string, { values: number[]; max: number }>();
+  for (const { result } of graded) {
+    if (!result.complete) continue;
+    for (const item of result.items) {
+      if (item.points === null) continue;
+      const e = out.get(item.itemId) ?? { values: [], max: item.maxPoints };
+      e.values.push(item.points);
+      e.max = Math.max(e.max, item.maxPoints);
+      out.set(item.itemId, e);
+    }
+  }
+  return out;
 }
 
 /**
@@ -393,6 +433,7 @@ export function buildInsights(
   const timing = secondsPerItem(completeDocs);
   const overall = accuracyByItem(graded);
   const discrimination = discriminationByItem(graded);
+  const pointValues = pointValuesByItem(graded);
   const pre = accuracyByItem(graded, "pretest");
   const post = accuracyByItem(graded, "posttest");
 
@@ -402,9 +443,19 @@ export function buildInsights(
       const disc = discrimination.get(itemId);
       const p = pre.get(itemId);
       const q = post.get(itemId);
+      const pv = pointValues.get(itemId);
+      const itemMax = pv?.max ?? 0;
+      const dist = Array.from({ length: itemMax + 1 }, (_, points) => ({
+        points,
+        count: (pv?.values ?? []).filter((v) => v === points).length,
+      }));
       return {
         itemId,
+        label: labelForItem(itemId),
         goal: goalForItem(itemId),
+        dist,
+        minSeconds: seconds.length ? Math.min(...seconds) : null,
+        maxSeconds: seconds.length ? Math.max(...seconds) : null,
         accuracy: max > 0 ? total / max : 0,
         meanPoints: n > 0 ? total / n : 0,
         maxPoints: n > 0 ? max / n : 0,
