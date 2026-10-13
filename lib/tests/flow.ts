@@ -1,7 +1,15 @@
 import type { LogDoc } from "./report";
-import { minutesPerPhase, type Phase } from "./export";
+import { fullFlowSubjects, minutesPerPhase, type Phase } from "./export";
 import { getSurvey } from "@/lib/surveys/definitions";
 import type { SurveyItem } from "@/lib/surveys/types";
+import {
+  transitionPlacement,
+  placementLine,
+  type PlacementEvent,
+  type PlacementFlow,
+  type PlacementLineId,
+} from "@/lib/placement-flow";
+import { statusLine } from "@/lib/status-flow";
 
 /**
  * Step-by-step analysis of the whole study flow — screening, pre-survey,
@@ -88,6 +96,27 @@ export type AgentPartScore = {
   aiRuns: number;
 };
 
+/** One turn in a reconstructed Apply-Rubric discussion. */
+export type ConvTurn = {
+  speaker: "professor" | "ta";
+  /** scripted = canned flow line; llm = model-written; action = the TA's own move/words. */
+  kind: "scripted" | "llm" | "action";
+  text: string;
+};
+
+/**
+ * One criterion's discussion thread in the Apply-Rubric step — either the
+ * placement (which step it belongs on) or the pass/fail decision, rebuilt turn
+ * by turn from the flow transitions (scripted lines) interleaved with the LLM
+ * exchanges.
+ */
+export type ConvThread = {
+  heading: string;
+  phase: "placement" | "status" | "question";
+  outcome: string;
+  turns: ConvTurn[];
+};
+
 export type InstructionDetail = {
   arm: string | null;
   minutes: number | null;
@@ -99,7 +128,9 @@ export type InstructionDetail = {
   agentLowestPart: string | null;
   agentSlowestPart: string | null;
   agentFastestPart: string | null;
-  /** Agent arm: the full AI conversation, in order. */
+  /** Agent arm: the reconstructed conversation, grouped by criterion/phase. */
+  agentThreads: ConvThread[];
+  /** Agent arm: the raw AI exchanges, in order (fallback / full detail). */
   agent: AiExchange[];
 };
 
@@ -209,7 +240,8 @@ function summariseSurvey(
       };
     }
 
-    // open
+    // open — show every response in full; these are instructor-only and the
+    // whole sentence is the point (no truncation, no "…").
     const texts = raw.map((v) => String(v)).filter((t) => t.trim());
     return {
       id: item.id,
@@ -217,7 +249,7 @@ function summariseSurvey(
       kind: item.kind,
       n: texts.length,
       answered: texts.length,
-      samples: texts.slice(0, 3).map((t) => (t.length > 200 ? `${t.slice(0, 200)}…` : t)),
+      samples: texts,
     };
   });
 }
@@ -395,24 +427,27 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     .sort((a, b) => a.at.localeCompare(b.at));
 }
 
-/** The agent scenario's parts, in order, keyed by the page's path segment. */
+/**
+ * The agent scenario's three interactive steps, in order, keyed by the page's
+ * path segment — matching the in-scenario stepper (Question → Create Rubric →
+ * Apply Rubric → Complete). "Apply Rubric" is the grade-lines page, where the
+ * TA places each criterion on a step and marks it pass/fail. The standalone
+ * /grade page is NOT part of this flow, so it is deliberately absent.
+ */
 const AGENT_PARTS: { key: string; label: string }[] = [
-  { key: "question", label: "Compose the question" },
-  { key: "create-rubric", label: "Create the rubric" },
-  { key: "grade", label: "Grade the work" },
-  { key: "grade-lines", label: "Judge the steps" },
+  { key: "question", label: "Question" },
+  { key: "create-rubric", label: "Create Rubric" },
+  { key: "grade-lines", label: "Apply Rubric" },
 ];
 
 /** Which scenario part each AI route belongs to, for the per-part run counts. */
 const ROUTE_TO_PART: Record<string, string> = {
-  "question-feedback": "Compose the question",
-  "apply-rubric-feedback": "Grade the work",
-  "ai-student-answers": "Grade the work",
-  "grade-lines-comment": "Judge the steps",
-  "grade-lines-feedback": "Judge the steps",
-  "placement-classify": "Judge the steps",
-  "placement-explain": "Judge the steps",
-  "grade-chat": "Judge the steps",
+  "question-feedback": "Question",
+  "grade-lines-comment": "Apply Rubric",
+  "grade-lines-feedback": "Apply Rubric",
+  "placement-classify": "Apply Rubric",
+  "placement-explain": "Apply Rubric",
+  "grade-chat": "Apply Rubric",
 };
 
 /** The last non-empty segment of a path, e.g. "/5/grade-lines" -> "grade-lines". */
@@ -469,19 +504,29 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
     ? (rubric!.data!.missed_essential as unknown[]).length
     : 0;
 
-  // Grade the work: how many of the AI's answers were reviewed.
-  const reviewed = sorted.filter((d) => d.event === "apply_rubric_submitted").length;
-
-  // Judge the steps: latest placement verdict per criterion.
-  const placements = new Map<string, boolean>();
+  // Apply Rubric: latest placement + pass/fail verdict per criterion. Each
+  // criterion is both dropped on a step (stepCorrect) and marked pass/fail
+  // (statusCorrect); both count toward how well the TA judged the work.
+  const verdicts = new Map<
+    string,
+    { stepCorrect: boolean; statusCorrect: boolean }
+  >();
   for (const d of sorted) {
     if (d.event !== "grade_lines_criterion_graded") continue;
     const key = `${d.data?.answer_id ?? ""}::${d.data?.criterion_id ?? ""}`;
     const p = d.data?.placement as Record<string, unknown> | undefined;
-    if (p) placements.set(key, p.correct === true);
+    if (!p) continue;
+    const prev = verdicts.get(key) ?? { stepCorrect: false, statusCorrect: false };
+    verdicts.set(key, {
+      stepCorrect: p.stepCorrect === true,
+      // status is only set on the pass/fail phase; keep an earlier true.
+      statusCorrect: p.statusCorrect === true || prev.statusCorrect,
+    });
   }
-  const jCorrect = [...placements.values()].filter(Boolean).length;
-  const jTotal = placements.size;
+  const vlist = [...verdicts.values()];
+  const stepOk = vlist.filter((v) => v.stepCorrect).length;
+  const statusOk = vlist.filter((v) => v.statusCorrect).length;
+  const jTotal = vlist.length;
 
   const parts: AgentPartScore[] = AGENT_PARTS.map(({ key, label }) => {
     const seconds = secondsByKey.get(key) ?? null;
@@ -501,12 +546,10 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
           : `${wrongly} wrongly included, ${missed} missed`;
         rate = rubricPerfect ? 1 : 0;
       }
-    } else if (key === "grade") {
-      if (reviewed) scoreLabel = `${reviewed} answer(s) reviewed`;
     } else if (key === "grade-lines") {
       if (jTotal) {
-        scoreLabel = `${jCorrect}/${jTotal} criteria judged correctly`;
-        rate = jCorrect / jTotal;
+        scoreLabel = `${stepOk}/${jTotal} placed right, ${statusOk}/${jTotal} marked right`;
+        rate = (stepOk + statusOk) / (2 * jTotal);
       }
     }
 
@@ -519,6 +562,243 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
   );
 }
 
+type FlowCtx = {
+  criterionLabel: string;
+  placedStep: number | null;
+  expectedStep: number;
+  marked: "pass" | "fail" | null;
+  expected: "pass" | "fail" | null;
+};
+
+function emptyCtx(): FlowCtx {
+  return {
+    criterionLabel: "",
+    placedStep: null,
+    expectedStep: 0,
+    marked: null,
+    expected: null,
+  };
+}
+
+/** Render a scripted flow line for whichever phase the thread is in. */
+function scriptedLine(
+  phase: "placement" | "status",
+  line: PlacementLineId,
+  ctx: FlowCtx
+): string {
+  return phase === "status"
+    ? statusLine(line, {
+        marked: ctx.marked,
+        expected: ctx.expected,
+        placedStep: ctx.placedStep,
+      })
+    : placementLine(line, {
+        criterionLabel: ctx.criterionLabel,
+        placedStep: ctx.placedStep,
+        expectedStep: ctx.expectedStep,
+      });
+}
+
+const REPLY_PHRASE: Record<string, string> = {
+  yes: "Yes, I'm keeping it.",
+  no: "No, I'm not sure.",
+  unclear: "(reply the AI couldn't read as yes/no)",
+};
+
+/**
+ * Rebuild the Apply-Rubric conversation for one agent participant.
+ *
+ * The visible dialogue is a deterministic state machine (lib/placement-flow.ts,
+ * shared by placement and pass/fail) with a few lines written by the model. So
+ * the transcript is reconstructed by replaying each logged transition to get
+ * its scripted lines, and splicing in the model-written lines and the TA's
+ * free-text replies from the AI exchanges — grouped per criterion and phase.
+ */
+function agentConversation(list: LogDoc[]): ConvThread[] {
+  const sorted = [...list].sort((a, b) =>
+    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+  );
+
+  const threads = new Map<string, ConvThread>();
+  const ctxByKey = new Map<string, FlowCtx>();
+  let currentKey: string | null = null;
+  let pendingReply: string | null = null;
+
+  const questionThread: ConvThread = {
+    heading: "Question — explanation feedback",
+    phase: "question",
+    outcome: "",
+    turns: [],
+  };
+
+  const threadFor = (
+    answer: string,
+    criterion: string,
+    phase: "placement" | "status",
+    ctx: FlowCtx
+  ): ConvThread => {
+    const key = `${answer}::${criterion}::${phase}`;
+    let t = threads.get(key);
+    if (!t) {
+      const name = ctx.criterionLabel || criterion || "criterion";
+      t = {
+        heading: `Apply Rubric · ${name} · ${
+          phase === "status" ? "pass/fail" : "placement"
+        }`,
+        phase,
+        outcome: "",
+        turns: [],
+      };
+      threads.set(key, t);
+    }
+    return t;
+  };
+
+  for (const d of sorted) {
+    const data = (d.data ?? {}) as Record<string, unknown>;
+
+    if (d.event === "grade_lines_criterion_graded") {
+      const answer = String(data.answer_id ?? "");
+      const criterion = String(data.criterion_id ?? "");
+      const phase = data.phase === "status" ? "status" : "placement";
+      const key = `${answer}::${criterion}::${phase}`;
+      const p = (data.placement ?? {}) as Record<string, unknown>;
+      const ctx = ctxByKey.get(key) ?? emptyCtx();
+      if (typeof p.placedStep === "number") ctx.placedStep = p.placedStep;
+      if (typeof p.expectedStep === "number") ctx.expectedStep = p.expectedStep;
+      if (p.status === "pass" || p.status === "fail") ctx.marked = p.status;
+      if (p.expectedStatus === "pass" || p.expectedStatus === "fail")
+        ctx.expected = p.expectedStatus;
+      ctxByKey.set(key, ctx);
+      currentKey = key;
+      continue;
+    }
+
+    if (
+      d.event === "grade_lines_placement_transition" ||
+      d.event === "grade_lines_status_transition"
+    ) {
+      const phase =
+        d.event === "grade_lines_status_transition" ? "status" : "placement";
+      const answer = String(data.answer_id ?? "");
+      const criterion = String(data.criterion_id ?? "");
+      const key = `${answer}::${criterion}::${phase}`;
+      currentKey = key;
+      const ctx = ctxByKey.get(key) ?? emptyCtx();
+      ctxByKey.set(key, ctx);
+      const thread = threadFor(answer, criterion, phase, ctx);
+
+      const from = data.from as PlacementFlow | undefined;
+      const event = data.event as PlacementEvent | undefined;
+      if (!from || !event) continue;
+
+      // The TA's own move / reply that drives this transition.
+      if (event.type === "DROP") {
+        thread.turns.push({
+          speaker: "ta",
+          kind: "action",
+          text:
+            phase === "status"
+              ? `Marked it ${(ctx.marked ?? "?").toUpperCase()}.`
+              : `Dragged "${ctx.criterionLabel || criterion}" onto step ${
+                  ctx.placedStep ?? "?"
+                }.`,
+        });
+      } else {
+        thread.turns.push({
+          speaker: "ta",
+          kind: "action",
+          text:
+            pendingReply ??
+            REPLY_PHRASE[event.label ?? "unclear"] ??
+            "(reply)",
+        });
+        pendingReply = null;
+      }
+
+      // Replay the state machine to get the scripted professor lines.
+      const { next, effects } = transitionPlacement(from, event);
+      for (const effect of effects) {
+        if (effect.type === "say") {
+          thread.turns.push({
+            speaker: "professor",
+            kind: "scripted",
+            text: scriptedLine(phase, effect.line, ctx),
+          });
+        }
+        // `explain` effects are model-written: filled by the placement-explain
+        // exchange that follows this transition.
+      }
+      if (next.kind === "resolved") {
+        thread.outcome =
+          next.how === "accepted"
+            ? `Resolved — stood by the call (attempt ${next.attempt}).`
+            : `Resolved — moved after being told (attempt ${next.attempt}).`;
+      }
+      continue;
+    }
+
+    if (d.event === "ai_exchange") {
+      const route = String(data.route ?? "");
+      const req = (data.request ?? {}) as Record<string, unknown>;
+      const res = (data.response ?? {}) as Record<string, unknown>;
+
+      // Keep the criterion label / steps fresh for scripted-line rendering.
+      if (currentKey) {
+        const ctx = ctxByKey.get(currentKey) ?? emptyCtx();
+        if (typeof req.criterionLabel === "string")
+          ctx.criterionLabel = req.criterionLabel;
+        if (typeof req.placedStep === "number") ctx.placedStep = req.placedStep;
+        if (typeof req.expectedStep === "number")
+          ctx.expectedStep = req.expectedStep;
+        ctxByKey.set(currentKey, ctx);
+      }
+
+      if (route === "question-feedback") {
+        const student = pick(req, ["explanation", "answer", "text"]);
+        const ai = pick(res, ["feedback", "reply", "comment", "text"]);
+        if (student)
+          questionThread.turns.push({
+            speaker: "ta",
+            kind: "action",
+            text: student,
+          });
+        if (ai)
+          questionThread.turns.push({ speaker: "professor", kind: "llm", text: ai });
+        continue;
+      }
+
+      if (route === "placement-classify") {
+        // The TA's free answer to "Are you sure?" — attached to the REPLY
+        // transition that immediately follows.
+        pendingReply = pick(req, ["reply", "message", "text"]) || pendingReply;
+        continue;
+      }
+
+      // The remaining routes are model-written professor lines in the current
+      // thread (affirm/hint/reveal, line feedback, or open chat).
+      const target =
+        currentKey && threads.get(currentKey)
+          ? threads.get(currentKey)!
+          : null;
+      if (!target) continue;
+
+      if (route === "grade-chat") {
+        const student = pick(req, ["message", "reply", "text"]);
+        if (student)
+          target.turns.push({ speaker: "ta", kind: "action", text: student });
+      }
+      const ai = pick(res, ["text", "reply", "feedback", "comment", "message"]);
+      if (ai) target.turns.push({ speaker: "professor", kind: "llm", text: ai });
+    }
+  }
+
+  const out: ConvThread[] = [];
+  if (questionThread.turns.length) out.push(questionThread);
+  out.push(...threads.values());
+  return out;
+}
+
 export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   const bySubject = groupBySubject(docs);
   const subjects = [...bySubject.entries()];
@@ -528,8 +808,10 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       (d) => d.event === event && (scenarioId === undefined || d.scenario_id === scenarioId)
     );
 
-  const isCompleter = (list: LogDoc[]) => has(list, "survey_completed", "post");
-  const completerSubjects = subjects.filter(([, list]) => isCompleter(list));
+  // Completers = finished EVERY step of the flow (not just the post-survey);
+  // this also drops instructor preview / dev runs. See fullFlowSubjects.
+  const fullFlow = fullFlowSubjects(docs);
+  const completerSubjects = subjects.filter(([subject]) => fullFlow.has(subject));
   const completerLists = completerSubjects.map(([, list]) => list);
 
   // Funnel across ALL participants: how many reached each step.
@@ -574,6 +856,21 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       .filter((v) => v > 0);
     return { medianMin: median(vals), n: vals.length };
   };
+  // LearnVia lesson time is measured from the lessons' own completion events
+  // (each lesson logs its own elapsed seconds), summed across BOTH lessons per
+  // participant. This is more reliable than page-dwell for the lesson arm, and
+  // it is the actual on-task time across the two lessons.
+  const lessonTotalsMin = completerLists
+    .filter((l) => armOf(l) === "lesson")
+    .map((l) => {
+      const secs = l
+        .filter((d) => d.event === "lesson_completed")
+        .map((d) => Number(d.data?.seconds))
+        .filter((n) => Number.isFinite(n) && n > 0);
+      return secs.length ? secs.reduce((a, b) => a + b, 0) / 60 : null;
+    })
+    .filter((v): v is number => v != null);
+
   const phases: PhaseTiming[] = [
     { key: "pre_survey", label: "Pre-survey", ...medPhase("pre_survey") },
     { key: "pretest", label: "Pre-test", ...medPhase("pretest") },
@@ -584,8 +881,9 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     },
     {
       key: "lesson",
-      label: "LearnVia lesson",
-      ...medPhase("scenarios", (x) => x.arm === "lesson"),
+      label: "LearnVia lesson (both lessons)",
+      medianMin: median(lessonTotalsMin),
+      n: lessonTotalsMin.length,
     },
     { key: "posttest", label: "Post-test", ...medPhase("posttest") },
     { key: "post_survey", label: "Post-survey", ...medPhase("post_survey") },
@@ -663,6 +961,7 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       agentLowestPart: minBy(scored, (p) => p.rate ?? 1)?.part ?? null,
       agentSlowestPart: maxBy(timed, (p) => p.seconds ?? 0)?.part ?? null,
       agentFastestPart: minBy(timed, (p) => p.seconds ?? Infinity)?.part ?? null,
+      agentThreads: arm === "agent" ? agentConversation(list) : [],
       agent:
         arm === "agent"
           ? list

@@ -303,6 +303,7 @@ function InstructionBlock({
     lesson,
     agent,
     agentParts,
+    agentThreads,
     agentLowestPart,
     agentSlowestPart,
     agentFastestPart,
@@ -375,44 +376,100 @@ function InstructionBlock({
           ))}
         </ul>
       )}
-      {agent.length > 0 && (
-        <ol className="mt-2 space-y-3">
-          {agent.map((ex, i) => (
-            <li key={i} className="border-l-2 border-stone-200 pl-3">
-              {/* Turn header: which part, what it was about, when. */}
-              <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
-                <span className="rounded bg-stone-200 px-1.5 py-0.5 font-semibold text-stone-700">
-                  {i + 1}. {ex.part}
-                </span>
-                {ex.context && (
-                  <span className="text-stone-500">{ex.context}</span>
+      {/* Reconstructed Apply-Rubric conversation, grouped by criterion/phase:
+          scripted professor/TA lines interleaved with the model-written ones. */}
+      {agentThreads.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {agentThreads.map((t, ti) => (
+            <div
+              key={ti}
+              className="rounded-lg border border-stone-200 bg-stone-50/50 p-3"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <p className="text-xs font-semibold text-stone-700">
+                  {t.heading}
+                </p>
+                {t.outcome && (
+                  <p className="text-[11px] text-stone-500">{t.outcome}</p>
                 )}
-                <span className="text-stone-400">
-                  {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
-                  {ex.durationMs != null
-                    ? ` · ${(ex.durationMs / 1000).toFixed(1)}s`
-                    : ""}
-                </span>
               </div>
-              {ex.student && (
-                <div className="mt-1 rounded-lg rounded-tl-none bg-blue-50 px-3 py-1.5 text-xs text-stone-800">
-                  <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                    Student
-                  </span>
-                  <span className="whitespace-pre-wrap">{ex.student}</span>
-                </div>
-              )}
-              {ex.ai && (
-                <div className="mt-1 rounded-lg rounded-tl-none bg-violet-50 px-3 py-1.5 text-xs text-stone-800">
-                  <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-violet-700">
-                    AI
-                  </span>
-                  <span className="whitespace-pre-wrap">{ex.ai}</span>
-                </div>
-              )}
-            </li>
+              <ol className="mt-2 space-y-1.5">
+                {t.turns.map((turn, ki) => (
+                  <li
+                    key={ki}
+                    className={`flex ${
+                      turn.speaker === "ta" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs ${
+                        turn.speaker === "ta"
+                          ? "rounded-tr-none bg-blue-50 text-stone-800"
+                          : turn.kind === "scripted"
+                            ? "rounded-tl-none bg-stone-100 text-stone-700"
+                            : "rounded-tl-none bg-violet-50 text-stone-800"
+                      }`}
+                    >
+                      <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-stone-400">
+                        {turn.speaker === "ta"
+                          ? "TA (student)"
+                          : turn.kind === "scripted"
+                            ? "Professor · scripted"
+                            : "Professor · AI"}
+                      </span>
+                      <span className="whitespace-pre-wrap">{turn.text}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
           ))}
-        </ol>
+        </div>
+      )}
+
+      {/* Raw AI exchanges, kept as a collapsed fallback / full detail. */}
+      {agent.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-[11px] font-semibold text-stone-400">
+            Raw AI exchanges ({agent.length})
+          </summary>
+          <ol className="mt-2 space-y-3">
+            {agent.map((ex, i) => (
+              <li key={i} className="border-l-2 border-stone-200 pl-3">
+                <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+                  <span className="rounded bg-stone-200 px-1.5 py-0.5 font-semibold text-stone-700">
+                    {i + 1}. {ex.part}
+                  </span>
+                  {ex.context && (
+                    <span className="text-stone-500">{ex.context}</span>
+                  )}
+                  <span className="text-stone-400">
+                    {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
+                    {ex.durationMs != null
+                      ? ` · ${(ex.durationMs / 1000).toFixed(1)}s`
+                      : ""}
+                  </span>
+                </div>
+                {ex.student && (
+                  <div className="mt-1 rounded-lg rounded-tl-none bg-blue-50 px-3 py-1.5 text-xs text-stone-800">
+                    <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                      Student
+                    </span>
+                    <span className="whitespace-pre-wrap">{ex.student}</span>
+                  </div>
+                )}
+                {ex.ai && (
+                  <div className="mt-1 rounded-lg rounded-tl-none bg-violet-50 px-3 py-1.5 text-xs text-stone-800">
+                    <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                      AI
+                    </span>
+                    <span className="whitespace-pre-wrap">{ex.ai}</span>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </details>
       )}
     </div>
   );
@@ -589,7 +646,14 @@ function ItemDetailPanel({
   const { detail } = item;
 
   return (
-    <div className="mt-6 rounded-2xl border-2 border-stone-300 bg-white p-6 shadow-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/40 p-4 sm:p-8"
+      onClick={onClose}
+    >
+      <div
+        className="mt-4 w-full max-w-3xl rounded-2xl border-2 border-stone-300 bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
@@ -747,6 +811,7 @@ function ItemDetailPanel({
             )}
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -1031,11 +1096,21 @@ export default function InstructorAnalysisPage() {
               <>
                 <h2 className="mt-10 text-xl font-bold text-stone-800">
                   Which skills moved
+                  <span className="ml-2 align-middle text-sm font-semibold text-lime-700">
+                    {arm === "all"
+                      ? "· both arms pooled"
+                      : arm === "lesson"
+                        ? "· Lesson (control)"
+                        : "· Agent (instruction)"}
+                  </span>
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-stone-500">
                   Items grouped by the study&apos;s three assessment goals, using
                   the mapping in the answer key. Gain is post minus pre, in
-                  percentage points of the available marks.
+                  percentage points of the available marks. Lesson and Agent are
+                  different conditions — use the arm toggle above to read each
+                  separately; the numbers below cover only full-flow completers
+                  {arm === "all" ? " in both arms" : ""}.
                 </p>
 
                 {view.insights.underpowered && (
