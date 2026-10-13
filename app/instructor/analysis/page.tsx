@@ -197,6 +197,80 @@ function AnswerBlock({
   );
 }
 
+/** A participant's instruction step: lesson attempts or the AI conversation. */
+function InstructionBlock({
+  instr,
+}: {
+  instr: ParticipantDetail["instruction"];
+}) {
+  const { arm, minutes, lesson, agent } = instr;
+  if (lesson.length === 0 && agent.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+        Instruction
+        {arm ? ` · ${arm}` : ""}
+        {minutes != null ? ` · ${minutes.toFixed(1)} min` : ""}
+      </p>
+      {lesson.length > 0 && (
+        <ul className="mt-1 space-y-1 text-xs">
+          {lesson.map((it) => (
+            <li key={it.itemId} className="text-stone-700">
+              <span
+                className={
+                  it.firstTryCorrect ? "text-lime-700" : "text-rose-600"
+                }
+              >
+                {it.firstTryCorrect ? "✓" : "✗"}
+              </span>{" "}
+              Q{it.itemId} · {it.attempts} attempt
+              {it.attempts === 1 ? "" : "s"}
+              {it.hints ? `, ${it.hints} hint${it.hints === 1 ? "" : "s"}` : ""}{" "}
+              <span className="text-stone-400">
+                {it.at ? new Date(it.at).toLocaleString() : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {agent.length > 0 && (
+        <div className="mt-1 space-y-2">
+          {agent.map((ex, i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-stone-100 bg-stone-50 p-2 text-xs"
+            >
+              <div className="flex flex-wrap items-center gap-x-2 text-stone-500">
+                <span className="font-semibold text-stone-700">{ex.part}</span>
+                {ex.context && <span>· {ex.context}</span>}
+                <span className="text-stone-400">
+                  ·{" "}
+                  {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
+                  {ex.durationMs != null
+                    ? ` · ${(ex.durationMs / 1000).toFixed(1)}s`
+                    : ""}
+                </span>
+              </div>
+              {ex.student && (
+                <p className="mt-1 whitespace-pre-wrap text-stone-800">
+                  <span className="font-semibold text-blue-700">Student:</span>{" "}
+                  {ex.student}
+                </p>
+              )}
+              {ex.ai && (
+                <p className="mt-0.5 whitespace-pre-wrap text-stone-800">
+                  <span className="font-semibold text-violet-700">AI:</span>{" "}
+                  {ex.ai}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** One completer's full step-by-step answers, collapsed by default. */
 function ParticipantCard({ p }: { p: ParticipantDetail }) {
   return (
@@ -209,6 +283,7 @@ function ParticipantCard({ p }: { p: ParticipantDetail }) {
         <AnswerBlock title="Screening" lines={p.screening} />
         <AnswerBlock title="Pre-survey" lines={p.preSurvey} />
         <AnswerBlock title="Pre-test" lines={p.preTest} />
+        <InstructionBlock instr={p.instruction} />
         <AnswerBlock title="Post-test" lines={p.postTest} />
         <AnswerBlock title="Post-survey" lines={p.postSurvey} />
       </div>
@@ -626,6 +701,71 @@ export default function InstructorAnalysisPage() {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Instruction — adapts to the selected arm. */}
+                <h3 className="mt-6 text-base font-bold text-stone-800">
+                  Instruction
+                </h3>
+                {arm !== "agent" &&
+                  view.flow.instruction.lessonFirstTry.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-stone-500">
+                        Lesson — first-try correctness per question
+                        {view.flow.instruction.lessonMedianMin != null && (
+                          <>
+                            {" "}
+                            (median{" "}
+                            {view.flow.instruction.lessonMedianMin.toFixed(1)}{" "}
+                            min, {view.flow.instruction.lessonMedianHints ?? 0}{" "}
+                            hints)
+                          </>
+                        )}
+                      </p>
+                      <div className="mt-1 space-y-1">
+                        {view.flow.instruction.lessonFirstTry.map((it) => (
+                          <MiniBar
+                            key={it.itemId}
+                            label={`Q${it.itemId} (${Math.round(it.firstTryRate * 100)}%, n=${it.n})`}
+                            count={Math.round(it.firstTryRate * 100)}
+                            max={100}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                {arm !== "lesson" &&
+                  view.flow.instruction.avgAiPerPart.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-stone-500">
+                        Agent — average AI interactions per part (per
+                        participant)
+                      </p>
+                      <table className="mt-1 w-full border-collapse text-sm">
+                        <tbody>
+                          {view.flow.instruction.avgAiPerPart.map((pt) => (
+                            <tr
+                              key={pt.part}
+                              className="border-t border-stone-100"
+                            >
+                              <td className="py-1 pr-3 text-stone-700">
+                                {pt.part}
+                              </td>
+                              <td className="py-1 pr-3 font-semibold text-stone-800">
+                                {pt.avg.toFixed(1)} avg
+                              </td>
+                              <td className="py-1 text-xs text-stone-400">
+                                {pt.total} total
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <p className="mt-1 text-xs text-stone-400">
+                        Every participant&apos;s full AI conversation is in the
+                        per-participant detail at the bottom.
+                      </p>
+                    </div>
+                  )}
 
                 {/* Survey breakdowns (screening lives only in the per-participant
                     detail below, since every completer passed screening). */}
