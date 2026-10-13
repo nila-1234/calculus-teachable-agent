@@ -234,17 +234,18 @@ function InstructionBlock({
         </ul>
       )}
       {agent.length > 0 && (
-        <div className="mt-1 space-y-2">
+        <ol className="mt-2 space-y-3">
           {agent.map((ex, i) => (
-            <div
-              key={i}
-              className="rounded-lg border border-stone-100 bg-stone-50 p-2 text-xs"
-            >
-              <div className="flex flex-wrap items-center gap-x-2 text-stone-500">
-                <span className="font-semibold text-stone-700">{ex.part}</span>
-                {ex.context && <span>· {ex.context}</span>}
+            <li key={i} className="border-l-2 border-stone-200 pl-3">
+              {/* Turn header: which part, what it was about, when. */}
+              <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+                <span className="rounded bg-stone-200 px-1.5 py-0.5 font-semibold text-stone-700">
+                  {i + 1}. {ex.part}
+                </span>
+                {ex.context && (
+                  <span className="text-stone-500">{ex.context}</span>
+                )}
                 <span className="text-stone-400">
-                  ·{" "}
                   {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
                   {ex.durationMs != null
                     ? ` · ${(ex.durationMs / 1000).toFixed(1)}s`
@@ -252,20 +253,24 @@ function InstructionBlock({
                 </span>
               </div>
               {ex.student && (
-                <p className="mt-1 whitespace-pre-wrap text-stone-800">
-                  <span className="font-semibold text-blue-700">Student:</span>{" "}
-                  {ex.student}
-                </p>
+                <div className="mt-1 rounded-lg rounded-tl-none bg-blue-50 px-3 py-1.5 text-xs text-stone-800">
+                  <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                    Student
+                  </span>
+                  <span className="whitespace-pre-wrap">{ex.student}</span>
+                </div>
               )}
               {ex.ai && (
-                <p className="mt-0.5 whitespace-pre-wrap text-stone-800">
-                  <span className="font-semibold text-violet-700">AI:</span>{" "}
-                  {ex.ai}
-                </p>
+                <div className="mt-1 rounded-lg rounded-tl-none bg-violet-50 px-3 py-1.5 text-xs text-stone-800">
+                  <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-violet-700">
+                    AI
+                  </span>
+                  <span className="whitespace-pre-wrap">{ex.ai}</span>
+                </div>
               )}
-            </div>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
     </div>
   );
@@ -687,7 +692,7 @@ export default function InstructorAnalysisPage() {
                 <table className="mt-2 w-full border-collapse text-sm">
                   <tbody>
                     {view.flow.phases.map((p) => (
-                      <tr key={p.phase} className="border-t border-stone-100">
+                      <tr key={p.key} className="border-t border-stone-100">
                         <td className="py-1 pr-3 text-stone-700">{p.label}</td>
                         <td className="py-1 pr-3 font-semibold text-stone-800">
                           {p.medianMin == null
@@ -707,31 +712,14 @@ export default function InstructorAnalysisPage() {
                   Instruction
                 </h3>
                 {arm !== "agent" &&
-                  view.flow.instruction.lessonFirstTry.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold text-stone-500">
-                        Lesson — first-try correctness per question
-                        {view.flow.instruction.lessonMedianMin != null && (
-                          <>
-                            {" "}
-                            (median{" "}
-                            {view.flow.instruction.lessonMedianMin.toFixed(1)}{" "}
-                            min, {view.flow.instruction.lessonMedianHints ?? 0}{" "}
-                            hints)
-                          </>
-                        )}
-                      </p>
-                      <div className="mt-1 space-y-1">
-                        {view.flow.instruction.lessonFirstTry.map((it) => (
-                          <MiniBar
-                            key={it.itemId}
-                            label={`Q${it.itemId} (${Math.round(it.firstTryRate * 100)}%, n=${it.n})`}
-                            count={Math.round(it.firstTryRate * 100)}
-                            max={100}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                  view.flow.instruction.lessonMedianMin != null && (
+                    <p className="mt-2 text-xs text-stone-500">
+                      Lesson (control): median{" "}
+                      {view.flow.instruction.lessonMedianMin.toFixed(1)} min,{" "}
+                      {view.flow.instruction.lessonMedianHints ?? 0} hints.
+                      Per-question correctness and timestamps are in each
+                      participant&apos;s detail below.
+                    </p>
                   )}
                 {arm !== "lesson" &&
                   view.flow.instruction.avgAiPerPart.length > 0 && (

@@ -34,7 +34,7 @@ export type SurveyItemSummary = {
 export type FunnelStep = { step: string; reached: number };
 
 export type PhaseTiming = {
-  phase: Phase;
+  key: string;
   label: string;
   medianMin: number | null;
   n: number;
@@ -375,16 +375,6 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     .sort((a, b) => a.at.localeCompare(b.at));
 }
 
-const PHASE_LABELS: Record<Phase, string> = {
-  welcome: "Welcome",
-  pre_survey: "Pre-survey",
-  pretest: "Pre-test",
-  scenarios: "Instruction",
-  posttest: "Post-test",
-  post_survey: "Post-survey",
-  other: "Other",
-};
-
 export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   const bySubject = groupBySubject(docs);
   const subjects = [...bySubject.entries()];
@@ -417,14 +407,45 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     { step: "Post-survey done (completed)", reached: completerLists.length },
   ];
 
-  // Median minutes per phase, completers only.
-  const perSubjectMinutes = completerLists.map((l) => minutesPerPhase(l));
-  const phases: PhaseTiming[] = (
-    ["pre_survey", "pretest", "scenarios", "posttest", "post_survey"] as Phase[]
-  ).map((phase) => {
-    const vals = perSubjectMinutes.map((m) => m[phase]).filter((v) => v > 0);
-    return { phase, label: PHASE_LABELS[phase], medianMin: median(vals), n: vals.length };
-  });
+  // Arm per completer (each completer is in exactly one arm).
+  const armOf = (list: LogDoc[]): string | null => {
+    const ev = latest(list, "condition_assigned");
+    const c = ev?.data?.condition;
+    return typeof c === "string" ? c : null;
+  };
+
+  // Median minutes per phase, completers only. The instruction phase is split
+  // into the agent scenario and the LearnVia lesson, grouped by arm.
+  const withMinutes = completerLists.map((l) => ({
+    arm: armOf(l),
+    m: minutesPerPhase(l),
+  }));
+  const medPhase = (
+    phase: Phase,
+    filter: (x: { arm: string | null }) => boolean = () => true
+  ) => {
+    const vals = withMinutes
+      .filter(filter)
+      .map((x) => x.m[phase])
+      .filter((v) => v > 0);
+    return { medianMin: median(vals), n: vals.length };
+  };
+  const phases: PhaseTiming[] = [
+    { key: "pre_survey", label: "Pre-survey", ...medPhase("pre_survey") },
+    { key: "pretest", label: "Pre-test", ...medPhase("pretest") },
+    {
+      key: "instruction_agent",
+      label: "Instruction (agent)",
+      ...medPhase("scenarios", (x) => x.arm === "agent"),
+    },
+    {
+      key: "lesson",
+      label: "LearnVia lesson",
+      ...medPhase("scenarios", (x) => x.arm === "lesson"),
+    },
+    { key: "posttest", label: "Post-test", ...medPhase("posttest") },
+    { key: "post_survey", label: "Post-survey", ...medPhase("post_survey") },
+  ];
 
   // Survey response distributions, completers only.
   const screening = summariseSurvey(
@@ -441,11 +462,6 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   );
 
   // Instruction summary, completers only.
-  const armOf = (list: LogDoc[]): string | null => {
-    const ev = latest(list, "condition_assigned");
-    const c = ev?.data?.condition;
-    return typeof c === "string" ? c : null;
-  };
   const armCounts = { agent: 0, lesson: 0 };
   for (const list of completerLists) {
     const arm = armOf(list);
