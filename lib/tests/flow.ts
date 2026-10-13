@@ -74,11 +74,31 @@ export type LessonItemDetail = {
   at: string;
 };
 
+/**
+ * One part of the agent scenario, scored from that part's own events.
+ * `rate` (0–1) is the fraction judged correct where that is meaningful, and is
+ * used to pick the lowest-scoring part; it is null for parts with no answer key
+ * (e.g. applying the rubric to the AI's work).
+ */
+export type AgentPartScore = {
+  part: string;
+  scoreLabel: string;
+  rate: number | null;
+  seconds: number | null;
+  aiRuns: number;
+};
+
 export type InstructionDetail = {
   arm: string | null;
   minutes: number | null;
   /** Lesson arm: per-question correctness + timestamp. */
   lesson: LessonItemDetail[];
+  /** Agent arm: a scored, timed breakdown of each scenario part. */
+  agentParts: AgentPartScore[];
+  /** Agent arm: which part scored lowest / took most / took least time. */
+  agentLowestPart: string | null;
+  agentSlowestPart: string | null;
+  agentFastestPart: string | null;
   /** Agent arm: the full AI conversation, in order. */
   agent: AiExchange[];
 };
@@ -375,6 +395,130 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     .sort((a, b) => a.at.localeCompare(b.at));
 }
 
+/** The agent scenario's parts, in order, keyed by the page's path segment. */
+const AGENT_PARTS: { key: string; label: string }[] = [
+  { key: "question", label: "Compose the question" },
+  { key: "create-rubric", label: "Create the rubric" },
+  { key: "grade", label: "Grade the work" },
+  { key: "grade-lines", label: "Judge the steps" },
+];
+
+/** Which scenario part each AI route belongs to, for the per-part run counts. */
+const ROUTE_TO_PART: Record<string, string> = {
+  "question-feedback": "Compose the question",
+  "apply-rubric-feedback": "Grade the work",
+  "ai-student-answers": "Grade the work",
+  "grade-lines-comment": "Judge the steps",
+  "grade-lines-feedback": "Judge the steps",
+  "placement-classify": "Judge the steps",
+  "placement-explain": "Judge the steps",
+  "grade-chat": "Judge the steps",
+};
+
+/** The last non-empty segment of a path, e.g. "/5/grade-lines" -> "grade-lines". */
+function lastSegment(path: string): string {
+  return path.split("/").filter(Boolean).pop() ?? "";
+}
+
+/**
+ * Score each part of the agent scenario for one participant, from that part's
+ * own events: first-try MCQ correctness when composing the question, whether
+ * the rubric selection was perfect, how many answers were reviewed, and how
+ * many step placements were judged correctly. Time is the dwell on that page;
+ * AI runs are the exchanges routed to that part.
+ */
+function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
+  const sorted = [...list].sort((a, b) =>
+    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+  );
+
+  // Time on task per part (summed dwell), and AI runs per part.
+  const secondsByKey = new Map<string, number>();
+  for (const d of sorted) {
+    if (d.event !== "step_exited") continue;
+    const seg = lastSegment(String(d.data?.path ?? ""));
+    const dwell = Number(d.data?.dwell_ms);
+    if (seg && Number.isFinite(dwell))
+      secondsByKey.set(seg, (secondsByKey.get(seg) ?? 0) + dwell / 1000);
+  }
+  const aiByPart = new Map<string, number>();
+  for (const d of sorted) {
+    if (d.event !== "ai_exchange") continue;
+    const part = ROUTE_TO_PART[String(d.data?.route ?? "")];
+    if (part) aiByPart.set(part, (aiByPart.get(part) ?? 0) + 1);
+  }
+
+  // Compose the question: first-submit correctness per MCQ part.
+  const firstSubmit = new Map<string, boolean>();
+  for (const d of sorted) {
+    if (d.event !== "question_part_submitted") continue;
+    const pid = String(d.data?.part_id ?? "");
+    if (!pid || firstSubmit.has(pid)) continue;
+    firstSubmit.set(pid, d.data?.is_correct === true);
+  }
+  const qCorrect = [...firstSubmit.values()].filter(Boolean).length;
+  const qTotal = firstSubmit.size;
+
+  // Create the rubric: the latest submission's accuracy.
+  const rubric = latest(list, "rubric_submitted");
+  const rubricPerfect = rubric?.data?.is_perfect === true;
+  const wrongly = Array.isArray(rubric?.data?.wrongly_included)
+    ? (rubric!.data!.wrongly_included as unknown[]).length
+    : 0;
+  const missed = Array.isArray(rubric?.data?.missed_essential)
+    ? (rubric!.data!.missed_essential as unknown[]).length
+    : 0;
+
+  // Grade the work: how many of the AI's answers were reviewed.
+  const reviewed = sorted.filter((d) => d.event === "apply_rubric_submitted").length;
+
+  // Judge the steps: latest placement verdict per criterion.
+  const placements = new Map<string, boolean>();
+  for (const d of sorted) {
+    if (d.event !== "grade_lines_criterion_graded") continue;
+    const key = `${d.data?.answer_id ?? ""}::${d.data?.criterion_id ?? ""}`;
+    const p = d.data?.placement as Record<string, unknown> | undefined;
+    if (p) placements.set(key, p.correct === true);
+  }
+  const jCorrect = [...placements.values()].filter(Boolean).length;
+  const jTotal = placements.size;
+
+  const parts: AgentPartScore[] = AGENT_PARTS.map(({ key, label }) => {
+    const seconds = secondsByKey.get(key) ?? null;
+    const aiRuns = aiByPart.get(label) ?? 0;
+    let scoreLabel = "—";
+    let rate: number | null = null;
+
+    if (key === "question") {
+      if (qTotal) {
+        scoreLabel = `${qCorrect}/${qTotal} parts correct (first try)`;
+        rate = qCorrect / qTotal;
+      }
+    } else if (key === "create-rubric") {
+      if (rubric) {
+        scoreLabel = rubricPerfect
+          ? "perfect selection"
+          : `${wrongly} wrongly included, ${missed} missed`;
+        rate = rubricPerfect ? 1 : 0;
+      }
+    } else if (key === "grade") {
+      if (reviewed) scoreLabel = `${reviewed} answer(s) reviewed`;
+    } else if (key === "grade-lines") {
+      if (jTotal) {
+        scoreLabel = `${jCorrect}/${jTotal} criteria judged correctly`;
+        rate = jCorrect / jTotal;
+      }
+    }
+
+    return { part: label, scoreLabel, rate, seconds, aiRuns };
+  });
+
+  // Keep only parts the participant actually touched.
+  return parts.filter(
+    (p) => p.seconds != null || p.aiRuns > 0 || p.rate != null || p.scoreLabel !== "—"
+  );
+}
+
 export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   const bySubject = groupBySubject(docs);
   const subjects = [...bySubject.entries()];
@@ -504,10 +648,21 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   const instructionDetailOf = (list: LogDoc[]): InstructionDetail => {
     const arm = armOf(list);
     const mins = minutesPerPhase(list).scenarios;
+    const agentParts = arm === "agent" ? agentPartsOf(list) : [];
+    const scored = agentParts.filter((p) => p.rate != null);
+    const timed = agentParts.filter((p) => p.seconds != null);
+    const minBy = <T>(xs: T[], f: (x: T) => number): T | null =>
+      xs.length ? xs.reduce((a, b) => (f(b) < f(a) ? b : a)) : null;
+    const maxBy = <T>(xs: T[], f: (x: T) => number): T | null =>
+      xs.length ? xs.reduce((a, b) => (f(b) > f(a) ? b : a)) : null;
     return {
       arm,
       minutes: mins > 0 ? mins : null,
       lesson: arm === "lesson" ? lessonItemsOf(list) : [],
+      agentParts,
+      agentLowestPart: minBy(scored, (p) => p.rate ?? 1)?.part ?? null,
+      agentSlowestPart: maxBy(timed, (p) => p.seconds ?? 0)?.part ?? null,
+      agentFastestPart: minBy(timed, (p) => p.seconds ?? Infinity)?.part ?? null,
       agent:
         arm === "agent"
           ? list

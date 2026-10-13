@@ -80,6 +80,8 @@ export type ItemResponse = {
   points: number | null;
   maxPoints: number;
   answer: string;
+  /** Seconds this participant spent on this item, or null if not measurable. */
+  seconds: number | null;
   verdicts: { id: string; verdict: string; comment: string }[];
 };
 
@@ -208,6 +210,45 @@ function secondsPerItem(docs: LogDoc[]): Map<string, number[]> {
   return perItem;
 }
 
+/**
+ * Seconds per (subject, test, item) — the same gap measure as secondsPerItem,
+ * but kept per participant so each person's card can show how long they spent
+ * on each question. Keyed `${subject}::${testId}::${itemId}`.
+ */
+function secondsBySubjectItem(docs: LogDoc[]): Map<string, number> {
+  const out = new Map<string, number>();
+
+  const bySession = new Map<string, LogDoc[]>();
+  for (const doc of docs) {
+    if (doc.event !== "test_item_answered" && doc.event !== "test_started") continue;
+    const key = `${doc.subject_id ?? ""}::${doc.scenario_id ?? ""}`;
+    bySession.set(key, [...(bySession.get(key) ?? []), doc]);
+  }
+
+  for (const [sessionKey, list] of bySession) {
+    const ordered = [...list].sort((a, b) =>
+      (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+    );
+    let previous: string | null =
+      ordered.find((d) => d.event === "test_started")?.timestamp ?? null;
+
+    for (const doc of ordered) {
+      if (doc.event !== "test_item_answered") continue;
+      const itemId = doc.data?.item_id as string | undefined;
+      if (!itemId || !doc.timestamp) continue;
+      if (previous) {
+        const seconds = (Date.parse(doc.timestamp) - Date.parse(previous)) / 1000;
+        if (seconds > 0 && seconds <= MAX_ITEM_SECONDS) {
+          out.set(`${sessionKey}::${itemId}`, seconds);
+        }
+      }
+      previous = doc.timestamp;
+    }
+  }
+
+  return out;
+}
+
 function accuracyByItem(graded: GradedSubmission[], testId?: TestId) {
   const points = new Map<string, { total: number; max: number; n: number }>();
 
@@ -260,7 +301,8 @@ const MAX_ANSWER_CHARS = 2000;
 
 function buildItemDetail(
   itemId: string,
-  graded: GradedSubmission[]
+  graded: GradedSubmission[],
+  secondsByKey: Map<string, number>
 ): ItemDetail {
   const prompts: Partial<Record<TestId, string>> = {};
   for (const testId of ["pretest", "posttest"] as TestId[]) {
@@ -311,6 +353,10 @@ function buildItemDetail(
         ? formatAnswer(found.item, submission.answers[itemId])
         : JSON.stringify(submission.answers[itemId] ?? null)
       ).slice(0, MAX_ANSWER_CHARS),
+      seconds:
+        secondsByKey.get(
+          `${submission.subjectId}::${submission.testId}::${itemId}`
+        ) ?? null,
       verdicts:
         open?.criteria.map((c) => ({
           id: c.id,
@@ -431,6 +477,7 @@ export function buildInsights(
   );
 
   const timing = secondsPerItem(completeDocs);
+  const timingByKey = secondsBySubjectItem(completeDocs);
   const overall = accuracyByItem(graded);
   const discrimination = discriminationByItem(graded);
   const pointValues = pointValuesByItem(graded);
@@ -471,7 +518,7 @@ export function buildInsights(
         discMeanNot: disc?.meanNot ?? null,
         discNGot: disc?.nGot ?? 0,
         discNNot: disc?.nNot ?? 0,
-        detail: buildItemDetail(itemId, graded),
+        detail: buildItemDetail(itemId, graded, timingByKey),
       };
     })
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));

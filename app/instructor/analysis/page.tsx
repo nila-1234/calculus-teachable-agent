@@ -297,8 +297,18 @@ function InstructionBlock({
 }: {
   instr: ParticipantDetail["instruction"];
 }) {
-  const { arm, minutes, lesson, agent } = instr;
-  if (lesson.length === 0 && agent.length === 0) return null;
+  const {
+    arm,
+    minutes,
+    lesson,
+    agent,
+    agentParts,
+    agentLowestPart,
+    agentSlowestPart,
+    agentFastestPart,
+  } = instr;
+  if (lesson.length === 0 && agent.length === 0 && agentParts.length === 0)
+    return null;
   return (
     <div className="mt-3">
       <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
@@ -306,6 +316,44 @@ function InstructionBlock({
         {arm ? ` · ${arm}` : ""}
         {minutes != null ? ` · ${minutes.toFixed(1)} min` : ""}
       </p>
+      {agentParts.length > 0 && (
+        <div className="mt-2">
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="text-left text-stone-400">
+                <th className="py-1 pr-3 font-semibold">Part</th>
+                <th className="py-1 pr-3 font-semibold">Score</th>
+                <th className="py-1 pr-3 font-semibold">Time</th>
+                <th className="py-1 font-semibold">AI runs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agentParts.map((p) => (
+                <tr key={p.part} className="border-t border-stone-100">
+                  <td className="py-1 pr-3 text-stone-700">{p.part}</td>
+                  <td className="py-1 pr-3 text-stone-600">
+                    {p.scoreLabel}
+                    {p.rate != null && (
+                      <span className="ml-1 text-stone-400">
+                        ({Math.round(p.rate * 100)}%)
+                      </span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap py-1 pr-3 text-stone-500">
+                    {fmtSec(p.seconds)}
+                  </td>
+                  <td className="py-1 text-stone-500">{p.aiRuns}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-1 text-[11px] text-stone-400">
+            {agentLowestPart && <>Lowest score: {agentLowestPart}. </>}
+            {agentSlowestPart && <>Most time: {agentSlowestPart}. </>}
+            {agentFastestPart && <>Least time: {agentFastestPart}.</>}
+          </p>
+        </div>
+      )}
       {lesson.length > 0 && (
         <ul className="mt-1 space-y-1 text-xs">
           {lesson.map((it) => (
@@ -404,6 +452,7 @@ function ResponseTable({
           <tr className="text-left text-xs text-stone-400">
             <th className="py-1 pr-3 font-semibold">Question</th>
             <th className="py-1 pr-3 font-semibold">Response</th>
+            <th className="py-1 pr-3 font-semibold">Time</th>
             <th className="py-1 font-semibold">Score</th>
           </tr>
         </thead>
@@ -417,6 +466,9 @@ function ResponseTable({
                 </td>
                 <td className="py-1 pr-3 text-stone-800">
                   <span className="whitespace-pre-wrap">{r.answer || "—"}</span>
+                </td>
+                <td className="whitespace-nowrap py-1 pr-3 text-stone-500">
+                  {fmtSec(r.seconds)}
                 </td>
                 <td className="py-1 text-stone-600">
                   <span className="whitespace-nowrap font-semibold">
