@@ -83,6 +83,16 @@ export type ItemStat = {
   /** Median seconds spent, or null when it could not be measured. */
   medianSeconds: number | null;
   timedN: number;
+  /**
+   * Discrimination: mean TEST TOTAL of those who got the item (≥ half its marks)
+   * minus those who did not, pooled across pre and post. A bigger positive gap =
+   * the item separates stronger from weaker participants. null if not computable.
+   */
+  discriminationGap: number | null;
+  discMeanGot: number | null;
+  discMeanNot: number | null;
+  discNGot: number;
+  discNNot: number;
   /** Everything needed to answer "why is this one missed?" */
   detail: ItemDetail;
 };
@@ -104,6 +114,10 @@ export type Insights = {
   slowest: ItemStat[];
   hardest: ItemStat[];
   goals: GoalStat[];
+  /** Overall test-total distribution across completers, bucketed into bands. */
+  totalMax: number;
+  scorePre: { label: string; count: number }[];
+  scorePost: { label: string; count: number }[];
   /** True when the sample is too small to read anything into. */
   underpowered: boolean;
 };
@@ -288,6 +302,68 @@ function buildItemDetail(
   return { prompts, criteria, choices, responses };
 }
 
+/** Bucket a set of test totals into ~6 bands for a distribution chart. */
+function scoreBands(
+  totals: number[],
+  max: number
+): { label: string; count: number }[] {
+  const step = Math.max(1, Math.ceil((max + 1) / 6));
+  const bands: { label: string; count: number }[] = [];
+  for (let lo = 0; lo <= max; lo += step) {
+    const hi = Math.min(lo + step - 1, max);
+    bands.push({
+      label: lo === hi ? `${lo}` : `${lo}–${hi}`,
+      count: totals.filter((t) => t >= lo && t <= hi).length,
+    });
+  }
+  return bands;
+}
+
+const mean = (xs: number[]): number | null =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+
+/**
+ * Per-item discrimination, pooled across pre and post: for each item, split the
+ * graded submissions into those that got it (≥ half marks) and those that did
+ * not, and compare the mean TEST TOTAL of each group.
+ */
+function discriminationByItem(graded: GradedSubmission[]) {
+  const buckets = new Map<string, { got: number[]; not: number[] }>();
+  for (const { result } of graded) {
+    if (!result.complete) continue;
+    for (const item of result.items) {
+      if (item.points === null) continue;
+      const b = buckets.get(item.itemId) ?? { got: [], not: [] };
+      (item.points >= item.maxPoints / 2 ? b.got : b.not).push(
+        result.totalPoints
+      );
+      buckets.set(item.itemId, b);
+    }
+  }
+  const out = new Map<
+    string,
+    {
+      gap: number | null;
+      meanGot: number | null;
+      meanNot: number | null;
+      nGot: number;
+      nNot: number;
+    }
+  >();
+  for (const [id, b] of buckets) {
+    const mg = mean(b.got);
+    const mn = mean(b.not);
+    out.set(id, {
+      gap: mg != null && mn != null ? mg - mn : null,
+      meanGot: mg,
+      meanNot: mn,
+      nGot: b.got.length,
+      nNot: b.not.length,
+    });
+  }
+  return out;
+}
+
 export function buildInsights(
   docs: LogDoc[],
   gradedAll: GradedSubmission[]
@@ -311,10 +387,12 @@ export function buildInsights(
 
   const timing = secondsPerItem(completeDocs);
   const overall = accuracyByItem(graded);
+  const discrimination = discriminationByItem(graded);
 
   const items: ItemStat[] = [...overall.entries()]
     .map(([itemId, { total, max, n }]) => {
       const seconds = timing.get(itemId) ?? [];
+      const disc = discrimination.get(itemId);
       return {
         itemId,
         goal: goalForItem(itemId),
@@ -324,6 +402,11 @@ export function buildInsights(
         n,
         medianSeconds: median(seconds),
         timedN: seconds.length,
+        discriminationGap: disc?.gap ?? null,
+        discMeanGot: disc?.meanGot ?? null,
+        discMeanNot: disc?.meanNot ?? null,
+        discNGot: disc?.nGot ?? 0,
+        discNNot: disc?.nNot ?? 0,
         detail: buildItemDetail(itemId, graded),
       };
     })
@@ -375,6 +458,13 @@ export function buildInsights(
 
   const timed = items.filter((i) => i.medianSeconds !== null);
 
+  const totalMax =
+    graded.find((g) => g.result.complete)?.result.totalMaxPoints ?? 22;
+  const totalsFor = (testId: TestId) =>
+    graded
+      .filter((g) => g.submission.testId === testId && g.result.complete)
+      .map((g) => g.result.totalPoints);
+
   return {
     participants: subjects.size,
     pairedParticipants,
@@ -384,6 +474,9 @@ export function buildInsights(
       .slice(0, 3),
     hardest: [...items].sort((a, b) => a.accuracy - b.accuracy).slice(0, 3),
     goals,
+    totalMax,
+    scorePre: scoreBands(totalsFor("pretest"), totalMax),
+    scorePost: scoreBands(totalsFor("posttest"), totalMax),
     // Below this, per-item figures are one or two people's answers and any
     // ordering between them is noise.
     underpowered: pairedParticipants < 5,

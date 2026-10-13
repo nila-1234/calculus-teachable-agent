@@ -48,6 +48,42 @@ const pct = (value: number | null) =>
 const signed = (value: number | null) =>
   value === null ? "—" : `${value > 0 ? "+" : ""}${value.toFixed(1)} pts`;
 
+/** A labelled horizontal bar for the distribution/discrimination charts. */
+function BarRow({
+  label,
+  count,
+  max,
+  suffix,
+  highlight,
+}: {
+  label: string;
+  count: number;
+  max: number;
+  suffix?: string;
+  highlight?: "good" | "warn";
+}) {
+  const color =
+    highlight === "good"
+      ? "bg-lime-500"
+      : highlight === "warn"
+        ? "bg-amber-500"
+        : "bg-stone-400";
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-28 shrink-0 truncate text-right text-stone-500">
+        {label}
+      </span>
+      <div className="h-3 flex-1 rounded bg-stone-100">
+        <div
+          className={`h-3 rounded ${color}`}
+          style={{ width: `${max ? Math.min(100, (count / max) * 100) : 0}%` }}
+        />
+      </div>
+      <span className="w-20 shrink-0 text-stone-600">{suffix ?? count}</span>
+    </div>
+  );
+}
+
 const DOWNLOADS: { format: string; label: string; ext: string }[] = [
   { format: "json", label: "Full results (JSON)", ext: "json" },
   { format: "subjects", label: "Per participant (CSV)", ext: "csv" },
@@ -200,24 +236,42 @@ function ItemDetailPanel({
           <h4 className="mt-6 text-sm font-bold text-stone-800">
             What people chose
           </h4>
-          <div className="mt-2 space-y-2">
-            {detail.choices.map((c) => (
-              <div
-                key={c.choiceId}
-                className="flex items-center justify-between rounded-xl border-2 border-stone-100 bg-stone-50 px-4 py-2 text-sm"
-              >
-                <span className="text-stone-700">
-                  <span className="font-bold">{c.choiceId}</span>{" "}
-                  {c.correct && (
-                    <span className="ml-1 rounded bg-lime-100 px-1.5 py-0.5 text-xs font-bold text-lime-800">
-                      correct
-                    </span>
-                  )}
-                </span>
-                <span className="text-stone-500">chosen {c.count}&times;</span>
+          <p className="mt-1 text-xs text-stone-400">
+            ✓ correct · ◆ main distractor (most-chosen wrong option)
+          </p>
+          {(() => {
+            const maxWrong = Math.max(
+              0,
+              ...detail.choices.filter((c) => !c.correct).map((c) => c.count)
+            );
+            const distractor =
+              maxWrong > 0
+                ? detail.choices.find(
+                    (c) => !c.correct && c.count === maxWrong
+                  )?.choiceId ?? null
+                : null;
+            const mc = Math.max(1, ...detail.choices.map((c) => c.count));
+            return (
+              <div className="mt-2 space-y-1">
+                {detail.choices.map((c) => (
+                  <BarRow
+                    key={c.choiceId}
+                    label={`${c.choiceId}${c.correct ? " ✓" : c.choiceId === distractor ? " ◆" : ""}`}
+                    count={c.count}
+                    max={mc}
+                    highlight={
+                      c.correct
+                        ? "good"
+                        : c.choiceId === distractor
+                          ? "warn"
+                          : undefined
+                    }
+                    suffix={`${c.count}×`}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </>
       )}
 
@@ -551,6 +605,128 @@ export default function InstructorAnalysisPage() {
                     </ul>
                   </div>
                 </div>
+
+                {/* ---- Score distribution ---- */}
+                <h3 className="mt-12 text-base font-bold text-stone-800">
+                  Score distribution
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  Completers per score band, out of {summary.insights.totalMax}.
+                </p>
+                <div className="mt-3 grid gap-6 md:grid-cols-2">
+                  {(
+                    [
+                      ["Pre-test", summary.insights.scorePre],
+                      ["Post-test", summary.insights.scorePost],
+                    ] as const
+                  ).map(([label, bands]) => {
+                    const mc = Math.max(1, ...bands.map((b) => b.count));
+                    return (
+                      <div key={label}>
+                        <p className="mb-1 text-xs font-semibold text-stone-500">
+                          {label}
+                        </p>
+                        <div className="space-y-1">
+                          {bands.map((b) => (
+                            <BarRow
+                              key={b.label}
+                              label={b.label}
+                              count={b.count}
+                              max={mc}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Item discrimination ---- */}
+                <h3 className="mt-10 text-base font-bold text-stone-800">
+                  Item discrimination
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  Mean test total of those who got the item (≥ half marks) minus
+                  those who didn&apos;t. Bigger positive gap = the item better
+                  separates strong from weak participants. Pooled across pre and
+                  post.
+                </p>
+                <div className="mt-3 space-y-1">
+                  {[...summary.insights.items]
+                    .sort(
+                      (a, b) =>
+                        (b.discriminationGap ?? -99) -
+                        (a.discriminationGap ?? -99)
+                    )
+                    .map((item) => (
+                      <BarRow
+                        key={item.itemId}
+                        label={`Q${item.itemId}`}
+                        count={Math.max(0, item.discriminationGap ?? 0)}
+                        max={summary.insights.totalMax}
+                        highlight={
+                          (item.discriminationGap ?? 0) > 0 ? "good" : "warn"
+                        }
+                        suffix={
+                          item.discriminationGap == null
+                            ? "—"
+                            : `+${item.discriminationGap.toFixed(1)} (${item.discMeanGot?.toFixed(0) ?? "–"} vs ${item.discMeanNot?.toFixed(0) ?? "–"})`
+                        }
+                      />
+                    ))}
+                </div>
+
+                {/* ---- Conclusions ---- */}
+                <h3 className="mt-10 text-base font-bold text-stone-800">
+                  Conclusions — which items are too easy / too hard
+                </h3>
+                <p className="mt-1 text-xs leading-5 text-stone-500">
+                  Difficulty = mean % of max (pooled). Discrimination = the gap
+                  above. Small sample — read as signal, not proof.
+                </p>
+                <table className="mt-2 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Item</th>
+                      <th className="py-1 pr-3 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">Discrim.</th>
+                      <th className="py-1 font-semibold">Read</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...summary.insights.items]
+                      .sort((a, b) => b.accuracy - a.accuracy)
+                      .map((item) => {
+                        const acc = item.accuracy * 100;
+                        const gap = item.discriminationGap;
+                        const v =
+                          acc >= 75
+                            ? { t: "Too easy — near ceiling", c: "text-amber-600" }
+                            : gap != null && gap < 2
+                              ? { t: "Weak discriminator", c: "text-amber-600" }
+                              : acc <= 30
+                                ? { t: "Hard — floor-leaning", c: "text-stone-600" }
+                                : { t: "Good spread", c: "text-lime-700" };
+                        return (
+                          <tr
+                            key={item.itemId}
+                            className="border-t border-stone-100"
+                          >
+                            <td className="py-1 pr-3 text-stone-700">
+                              Q{item.itemId}
+                            </td>
+                            <td className="py-1 pr-3 font-semibold text-stone-800">
+                              {Math.round(acc)}%
+                            </td>
+                            <td className="py-1 pr-3 text-stone-500">
+                              {gap == null ? "—" : `+${gap.toFixed(1)}`}
+                            </td>
+                            <td className={`py-1 font-medium ${v.c}`}>{v.t}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
 
                 <h3 className="mt-12 text-base font-bold text-stone-800">
                   Every item
