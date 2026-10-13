@@ -24,6 +24,14 @@ import { LESSON_SEQUENCE, lessonPath } from "@/lib/lessons/definitions";
 export const CONDITIONS = ["agent", "lesson"] as const;
 export type Condition = (typeof CONDITIONS)[number];
 
+/**
+ * TEMPORARY OVERRIDE — force every participant onto one arm.
+ * "lesson"/"agent" collects that arm only; set back to null to restore the
+ * balanced split. (A matching override exists in app/api/assign/route.ts —
+ * flip both.)
+ */
+const FORCE_CONDITION: Condition | null = "lesson";
+
 /** Lets the instructor preview a specific arm: ?cond=lesson */
 const CONDITION_PARAM = "cond";
 
@@ -95,6 +103,20 @@ function fallbackCondition(): Condition {
  * so it is visible when the split is audited.
  */
 export async function resolveCondition(): Promise<Condition> {
+  // Temporary override: hand everyone the forced arm and record it server-side.
+  if (FORCE_CONDITION) {
+    writeCache(FORCE_CONDITION);
+    void fetch("/api/assign", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject_id: getSubjectId(),
+        preferred: FORCE_CONDITION,
+      }),
+    }).catch(() => {});
+    return FORCE_CONDITION;
+  }
+
   const cached = readCache();
   if (cached) return cached;
 
@@ -156,6 +178,7 @@ export function previewCondition(): Condition {
 export function getCondition(): Condition {
   if (typeof window === "undefined") return "agent";
   if (isPreviewActive()) return previewCondition();
+  if (FORCE_CONDITION) return FORCE_CONDITION;
   return readCache() ?? fallbackCondition();
 }
 
