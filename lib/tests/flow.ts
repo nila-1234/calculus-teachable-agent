@@ -901,38 +901,131 @@ function rubricTaskOf(sorted: LogDoc[]): AgentTask | null {
 }
 
 /**
+ * Cause-and-effect rank for events logged in the same millisecond. A drag is
+ * graded, then discussed; a reply is typed, then read by the AI, then moves the
+ * decision tree, which then speaks. Several of these routinely share a
+ * timestamp, and the database returns ties in arbitrary order — so without
+ * this, a reply could land after the AI line that answered it.
+ */
+function causalRank(d: LogDoc): number {
+  const route = d.event === "ai_exchange" ? String(d.data?.route ?? "") : "";
+  if (route === "grade-lines-feedback" || d.event === "grade_lines_criterion_graded") return 0;
+  if (d.event === "grade_lines_flow_message" && d.data?.role === "user") return 1;
+  if (route === "placement-classify") return 2;
+  if (
+    d.event === "grade_lines_placement_transition" ||
+    d.event === "grade_lines_status_transition" ||
+    d.event === "grade_lines_placement_unchallenged" ||
+    d.event === "grade_lines_status_unchallenged"
+  )
+    return 3;
+  if (d.event === "grade_lines_flow_message") return 4;
+  if (route === "placement-explain") return 5;
+  return 3;
+}
+
+/**
+ * Events in the order they happened: by the per-browser sequence number when
+ * both events have one (newer runs), otherwise by timestamp with same-instant
+ * ties broken by cause and effect.
+ */
+function causalSort(list: LogDoc[]): LogDoc[] {
+  return [...list].sort((a, b) => {
+    if (
+      typeof a.seq === "number" &&
+      typeof b.seq === "number" &&
+      a.session_id === b.session_id
+    )
+      return a.seq - b.seq;
+    const t = (a.timestamp ?? "").localeCompare(b.timestamp ?? "");
+    return t !== 0 ? t : causalRank(a) - causalRank(b);
+  });
+}
+
+const ms = (d: { timestamp?: string; at?: string }) =>
+  Date.parse(d.timestamp ?? d.at ?? "") || 0;
+
+/** How far apart (ms) a move and its discussion step may be and still pair. */
+const PAIR_WINDOW_MS = 15000;
+
+/**
  * Apply Rubric task: one item per criterion per phase (which step it belongs
- * on, then pass/fail), showing every move the participant made, why the AI
- * engaged, what it said, and exactly how the participant replied.
+ * on, then pass/fail), showing in order: the participant's move, the AI's
+ * question or challenge, the participant's reply, the AI's answer, and so on.
  *
- * Newer runs log every displayed line (grade_lines_flow_message), which is used
+ * Newer runs log every displayed line (grade_lines_flow_message), used
  * verbatim. Older runs are rebuilt: the decision tree is deterministic
  * (lib/placement-flow.ts), so replaying each logged transition recovers the
  * fixed AI lines; model-written lines and replies come from the AI exchanges.
- * In older runs, a typed reply that never reached an AI route was not saved.
+ * Moves and replies are paired with their own step by time and content, never
+ * by arrival order. In older runs, a typed reply that never reached an AI call
+ * was not saved, and is shown as such.
  */
-function applyRubricTaskOf(sorted: LogDoc[]): { task: AgentTask | null; exact: boolean } {
+function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boolean } {
+  const sorted = causalSort(list);
   const exact = sorted.some((d) => d.event === "grade_lines_flow_message");
-  const items = new Map<string, AgentTaskItem & { phase: "placement" | "status"; started: boolean }>();
-  const lastVerdict = new Map<string, GradeVerdict>();
-  const order: string[] = [];
-  let currentKey: string | null = null;
-  let pendingClassify: { reply: string; label: string } | null = null;
-  // The last participant reply in each item whose text still needs filling in.
-  const unfilled = new Map<string, ConvTurn>();
 
-  const itemFor = (key: string, v: GradeVerdict | undefined, phase: "placement" | "status") => {
+  // Every graded drag / mark, and every classified reply, up front — so each
+  // can be paired with its own discussion step regardless of log order.
+  const verdicts = gradeVerdictsOf(sorted).map((v) => ({ ...v, used: false }));
+  const classifies = sorted
+    .filter((d) => d.event === "ai_exchange" && d.data?.route === "placement-classify")
+    .map((d) => {
+      const req = (d.data?.request ?? {}) as Record<string, unknown>;
+      return {
+        at: ms(d),
+        question: String(req.question ?? ""),
+        reply: pick(req, ["reply", "message", "text"]),
+        used: false,
+      };
+    });
+
+  const takeVerdict = (key: string, at: number) => {
+    let best: (typeof verdicts)[number] | null = null;
+    for (const v of verdicts) {
+      if (v.used || `${v.answerId}::${v.criterionId}::${v.phase}` !== key) continue;
+      const gap = Math.abs(ms(v) - at);
+      // The grade always comes just before its drop/mark is discussed.
+      if (ms(v) > at + 1000 || gap > PAIR_WINDOW_MS) continue;
+      if (!best || gap < Math.abs(ms(best) - at)) best = v;
+    }
+    if (best) best.used = true;
+    return best;
+  };
+
+  const takeClassify = (at: number, questions: string[]) => {
+    let best: (typeof classifies)[number] | null = null;
+    for (const c of classifies) {
+      if (c.used || Math.abs(c.at - at) > PAIR_WINDOW_MS) continue;
+      const matches = questions.includes(c.question);
+      const bestMatches = best ? questions.includes(best.question) : false;
+      if (
+        !best ||
+        (matches && !bestMatches) ||
+        (matches === bestMatches && Math.abs(c.at - at) < Math.abs(best.at - at))
+      )
+        best = c;
+    }
+    if (best) best.used = true;
+    return best;
+  };
+
+  const items = new Map<string, AgentTaskItem>();
+  const current = new Map<string, GradeVerdict>();
+  const order: string[] = [];
+  const unfilled = new Map<string, ConvTurn>();
+  let activeKey: string | null = null;
+
+  const itemFor = (key: string, v: GradeVerdict | null | undefined, phase: "placement" | "status") => {
     let it = items.get(key);
     if (!it) {
       it = {
-        title: `${v?.answerTitle ?? "Answer"} · "${v?.item.criterion ?? key}" — ${
+        title: `${v?.answerTitle ?? "Answer"} · "${v?.item.criterion ?? key.split("::")[1]}" — ${
           phase === "status" ? "pass / fail" : "which step"
         }`,
         trigger: "",
         outcome: "",
         turns: [],
-        phase,
-        started: false,
       };
       items.set(key, it);
       order.push(key);
@@ -943,33 +1036,104 @@ function applyRubricTaskOf(sorted: LogDoc[]): { task: AgentTask | null; exact: b
   for (const d of sorted) {
     const data = (d.data ?? {}) as Record<string, unknown>;
 
-    // A drag or a pass/fail mark, graded.
-    if (d.event === "ai_exchange" && data.route === "grade-lines-feedback") {
-      const [v] = gradeVerdictsOf([d]);
-      if (!v) continue;
-      const key = `${v.answerId}::${v.criterionId}::${v.phase}`;
-      lastVerdict.set(key, v);
-      const it = itemFor(key, v, v.phase);
-      it.turns.push(describeMove(v.phase, v.item));
-      currentKey = key;
-      continue;
-    }
-
-    // A correct call accepted without any discussion.
-    if (
+    const isTransition =
+      d.event === "grade_lines_placement_transition" ||
+      d.event === "grade_lines_status_transition";
+    const isUnchallenged =
       d.event === "grade_lines_placement_unchallenged" ||
-      d.event === "grade_lines_status_unchallenged"
-    ) {
-      const phase = d.event === "grade_lines_status_unchallenged" ? "status" : "placement";
+      d.event === "grade_lines_status_unchallenged";
+
+    if (isTransition || isUnchallenged) {
+      const phase = (d.event ?? "").includes("_status_") ? "status" : "placement";
       const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
-      const it = itemFor(key, lastVerdict.get(key), phase);
-      if (!it.trigger) it.trigger = "No discussion — the correct call was accepted as-is.";
-      it.turns.push({
-        speaker: "system",
-        kind: "note",
-        text: "Accepted without discussion (correct calls are only challenged 20% of the time).",
-      });
-      it.outcome = "Accepted — correct, no discussion.";
+      activeKey = key;
+      const event = data.event as PlacementEvent | undefined;
+      const from = data.from as PlacementFlow | undefined;
+
+      // A new drag / mark: pair it with its own grade, then show the move.
+      if (isUnchallenged || event?.type === "DROP") {
+        const v = takeVerdict(key, ms(d));
+        if (v) current.set(key, v);
+        const it = itemFor(key, v ?? current.get(key), phase);
+        if (v) it.turns.push(describeMove(phase, v.item));
+        if (isUnchallenged) {
+          if (!it.trigger) it.trigger = "No discussion — the correct call was accepted as-is.";
+          it.turns.push({
+            speaker: "system",
+            kind: "note",
+            text: "Accepted without discussion (correct calls are only challenged 20% of the time).",
+          });
+          it.outcome = "Accepted — correct, no discussion.";
+          continue;
+        }
+        if (!it.trigger && v) it.trigger = triggerFor(phase, v.item);
+      }
+
+      if (!from || !event) continue;
+      const v = current.get(key);
+      const it = itemFor(key, v, phase);
+
+      if (!exact && event.type === "REPLY") {
+        const node = from.kind === "chat" ? from.node : "";
+        const label = event.label ?? null;
+        let turn: ConvTurn;
+        if (node === "askSure") {
+          // The question this reply answered: "Are you sure…?" or, after an
+          // unclear reply, "Just to check…".
+          const asked = v
+            ? [scriptedLine(phase, "askSure", v.item), scriptedLine(phase, "clarify", v.item)]
+            : [];
+          const c = takeClassify(ms(d), asked);
+          turn = c
+            ? { speaker: "participant", kind: "reply", text: c.reply }
+            : label && QUICK_REPLY_TEXT[label]
+              ? { speaker: "participant", kind: "reply", text: QUICK_REPLY_TEXT[label] }
+              : { speaker: "participant", kind: "reply", text: "(reply not saved in this run)" };
+        } else {
+          turn = {
+            speaker: "participant",
+            kind: "reply",
+            text: `(typed a reply to the ${NODE_QUESTION[node] ?? "question"} — not saved in this run)`,
+          };
+          unfilled.set(key, turn);
+        }
+        it.turns.push(turn);
+        if (node === "askSure") {
+          it.turns.push({
+            speaker: "system",
+            kind: "note",
+            text: `Read as: ${label ?? "unclear"}${
+              label === "unclear" && from.kind === "chat" && from.unclear >= 1
+                ? " (second unclear reply — treated as no)"
+                : ""
+            }.`,
+          });
+        }
+      }
+
+      const { next, effects } = transitionPlacement(from, event);
+      if (!exact && v) {
+        const persona = personaFor(phase, v.item);
+        for (const effect of effects) {
+          if (effect.type === "say") {
+            it.turns.push({
+              speaker: persona,
+              kind: "scripted",
+              text: scriptedLine(phase, effect.line, v.item),
+            });
+          }
+          // `explain` lines are model-written: they arrive as the
+          // placement-explain exchange that follows.
+        }
+      }
+      if (next.kind === "resolved") {
+        it.outcome =
+          next.how === "accepted"
+            ? `Resolved — the participant stood by a correct call (attempt ${next.attempt}).`
+            : `Resolved — the participant moved it after being told the answer (attempt ${next.attempt}).`;
+      } else if (next.kind === "dragging" && next.revealed) {
+        it.outcome = "Out of attempts — the AI told them the answer.";
+      }
       continue;
     }
 
@@ -977,7 +1141,7 @@ function applyRubricTaskOf(sorted: LogDoc[]): { task: AgentTask | null; exact: b
     if (d.event === "grade_lines_flow_message") {
       const phase = data.kind === "status" ? "status" : "placement";
       const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
-      const it = itemFor(key, lastVerdict.get(key), phase);
+      const it = itemFor(key, current.get(key), phase);
       const role = String(data.role ?? "");
       it.turns.push(
         role === "user"
@@ -991,144 +1155,58 @@ function applyRubricTaskOf(sorted: LogDoc[]): { task: AgentTask | null; exact: b
       continue;
     }
 
-    if (
-      d.event === "grade_lines_placement_transition" ||
-      d.event === "grade_lines_status_transition"
-    ) {
-      const phase = d.event === "grade_lines_status_transition" ? "status" : "placement";
-      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
-      currentKey = key;
-      const v = lastVerdict.get(key);
-      const it = itemFor(key, v, phase);
-      const from = data.from as PlacementFlow | undefined;
-      const event = data.event as PlacementEvent | undefined;
-      if (!from || !event) continue;
-
-      if (event.type === "DROP" && !it.started && v) {
-        it.trigger = triggerFor(phase, v.item);
-        it.started = true;
-      }
-
-      if (!exact) {
-        if (event.type === "REPLY") {
-          const node = from.kind === "chat" ? from.node : "";
-          const label = event.label ?? null;
-          let turn: ConvTurn;
-          if (node === "askSure" && pendingClassify) {
-            turn = { speaker: "participant", kind: "reply", text: pendingClassify.reply };
-          } else if (node === "askSure" && label && QUICK_REPLY_TEXT[label]) {
-            turn = { speaker: "participant", kind: "reply", text: QUICK_REPLY_TEXT[label] };
-          } else {
-            turn = {
-              speaker: "participant",
-              kind: "reply",
-              text: `(typed a reply to the ${NODE_QUESTION[node] ?? "question"} — not saved in this run)`,
-            };
-            unfilled.set(key, turn);
-          }
-          it.turns.push(turn);
-          if (node === "askSure") {
-            it.turns.push({
-              speaker: "system",
-              kind: "note",
-              text: `Read as: ${label ?? "unclear"}${
-                label === "unclear" && from.kind === "chat" && from.unclear >= 1
-                  ? " (second unclear reply — treated as no)"
-                  : ""
-              }.`,
-            });
-          }
-          pendingClassify = null;
-        }
-
-        const { effects } = transitionPlacement(from, event);
-        const persona = v ? personaFor(phase, v.item) : "professor";
-        for (const effect of effects) {
-          if (effect.type === "say" && v) {
-            it.turns.push({
-              speaker: persona,
-              kind: "scripted",
-              text: scriptedLine(phase, effect.line, v.item),
-            });
-          }
-          // `explain` lines are model-written; they arrive as the next
-          // placement-explain exchange.
-        }
-      }
-
-      const { next } = transitionPlacement(from, event);
-      if (next.kind === "resolved") {
-        it.outcome =
-          next.how === "accepted"
-            ? `Resolved — the participant stood by a correct call (attempt ${next.attempt}).`
-            : `Resolved — the participant moved it after being told the answer (attempt ${next.attempt}).`;
-      } else if (next.kind === "dragging" && next.revealed) {
-        it.outcome = "Out of attempts — the AI revealed the correct answer.";
-      }
-      continue;
-    }
-
-    if (d.event === "ai_exchange" && !exact) {
-      const route = String(data.route ?? "");
+    // Model-written AI line (older runs), plus the reply that prompted it.
+    if (!exact && d.event === "ai_exchange" && data.route === "placement-explain" && activeKey) {
+      const it = items.get(activeKey);
+      if (!it) continue;
       const req = (data.request ?? {}) as Record<string, unknown>;
       const res = (data.response ?? {}) as Record<string, unknown>;
-
-      if (route === "placement-classify") {
-        pendingClassify = {
-          reply: pick(req, ["reply", "message", "text"]),
-          label: String(res.label ?? ""),
-        };
-        continue;
+      const ta = typeof req.taMessage === "string" ? req.taMessage.trim() : "";
+      const hole = unfilled.get(activeKey);
+      if (ta && hole) {
+        hole.text = ta;
+        unfilled.delete(activeKey);
       }
-
-      if (route === "placement-explain" && currentKey) {
-        const it = items.get(currentKey);
-        if (!it) continue;
-        // The explain call carries the participant's reply that prompted it.
-        const ta = typeof req.taMessage === "string" ? req.taMessage.trim() : "";
-        const hole = unfilled.get(currentKey);
-        if (ta && hole) {
-          hole.text = ta;
-          unfilled.delete(currentKey);
-        }
-        const text = pick(res, ["text"]);
-        const persona = req.speaker === "student" ? "student" : "professor";
-        if (text) it.turns.push({ speaker: persona, kind: "llm", text });
-      }
+      const text = pick(res, ["text"]);
+      const persona = req.speaker === "student" ? "student" : "professor";
+      if (text) it.turns.push({ speaker: persona, kind: "llm", text });
     }
+  }
+
+  // Graded moves with no discussion step at all (e.g. outside discussion mode).
+  for (const v of verdicts) {
+    if (v.used) continue;
+    const key = `${v.answerId}::${v.criterionId}::${v.phase}`;
+    const it = itemFor(key, v, v.phase);
+    it.turns.push(describeMove(v.phase, v.item));
   }
 
   if (order.length === 0) return { task: null, exact };
 
-  const list = order.map((k) => {
-    const { phase: _phase, started: _started, ...item } = items.get(k)!;
-    void _phase;
-    void _started;
-    return {
-      ...item,
-      trigger: item.trigger || "—",
-      outcome: item.outcome || "—",
-    };
+  const listOut = order.map((k) => {
+    const item = items.get(k)!;
+    return { ...item, trigger: item.trigger || "—", outcome: item.outcome || "—" };
   });
 
-  const discussed = list.filter((i) => !i.outcome.startsWith("Accepted")).length;
-  const firstMoves = order.map((k) => items.get(k)!.turns.find((t) => t.kind === "action"));
-  const firstRight = firstMoves.filter((t) => t?.correct === true).length;
+  const discussed = listOut.filter(
+    (i) => i.turns.some((t) => t.speaker !== "participant" && t.speaker !== "system")
+  ).length;
+  const firstRight = listOut.filter(
+    (i) => i.turns.find((t) => t.kind === "action")?.correct === true
+  ).length;
   return {
     exact,
     task: {
       task: "Apply Rubric",
-      summary: `${firstRight}/${list.length} calls right on the first try · ${discussed} discussed with the AI.`,
-      items: list,
+      summary: `${firstRight}/${listOut.length} calls right on the first try · ${discussed} discussed with the AI.`,
+      items: listOut,
     },
   };
 }
 
 /** Every task of the agent instruction, in stepper order. */
 function agentTasksOf(list: LogDoc[]): { tasks: AgentTask[]; exact: boolean } {
-  const sorted = [...list].sort((a, b) =>
-    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
-  );
+  const sorted = causalSort(list);
   const apply = applyRubricTaskOf(sorted);
   const tasks = [questionTaskOf(sorted), rubricTaskOf(sorted), apply.task].filter(
     (t): t is AgentTask => t != null
