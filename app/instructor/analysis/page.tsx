@@ -46,7 +46,11 @@ type Summary = {
   pairs: Sheet;
   insights: Insights;
   flow: FlowSummary;
+  armViews: { lesson: ArmView; agent: ArmView };
 };
+
+type ArmView = { insights: Insights; flow: FlowSummary };
+type ArmKey = "all" | "lesson" | "agent";
 
 const pct = (value: number | null) =>
   value === null ? "—" : `${Math.round(value * 100)}%`;
@@ -437,6 +441,7 @@ export default function InstructorAnalysisPage() {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [openItem, setOpenItem] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [arm, setArm] = useState<ArmKey>("all");
 
   useEffect(() => {
     const saved = sessionStorage.getItem(TOKEN_KEY);
@@ -483,6 +488,12 @@ export default function InstructorAnalysisPage() {
   };
 
   const rows = summary?.subjects.rows ?? [];
+  const view: ArmView | null =
+    summary == null
+      ? null
+      : arm === "all"
+        ? { insights: summary.insights, flow: summary.flow }
+        : summary.armViews[arm];
 
   return (
     <main className="flex min-h-screen flex-col bg-stone-100">
@@ -528,7 +539,7 @@ export default function InstructorAnalysisPage() {
           </p>
         )}
 
-        {summary && (
+        {summary && view && (
           <>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
@@ -554,6 +565,36 @@ export default function InstructorAnalysisPage() {
               ))}
             </div>
 
+            {/* Analyse each arm separately. Lesson is the control condition. */}
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
+                Arm
+              </span>
+              {(
+                [
+                  ["all", `All (${summary.flow.completers})`],
+                  [
+                    "lesson",
+                    `Lesson · control (${summary.armViews.lesson.flow.completers})`,
+                  ],
+                  ["agent", `Agent (${summary.armViews.agent.flow.completers})`],
+                ] as [ArmKey, string][]
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setArm(key)}
+                  className={`rounded-lg border-2 px-3 py-1.5 text-sm font-semibold transition-colors ${
+                    arm === key
+                      ? "border-lime-600 bg-lime-50 text-lime-800"
+                      : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
             {!summary.allComplete && (
               <div className="mt-4 rounded-xl border-2 border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                 <p className="font-bold">
@@ -574,7 +615,7 @@ export default function InstructorAnalysisPage() {
               </div>
             )}
 
-            {summary.flow && (
+            {view.flow && (
               <>
                 <h2 className="mt-10 text-xl font-bold text-stone-800">
                   Full flow — step by step
@@ -583,10 +624,10 @@ export default function InstructorAnalysisPage() {
                   Every step from screening to post-survey. The response
                   breakdowns below cover only the{" "}
                   <span className="font-semibold">
-                    {summary.flow.completers}
+                    {view.flow.completers}
                   </span>{" "}
                   participant(s) who finished the whole flow (of{" "}
-                  {summary.flow.totalParticipants} who started).
+                  {view.flow.totalParticipants} who started).
                 </p>
 
                 {/* Funnel */}
@@ -597,9 +638,9 @@ export default function InstructorAnalysisPage() {
                   {(() => {
                     const mc = Math.max(
                       1,
-                      ...summary.flow.funnel.map((f) => f.reached)
+                      ...view.flow.funnel.map((f) => f.reached)
                     );
-                    return summary.flow.funnel.map((f) => (
+                    return view.flow.funnel.map((f) => (
                       <BarRow
                         key={f.step}
                         label={f.step}
@@ -616,7 +657,7 @@ export default function InstructorAnalysisPage() {
                 </h3>
                 <table className="mt-2 w-full border-collapse text-sm">
                   <tbody>
-                    {summary.flow.phases.map((p) => (
+                    {view.flow.phases.map((p) => (
                       <tr key={p.phase} className="border-t border-stone-100">
                         <td className="py-1 pr-3 text-stone-700">{p.label}</td>
                         <td className="py-1 pr-3 font-semibold text-stone-800">
@@ -637,23 +678,23 @@ export default function InstructorAnalysisPage() {
                   Instruction
                 </h3>
                 <p className="mt-1 text-xs text-stone-500">
-                  Arm: {summary.flow.instruction.armCounts.lesson} lesson,{" "}
-                  {summary.flow.instruction.armCounts.agent} agent.
-                  {summary.flow.instruction.lessonMedianMin != null && (
+                  Arm: {view.flow.instruction.armCounts.lesson} lesson,{" "}
+                  {view.flow.instruction.armCounts.agent} agent.
+                  {view.flow.instruction.lessonMedianMin != null && (
                     <>
                       {" "}
                       Lesson median{" "}
-                      {summary.flow.instruction.lessonMedianMin.toFixed(1)} min,{" "}
-                      {summary.flow.instruction.lessonMedianHints ?? 0} hints.
+                      {view.flow.instruction.lessonMedianMin.toFixed(1)} min,{" "}
+                      {view.flow.instruction.lessonMedianHints ?? 0} hints.
                     </>
                   )}
                 </p>
-                {summary.flow.instruction.lessonFirstTry.length > 0 && (
+                {view.flow.instruction.lessonFirstTry.length > 0 && (
                   <div className="mt-2 space-y-1">
                     <p className="text-xs font-semibold text-stone-500">
                       Lesson first-try correctness per item
                     </p>
-                    {summary.flow.instruction.lessonFirstTry.map((it) => (
+                    {view.flow.instruction.lessonFirstTry.map((it) => (
                       <MiniBar
                         key={it.itemId}
                         label={`Q${it.itemId} (${Math.round(it.firstTryRate * 100)}%, n=${it.n})`}
@@ -667,9 +708,9 @@ export default function InstructorAnalysisPage() {
                 {/* Survey breakdowns */}
                 {(
                   [
-                    ["Screening responses", summary.flow.screening],
-                    ["Pre-survey responses", summary.flow.preSurvey],
-                    ["Post-survey responses", summary.flow.postSurvey],
+                    ["Screening responses", view.flow.screening],
+                    ["Pre-survey responses", view.flow.preSurvey],
+                    ["Post-survey responses", view.flow.postSurvey],
                   ] as const
                 ).map(([label, items]) => (
                   <div key={label}>
@@ -694,7 +735,7 @@ export default function InstructorAnalysisPage() {
               </>
             )}
 
-            {summary.insights && (
+            {view.insights && (
               <>
                 <h2 className="mt-10 text-xl font-bold text-stone-800">
                   Which skills moved
@@ -705,13 +746,13 @@ export default function InstructorAnalysisPage() {
                   percentage points of the available marks.
                 </p>
 
-                {summary.insights.underpowered && (
+                {view.insights.underpowered && (
                   <div className="mt-3 rounded-xl border-2 border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
                     <p className="font-bold">
                       Too few participants to read anything into this.
                     </p>
                     <p className="mt-1">
-                      {summary.insights.pairedParticipants} participant(s) have
+                      {view.insights.pairedParticipants} participant(s) have
                       completed both tests. These are descriptions of the data
                       so far, not findings — any ordering between items or goals
                       at this size is noise.
@@ -720,7 +761,7 @@ export default function InstructorAnalysisPage() {
                 )}
 
                 <div className="mt-3 grid gap-4 md:grid-cols-3">
-                  {summary.insights.goals.map((goal) => (
+                  {view.insights.goals.map((goal) => (
                     <div
                       key={goal.goal}
                       className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
@@ -751,7 +792,7 @@ export default function InstructorAnalysisPage() {
                       Lowest share of available marks.
                     </p>
                     <ul className="mt-2 space-y-2">
-                      {summary.insights.hardest.map((item) => (
+                      {view.insights.hardest.map((item) => (
                         <li key={item.itemId}>
                           <ItemRow
                             item={item}
@@ -771,12 +812,12 @@ export default function InstructorAnalysisPage() {
                       Median time on the question itself.
                     </p>
                     <ul className="mt-2 space-y-2">
-                      {summary.insights.slowest.length === 0 && (
+                      {view.insights.slowest.length === 0 && (
                         <li className="rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm text-stone-400">
                           No timing recorded yet.
                         </li>
                       )}
-                      {summary.insights.slowest.map((item) => (
+                      {view.insights.slowest.map((item) => (
                         <li key={item.itemId}>
                           <ItemRow
                             item={item}
@@ -795,13 +836,13 @@ export default function InstructorAnalysisPage() {
                   Score distribution
                 </h3>
                 <p className="mt-1 text-xs leading-5 text-stone-500">
-                  Completers per score band, out of {summary.insights.totalMax}.
+                  Completers per score band, out of {view.insights.totalMax}.
                 </p>
                 <div className="mt-3 grid gap-6 md:grid-cols-2">
                   {(
                     [
-                      ["Pre-test", summary.insights.scorePre],
-                      ["Post-test", summary.insights.scorePost],
+                      ["Pre-test", view.insights.scorePre],
+                      ["Post-test", view.insights.scorePost],
                     ] as const
                   ).map(([label, bands]) => {
                     const mc = Math.max(1, ...bands.map((b) => b.count));
@@ -836,7 +877,7 @@ export default function InstructorAnalysisPage() {
                   post.
                 </p>
                 <div className="mt-3 space-y-1">
-                  {[...summary.insights.items]
+                  {[...view.insights.items]
                     .sort(
                       (a, b) =>
                         (b.discriminationGap ?? -99) -
@@ -847,7 +888,7 @@ export default function InstructorAnalysisPage() {
                         key={item.itemId}
                         label={`Q${item.itemId}`}
                         count={Math.max(0, item.discriminationGap ?? 0)}
-                        max={summary.insights.totalMax}
+                        max={view.insights.totalMax}
                         highlight={
                           (item.discriminationGap ?? 0) > 0 ? "good" : "warn"
                         }
@@ -878,7 +919,7 @@ export default function InstructorAnalysisPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...summary.insights.items]
+                    {[...view.insights.items]
                       .sort((a, b) => b.accuracy - a.accuracy)
                       .map((item) => {
                         const acc = item.accuracy * 100;
@@ -932,7 +973,7 @@ export default function InstructorAnalysisPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {summary.insights.items.map((item) => (
+                      {view.insights.items.map((item) => (
                         <tr
                           key={item.itemId}
                           onClick={() => setOpenItem(item.itemId)}
@@ -964,17 +1005,17 @@ export default function InstructorAnalysisPage() {
               </>
             )}
 
-            {openItem && summary.insights && (
+            {openItem && view.insights && (
               <ItemDetailPanel
                 item={
-                  summary.insights.items.find((i) => i.itemId === openItem) ??
+                  view.insights.items.find((i) => i.itemId === openItem) ??
                   null
                 }
                 onClose={() => setOpenItem(null)}
               />
             )}
 
-            {summary.flow && summary.flow.participants.length > 0 && (
+            {view.flow && view.flow.participants.length > 0 && (
               <>
                 <h2 className="mt-10 text-xl font-bold text-stone-800">
                   Per participant — full answers
@@ -984,7 +1025,7 @@ export default function InstructorAnalysisPage() {
                   a participant to expand.
                 </p>
                 <div className="mt-3 space-y-2">
-                  {summary.flow.participants.map((p) => (
+                  {view.flow.participants.map((p) => (
                     <ParticipantCard key={p.subjectId} p={p} />
                   ))}
                 </div>
