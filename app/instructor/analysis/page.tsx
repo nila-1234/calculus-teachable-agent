@@ -10,7 +10,11 @@ import {
   type Insights,
   type ItemStat,
 } from "@/lib/tests/insights";
-import type { FlowSummary, SurveyItemSummary } from "@/lib/tests/flow";
+import type {
+  FlowSummary,
+  SurveyItemSummary,
+  ParticipantDetail,
+} from "@/lib/tests/flow";
 
 /**
  * Instructor analysis view.
@@ -94,18 +98,6 @@ const DOWNLOADS: { format: string; label: string; ext: string }[] = [
   { format: "pairs", label: "Pre/post gain (CSV)", ext: "csv" },
 ];
 
-/** Columns worth showing on screen; the rest stay in the downloads. */
-const SHOWN = [
-  "subject_id",
-  "pre_points",
-  "post_points",
-  "gain",
-  "active_min",
-  "flow_complete",
-  "phases_missing",
-];
-
-
 /** A simple labelled bar row with a full (wrapping) label, for survey items. */
 function MiniBar({ label, count, max }: { label: string; count: number; max: number }) {
   return (
@@ -170,6 +162,53 @@ function SurveyItemView({ item }: { item: SurveyItemSummary }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** One labelled group of a participant's answers. */
+function AnswerBlock({
+  title,
+  lines,
+}: {
+  title: string;
+  lines: { label: string; value: string }[];
+}) {
+  if (lines.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+        {title}
+      </p>
+      <ul className="mt-1 space-y-1.5">
+        {lines.map((l, i) => (
+          <li key={i} className="text-xs">
+            <span className="text-stone-500">{l.label}</span>
+            <span className="mt-0.5 block whitespace-pre-wrap text-stone-800">
+              {l.value}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** One completer's full step-by-step answers, collapsed by default. */
+function ParticipantCard({ p }: { p: ParticipantDetail }) {
+  return (
+    <details className="rounded-xl border-2 border-stone-200 bg-white p-4">
+      <summary className="cursor-pointer text-sm font-semibold text-stone-800">
+        {p.subjectId}{" "}
+        <span className="font-normal text-stone-400">· {p.arm ?? "—"}</span>
+      </summary>
+      <div className="mt-2 border-t border-stone-100 pt-1">
+        <AnswerBlock title="Screening" lines={p.screening} />
+        <AnswerBlock title="Pre-survey" lines={p.preSurvey} />
+        <AnswerBlock title="Pre-test" lines={p.preTest} />
+        <AnswerBlock title="Post-test" lines={p.postTest} />
+        <AnswerBlock title="Post-survey" lines={p.postSurvey} />
+      </div>
+    </details>
   );
 }
 
@@ -534,50 +573,6 @@ export default function InstructorAnalysisPage() {
                 </ul>
               </div>
             )}
-
-            <h2 className="mt-10 text-xl font-bold text-stone-800">
-              Per participant
-            </h2>
-            <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
-              <table className="w-full border-collapse text-left text-sm">
-                <thead className="bg-stone-50">
-                  <tr>
-                    {SHOWN.map((column) => (
-                      <th
-                        key={column}
-                        className="whitespace-nowrap border-b border-stone-200 px-3 py-2 font-semibold text-stone-600"
-                      >
-                        {column.replace(/_/g, " ")}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={SHOWN.length}
-                        className="px-3 py-6 text-center text-stone-400"
-                      >
-                        No participant data yet.
-                      </td>
-                    </tr>
-                  )}
-                  {rows.map((row, index) => (
-                    <tr key={index} className="border-b border-stone-100 last:border-b-0">
-                      {SHOWN.map((column) => (
-                        <td
-                          key={column}
-                          className="whitespace-nowrap px-3 py-2 text-stone-700"
-                        >
-                          {String(row[column] ?? "")}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
             {summary.flow && (
               <>
@@ -977,6 +972,23 @@ export default function InstructorAnalysisPage() {
                 }
                 onClose={() => setOpenItem(null)}
               />
+            )}
+
+            {summary.flow && summary.flow.participants.length > 0 && (
+              <>
+                <h2 className="mt-10 text-xl font-bold text-stone-800">
+                  Per participant — full answers
+                </h2>
+                <p className="mt-1 text-sm leading-6 text-stone-500">
+                  Every completer&apos;s answers to every step of the flow. Click
+                  a participant to expand.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {summary.flow.participants.map((p) => (
+                    <ParticipantCard key={p.subjectId} p={p} />
+                  ))}
+                </div>
+              </>
             )}
 
             <h2 className="mt-10 text-xl font-bold text-stone-800">Download</h2>

@@ -47,6 +47,19 @@ export type InstructionSummary = {
   lessonMedianHints: number | null;
 };
 
+export type AnswerLine = { label: string; value: string };
+
+/** Everything one completer answered, step by step, for the bottom-of-page dump. */
+export type ParticipantDetail = {
+  subjectId: string;
+  arm: string | null;
+  screening: AnswerLine[];
+  preSurvey: AnswerLine[];
+  preTest: AnswerLine[];
+  postTest: AnswerLine[];
+  postSurvey: AnswerLine[];
+};
+
 export type FlowSummary = {
   totalParticipants: number;
   completers: number;
@@ -56,6 +69,7 @@ export type FlowSummary = {
   preSurvey: SurveyItemSummary[];
   postSurvey: SurveyItemSummary[];
   instruction: InstructionSummary;
+  participants: ParticipantDetail[];
 };
 
 function median(values: number[]): number | null {
@@ -151,6 +165,53 @@ function summariseSurvey(
       samples: texts.slice(0, 3).map((t) => (t.length > 200 ? `${t.slice(0, 200)}…` : t)),
     };
   });
+}
+
+function formatValue(v: unknown): string {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "string" || typeof v === "number") return String(v);
+  return JSON.stringify(v);
+}
+
+/** Map one survey's answers to labelled lines using the item prompts. */
+function surveyAnswerLines(
+  surveyId: string,
+  answers: Record<string, unknown>
+): AnswerLine[] {
+  const survey = getSurvey(surveyId);
+  if (!survey) return [];
+  return survey.sections
+    .flatMap((s) => s.items)
+    .map((item) => ({ label: item.prompt, value: formatValue(answers[item.id]) }))
+    .filter((l) => l.value !== "");
+}
+
+/** Format one test item's answer object (choice / text / matching) readably. */
+function formatTestAnswer(v: unknown): string {
+  if (!v || typeof v !== "object") return formatValue(v);
+  const a = v as {
+    choiceId?: string;
+    text?: string;
+    matches?: Record<string, string>;
+  };
+  const parts: string[] = [];
+  if (a.choiceId) parts.push(`chose ${a.choiceId}`);
+  if (a.matches)
+    parts.push(
+      Object.entries(a.matches)
+        .map(([k, val]) => `${k}→${val}`)
+        .join(", ")
+    );
+  if (a.text) parts.push(a.text);
+  return parts.join(" · ") || formatValue(v);
+}
+
+/** One line per answered item from a test_completed event. */
+function testAnswerLines(doc: LogDoc | null): AnswerLine[] {
+  return Object.entries(answersOf(doc))
+    .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(([itemId, val]) => ({ label: `Q${itemId}`, value: formatTestAnswer(val) }))
+    .filter((l) => l.value !== "");
 }
 
 const PHASE_LABELS: Record<Phase, string> = {
@@ -262,6 +323,28 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     .map(([itemId, e]) => ({ itemId, firstTryRate: e.n ? e.correct / e.n : 0, n: e.n }))
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));
 
+  // Every completer's full set of answers, step by step, for the page bottom.
+  const participants: ParticipantDetail[] = completerSubjects.map(
+    ([subjectId, list]) => ({
+      subjectId,
+      arm: armOf(list),
+      screening: surveyAnswerLines(
+        "screening",
+        answersOf(latest(list, "screening_completed"))
+      ),
+      preSurvey: surveyAnswerLines(
+        "pre",
+        answersOf(latest(list, "survey_completed", "pre"))
+      ),
+      preTest: testAnswerLines(latest(list, "test_completed", "pretest")),
+      postTest: testAnswerLines(latest(list, "test_completed", "posttest")),
+      postSurvey: surveyAnswerLines(
+        "post",
+        answersOf(latest(list, "survey_completed", "post"))
+      ),
+    })
+  );
+
   return {
     totalParticipants: subjects.length,
     completers: completerLists.length,
@@ -276,5 +359,6 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       lessonMedianMin: median(lessonMinutes),
       lessonMedianHints: median(lessonHints),
     },
+    participants,
   };
 }
