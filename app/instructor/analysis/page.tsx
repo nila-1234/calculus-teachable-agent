@@ -5,13 +5,13 @@ import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 import MathDisplay from "@/components/math-display";
 import {
-  GOAL_DESCRIPTIONS,
   GOAL_LABELS,
   type Insights,
   type ItemStat,
   type ItemResponse,
 } from "@/lib/tests/insights";
 import type {
+  ConvTurn,
   FlowSummary,
   SurveyItemSummary,
   ParticipantDetail,
@@ -291,7 +291,60 @@ function AnswerBlock({
   );
 }
 
-/** A participant's instruction step: lesson attempts or the AI conversation. */
+/** Who said a turn, as a label. The participant plays the TA. */
+const SPEAKER_LABEL: Record<ConvTurn["speaker"], string> = {
+  participant: "Participant (TA)",
+  professor: "Professor (AI)",
+  student: "Student (AI)",
+  system: "System",
+};
+
+/** One turn of an agent task, as a chat bubble. Participant on the right. */
+function TurnBubble({ turn }: { turn: ConvTurn }) {
+  if (turn.kind === "note") {
+    return (
+      <li className="text-center text-[11px] italic text-stone-400">
+        {turn.text}
+      </li>
+    );
+  }
+  const mine = turn.speaker === "participant";
+  const tone = mine
+    ? turn.correct === true
+      ? "bg-lime-50 ring-1 ring-lime-200"
+      : turn.correct === false
+        ? "bg-rose-50 ring-1 ring-rose-200"
+        : "bg-blue-50"
+    : turn.speaker === "student"
+      ? "bg-amber-50"
+      : "bg-violet-50";
+  const sub = mine
+    ? turn.kind === "action"
+      ? "did"
+      : "replied"
+    : turn.kind === "scripted"
+      ? "fixed line"
+      : "AI-written";
+  return (
+    <li className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs text-stone-800 ${tone} ${
+          mine ? "rounded-tr-none" : "rounded-tl-none"
+        }`}
+      >
+        <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-stone-500">
+          {SPEAKER_LABEL[turn.speaker]}
+          <span className="ml-1 font-normal normal-case tracking-normal text-stone-400">
+            · {sub}
+          </span>
+        </span>
+        <span className="whitespace-pre-wrap">{turn.text}</span>
+      </div>
+    </li>
+  );
+}
+
+/** A participant's instruction step: the lessons, or every agent task. */
 function InstructionBlock({
   instr,
 }: {
@@ -301,31 +354,81 @@ function InstructionBlock({
     arm,
     minutes,
     lesson,
+    lessonTimes,
     agent,
     agentParts,
-    agentThreads,
+    agentTasks,
+    agentExactTranscript,
     agentLowestPart,
     agentSlowestPart,
     agentFastestPart,
   } = instr;
   if (lesson.length === 0 && agent.length === 0 && agentParts.length === 0)
     return null;
+
+  const lessonNames = [...new Set(lesson.map((it) => it.lesson))];
+
   return (
-    <div className="mt-3">
+    <div className="mt-4">
       <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
         Instruction
-        {arm ? ` · ${arm}` : ""}
+        {arm ? ` · ${arm === "lesson" ? "LearnVia lesson (control)" : "agent"}` : ""}
         {minutes != null ? ` · ${minutes.toFixed(1)} min` : ""}
       </p>
+
+      {/* ---- Lesson arm: each lesson, its time, and each question ---- */}
+      {lessonNames.map((name) => {
+        const items = lesson.filter((it) => it.lesson === name);
+        const secs = lessonTimes.find((t) => t.lesson === name)?.seconds ?? null;
+        const right = items.filter((it) => it.firstTryCorrect).length;
+        return (
+          <div key={name} className="mt-2">
+            <p className="text-xs font-semibold text-stone-700">
+              {name}
+              <span className="ml-2 font-normal text-stone-500">
+                {fmtSec(secs)} · {right}/{items.length} correct on the first try
+              </span>
+            </p>
+            <table className="mt-1 w-full border-collapse text-xs">
+              <thead>
+                <tr className="text-left text-stone-400">
+                  <th className="py-1 pr-3 font-semibold">Question</th>
+                  <th className="py-1 pr-3 font-semibold">First try</th>
+                  <th className="py-1 pr-3 font-semibold">Attempts</th>
+                  <th className="py-1 pr-3 font-semibold">Hints</th>
+                  <th className="py-1 font-semibold">Answered at</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, i) => (
+                  <tr key={it.itemId} className="border-t border-stone-100">
+                    <td className="py-1 pr-3 text-stone-700">Q{i + 1}</td>
+                    <td className="py-1 pr-3">
+                      <Tick ok={it.firstTryCorrect} />
+                    </td>
+                    <td className="py-1 pr-3 text-stone-600">{it.attempts}</td>
+                    <td className="py-1 pr-3 text-stone-600">{it.hints}</td>
+                    <td className="py-1 text-stone-400">
+                      {it.at ? new Date(it.at).toLocaleTimeString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+
+      {/* ---- Agent arm: score/time per task ---- */}
       {agentParts.length > 0 && (
         <div className="mt-2">
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="text-left text-stone-400">
-                <th className="py-1 pr-3 font-semibold">Part</th>
+                <th className="py-1 pr-3 font-semibold">Task</th>
                 <th className="py-1 pr-3 font-semibold">Score</th>
                 <th className="py-1 pr-3 font-semibold">Time</th>
-                <th className="py-1 font-semibold">AI runs</th>
+                <th className="py-1 font-semibold">AI calls</th>
               </tr>
             </thead>
             <tbody>
@@ -355,116 +458,73 @@ function InstructionBlock({
           </p>
         </div>
       )}
-      {lesson.length > 0 && (
-        <ul className="mt-1 space-y-1 text-xs">
-          {lesson.map((it) => (
-            <li key={it.itemId} className="text-stone-700">
-              <span
-                className={
-                  it.firstTryCorrect ? "text-lime-700" : "text-rose-600"
-                }
+
+      {/* ---- Agent arm: every task, how the participant responded ---- */}
+      {agentTasks.map((task) => (
+        <div key={task.task} className="mt-4">
+          <p className="text-xs font-semibold text-stone-800">
+            {task.task}
+            <span className="ml-2 font-normal text-stone-500">{task.summary}</span>
+          </p>
+          {task.task === "Apply Rubric" && !agentExactTranscript && (
+            <p className="mt-0.5 text-[11px] text-amber-700">
+              Rebuilt from the logs. In this run, a typed reply that didn&apos;t
+              go to an AI call wasn&apos;t saved — it shows as &ldquo;not saved&rdquo;.
+              Runs from now on record every line exactly.
+            </p>
+          )}
+          <div className="mt-2 space-y-2">
+            {task.items.map((item, i) => (
+              <details
+                key={i}
+                open={task.task !== "Apply Rubric" || item.turns.length > 1}
+                className="rounded-lg border border-stone-200 bg-white"
               >
-                {it.firstTryCorrect ? "✓" : "✗"}
-              </span>{" "}
-              Q{it.itemId} · {it.attempts} attempt
-              {it.attempts === 1 ? "" : "s"}
-              {it.hints ? `, ${it.hints} hint${it.hints === 1 ? "" : "s"}` : ""}{" "}
-              <span className="text-stone-400">
-                {it.at ? new Date(it.at).toLocaleString() : ""}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {/* Reconstructed Apply-Rubric conversation, grouped by criterion/phase:
-          scripted professor/TA lines interleaved with the model-written ones. */}
-      {agentThreads.length > 0 && (
-        <div className="mt-3 space-y-3">
-          {agentThreads.map((t, ti) => (
-            <div
-              key={ti}
-              className="rounded-lg border border-stone-200 bg-stone-50/50 p-3"
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                <p className="text-xs font-semibold text-stone-700">
-                  {t.heading}
-                </p>
-                {t.outcome && (
-                  <p className="text-[11px] text-stone-500">{t.outcome}</p>
-                )}
-              </div>
-              <ol className="mt-2 space-y-1.5">
-                {t.turns.map((turn, ki) => (
-                  <li
-                    key={ki}
-                    className={`flex ${
-                      turn.speaker === "ta" ? "justify-end" : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg px-3 py-1.5 text-xs ${
-                        turn.speaker === "ta"
-                          ? "rounded-tr-none bg-blue-50 text-stone-800"
-                          : turn.kind === "scripted"
-                            ? "rounded-tl-none bg-stone-100 text-stone-700"
-                            : "rounded-tl-none bg-violet-50 text-stone-800"
-                      }`}
-                    >
-                      <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-stone-400">
-                        {turn.speaker === "ta"
-                          ? "TA (student)"
-                          : turn.kind === "scripted"
-                            ? "Professor · scripted"
-                            : "Professor · AI"}
-                      </span>
-                      <span className="whitespace-pre-wrap">{turn.text}</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          ))}
+                <summary className="cursor-pointer px-3 py-2 text-xs">
+                  <span className="font-semibold text-stone-700">{item.title}</span>
+                  <span className="ml-2 text-stone-500">{item.outcome}</span>
+                </summary>
+                <div className="border-t border-stone-100 px-3 py-2">
+                  <p className="text-[11px] text-stone-500">
+                    <span className="font-semibold">Why the AI responded:</span>{" "}
+                    {item.trigger}
+                  </p>
+                  <ol className="mt-2 space-y-1.5">
+                    {item.turns.map((turn, k) => (
+                      <TurnBubble key={k} turn={turn} />
+                    ))}
+                  </ol>
+                </div>
+              </details>
+            ))}
+          </div>
         </div>
-      )}
+      ))}
 
       {/* Raw AI exchanges, kept as a collapsed fallback / full detail. */}
       {agent.length > 0 && (
-        <details className="mt-2">
+        <details className="mt-3">
           <summary className="cursor-pointer text-[11px] font-semibold text-stone-400">
-            Raw AI exchanges ({agent.length})
+            Raw AI calls ({agent.length})
           </summary>
-          <ol className="mt-2 space-y-3">
+          <ol className="mt-2 space-y-2">
             {agent.map((ex, i) => (
-              <li key={i} className="border-l-2 border-stone-200 pl-3">
-                <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
-                  <span className="rounded bg-stone-200 px-1.5 py-0.5 font-semibold text-stone-700">
-                    {i + 1}. {ex.part}
-                  </span>
-                  {ex.context && (
-                    <span className="text-stone-500">{ex.context}</span>
-                  )}
-                  <span className="text-stone-400">
-                    {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
-                    {ex.durationMs != null
-                      ? ` · ${(ex.durationMs / 1000).toFixed(1)}s`
-                      : ""}
-                  </span>
-                </div>
+              <li key={i} className="border-l-2 border-stone-200 pl-3 text-xs">
+                <span className="font-semibold text-stone-600">
+                  {i + 1}. {ex.part}
+                </span>{" "}
+                <span className="text-stone-400">
+                  {ex.at ? new Date(ex.at).toLocaleTimeString() : ""}
+                </span>
                 {ex.student && (
-                  <div className="mt-1 rounded-lg rounded-tl-none bg-blue-50 px-3 py-1.5 text-xs text-stone-800">
-                    <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                      Student
-                    </span>
-                    <span className="whitespace-pre-wrap">{ex.student}</span>
-                  </div>
+                  <p className="mt-0.5 whitespace-pre-wrap text-stone-700">
+                    → {ex.student}
+                  </p>
                 )}
                 {ex.ai && (
-                  <div className="mt-1 rounded-lg rounded-tl-none bg-violet-50 px-3 py-1.5 text-xs text-stone-800">
-                    <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-violet-700">
-                      AI
-                    </span>
-                    <span className="whitespace-pre-wrap">{ex.ai}</span>
-                  </div>
+                  <p className="mt-0.5 whitespace-pre-wrap text-stone-500">
+                    ← {ex.ai}
+                  </p>
                 )}
               </li>
             ))}
@@ -817,11 +877,94 @@ function ItemDetailPanel({
   );
 }
 
+/**
+ * Goal gains + most-missed + longest-to-answer for ONE arm. Lesson (control)
+ * and Agent are different conditions, so these are never pooled: the page
+ * renders this once per arm.
+ */
+function SkillsBlock({
+  title,
+  insights,
+  onOpen,
+}: {
+  title: string;
+  insights: Insights;
+  onOpen: (itemId: string) => void;
+}) {
+  return (
+    <div className="rounded-2xl border-2 border-stone-200 bg-stone-50/60 p-4">
+      <p className="text-sm font-bold text-lime-800">
+        {title}
+        <span className="ml-2 font-normal text-stone-500">
+          {insights.participants} full-flow participant
+          {insights.participants === 1 ? "" : "s"}
+        </span>
+      </p>
+      {insights.participants === 0 ? (
+        <p className="mt-2 text-xs text-stone-400">No full-flow completers yet.</p>
+      ) : (
+        <>
+          <div className="mt-3 grid gap-3">
+            {insights.goals.map((goal) => (
+              <div
+                key={goal.goal}
+                className="rounded-xl border border-stone-200 bg-white p-3"
+              >
+                <p className="text-xs font-bold text-stone-800">
+                  {GOAL_LABELS[goal.goal]}
+                </p>
+                <p className="mt-1 text-xl font-bold text-stone-800">
+                  {signed(goal.gain)}
+                </p>
+                <p className="text-xs text-stone-500">
+                  pre {pct(goal.preAccuracy)} &rarr; post {pct(goal.postAccuracy)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <h4 className="mt-4 text-xs font-bold uppercase tracking-wide text-stone-500">
+            Most often missed
+          </h4>
+          <ul className="mt-1 space-y-1.5">
+            {insights.hardest.map((item) => (
+              <li key={item.itemId}>
+                <ItemRow item={item} value={`${pct(item.accuracy)} `} onOpen={onOpen} />
+              </li>
+            ))}
+          </ul>
+
+          <h4 className="mt-4 text-xs font-bold uppercase tracking-wide text-stone-500">
+            Longest to answer
+          </h4>
+          <ul className="mt-1 space-y-1.5">
+            {insights.slowest.length === 0 && (
+              <li className="text-xs text-stone-400">No timing recorded yet.</li>
+            )}
+            {insights.slowest.map((item) => (
+              <li key={item.itemId}>
+                <ItemRow
+                  item={item}
+                  value={`${Math.round(item.medianSeconds ?? 0)}s `}
+                  countLabel={item.timedN}
+                  onOpen={onOpen}
+                />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function InstructorAnalysisPage() {
   const [token, setToken] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [openItem, setOpenItem] = useState<string | null>(null);
+  // Which arm's insights the opened item belongs to (the skills blocks are per arm).
+  const [openArm, setOpenArm] = useState<ArmKey>("all");
   const [error, setError] = useState<string | null>(null);
   const [arm, setArm] = useState<ArmKey>("all");
 
@@ -996,21 +1139,41 @@ export default function InstructorAnalysisPage() {
                 <h3 className="mt-5 text-base font-bold text-stone-800">
                   Median time per phase (completers)
                 </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Instruction is broken into its tasks (Question → Create Rubric
+                  → Apply Rubric); LearnVia into its two lessons, each timed by
+                  the lesson itself.
+                </p>
                 <table className="mt-2 w-full border-collapse text-sm">
                   <tbody>
-                    {view.flow.phases.map((p) => (
-                      <tr key={p.key} className="border-t border-stone-100">
-                        <td className="py-1 pr-3 text-stone-700">{p.label}</td>
-                        <td className="py-1 pr-3 font-semibold text-stone-800">
-                          {p.medianMin == null
-                            ? "—"
-                            : `${p.medianMin.toFixed(1)} min`}
-                        </td>
-                        <td className="py-1 text-xs text-stone-400">
-                          n={p.n}
-                        </td>
-                      </tr>
-                    ))}
+                    {view.flow.phases
+                      // Rows for the other arm have no one in them.
+                      .filter((p) => p.n > 0 || p.medianMin != null)
+                      .map((p) => (
+                        <tr key={p.key} className="border-t border-stone-100">
+                          <td
+                            className={`py-1 pr-3 ${
+                              p.sub ? "pl-6 text-stone-500" : "text-stone-700"
+                            }`}
+                          >
+                            {p.sub ? `↳ ${p.label}` : p.label}
+                          </td>
+                          <td
+                            className={`py-1 pr-3 ${
+                              p.sub
+                                ? "text-stone-600"
+                                : "font-semibold text-stone-800"
+                            }`}
+                          >
+                            {p.medianMin == null
+                              ? "—"
+                              : `${p.medianMin.toFixed(1)} min`}
+                          </td>
+                          <td className="py-1 text-xs text-stone-400">
+                            n={p.n}
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
 
@@ -1029,35 +1192,53 @@ export default function InstructorAnalysisPage() {
                     </p>
                   )}
                 {arm !== "lesson" &&
-                  view.flow.instruction.avgAiPerPart.length > 0 && (
+                  view.flow.instruction.agentSteps.some((s) => s.n > 0) && (
                     <div className="mt-3">
                       <p className="text-xs font-semibold text-stone-500">
-                        Agent — average AI interactions per part (per
-                        participant)
+                        Agent — each task (across agent completers)
                       </p>
                       <table className="mt-1 w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="text-left text-xs text-stone-400">
+                            <th className="py-1 pr-3 font-semibold">Task</th>
+                            <th className="py-1 pr-3 font-semibold">
+                              Median time
+                            </th>
+                            <th className="py-1 pr-3 font-semibold">
+                              Mean score (first try)
+                            </th>
+                            <th className="py-1 font-semibold">
+                              Avg AI calls / person
+                            </th>
+                          </tr>
+                        </thead>
                         <tbody>
-                          {view.flow.instruction.avgAiPerPart.map((pt) => (
+                          {view.flow.instruction.agentSteps.map((s) => (
                             <tr
-                              key={pt.part}
+                              key={s.step}
                               className="border-t border-stone-100"
                             >
                               <td className="py-1 pr-3 text-stone-700">
-                                {pt.part}
+                                {s.step}
+                              </td>
+                              <td className="py-1 pr-3 text-stone-800">
+                                {s.medianMin == null
+                                  ? "—"
+                                  : `${s.medianMin.toFixed(1)} min`}
                               </td>
                               <td className="py-1 pr-3 font-semibold text-stone-800">
-                                {pt.avg.toFixed(1)} avg
+                                {pct(s.meanRate)}
                               </td>
-                              <td className="py-1 text-xs text-stone-400">
-                                {pt.total} total
+                              <td className="py-1 text-stone-600">
+                                {s.avgAiRuns.toFixed(1)}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                       <p className="mt-1 text-xs text-stone-400">
-                        Every participant&apos;s full AI conversation is in the
-                        per-participant detail at the bottom.
+                        How each participant responded at every task — and what
+                        the AI said back — is in their card at the bottom.
                       </p>
                     </div>
                   )}
@@ -1096,21 +1277,14 @@ export default function InstructorAnalysisPage() {
               <>
                 <h2 className="mt-10 text-xl font-bold text-stone-800">
                   Which skills moved
-                  <span className="ml-2 align-middle text-sm font-semibold text-lime-700">
-                    {arm === "all"
-                      ? "· both arms pooled"
-                      : arm === "lesson"
-                        ? "· Lesson (control)"
-                        : "· Agent (instruction)"}
-                  </span>
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-stone-500">
                   Items grouped by the study&apos;s three assessment goals, using
                   the mapping in the answer key. Gain is post minus pre, in
-                  percentage points of the available marks. Lesson and Agent are
-                  different conditions — use the arm toggle above to read each
-                  separately; the numbers below cover only full-flow completers
-                  {arm === "all" ? " in both arms" : ""}.
+                  percentage points of the available marks. Lesson (control) and
+                  Agent are different conditions, so each is shown on its own —
+                  only participants who completed every step are counted. Click
+                  a question to see its detail.
                 </p>
 
                 {view.insights.underpowered && (
@@ -1119,83 +1293,35 @@ export default function InstructorAnalysisPage() {
                       Too few participants to read anything into this.
                     </p>
                     <p className="mt-1">
-                      {view.insights.pairedParticipants} participant(s) have
-                      completed both tests. These are descriptions of the data
-                      so far, not findings — any ordering between items or goals
-                      at this size is noise.
+                      These are descriptions of the data so far, not findings —
+                      any ordering between items or goals at this size is noise.
                     </p>
                   </div>
                 )}
 
-                <div className="mt-3 grid gap-4 md:grid-cols-3">
-                  {view.insights.goals.map((goal) => (
-                    <div
-                      key={goal.goal}
-                      className="rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
-                    >
-                      <p className="text-sm font-bold text-stone-800">
-                        {GOAL_LABELS[goal.goal]}
-                      </p>
-                      <p className="mt-1 text-xs leading-5 text-stone-500">
-                        {GOAL_DESCRIPTIONS[goal.goal]}
-                      </p>
-                      <p className="mt-3 text-2xl font-bold text-stone-800">
-                        {signed(goal.gain)}
-                      </p>
-                      <p className="mt-1 text-xs text-stone-500">
-                        pre {pct(goal.preAccuracy)} &rarr; post{" "}
-                        {pct(goal.postAccuracy)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-6 grid items-start gap-6 md:grid-cols-2">
-                  <div>
-                    <h3 className="text-base font-bold text-stone-800">
-                      Most often missed
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-stone-500">
-                      Lowest share of available marks.
-                    </p>
-                    <ul className="mt-2 space-y-2">
-                      {view.insights.hardest.map((item) => (
-                        <li key={item.itemId}>
-                          <ItemRow
-                            item={item}
-                            value={`${pct(item.accuracy)} `}
-                            onOpen={setOpenItem}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div>
-                    <h3 className="text-base font-bold text-stone-800">
-                      Longest to answer
-                    </h3>
-                    <p className="mt-1 text-xs leading-5 text-stone-500">
-                      Median time on the question itself.
-                    </p>
-                    <ul className="mt-2 space-y-2">
-                      {view.insights.slowest.length === 0 && (
-                        <li className="rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm text-stone-400">
-                          No timing recorded yet.
-                        </li>
-                      )}
-                      {view.insights.slowest.map((item) => (
-                        <li key={item.itemId}>
-                          <ItemRow
-                            item={item}
-                            value={`${Math.round(item.medianSeconds ?? 0)}s `}
-                            countLabel={item.timedN}
-                            onOpen={setOpenItem}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                <div
+                  className={`mt-3 grid items-start gap-4 ${
+                    arm === "all" ? "md:grid-cols-2" : ""
+                  }`}
+                >
+                  {(
+                    [
+                      ["lesson", "Lesson (control)"],
+                      ["agent", "Agent (instruction)"],
+                    ] as const
+                  )
+                    .filter(([key]) => arm === "all" || arm === key)
+                    .map(([key, title]) => (
+                      <SkillsBlock
+                        key={key}
+                        title={title}
+                        insights={summary.armViews[key].insights}
+                        onOpen={(itemId) => {
+                          setOpenArm(key);
+                          setOpenItem(itemId);
+                        }}
+                      />
+                    ))}
                 </div>
 
                 {/* ---- Score distribution ---- */}
@@ -1302,7 +1428,10 @@ export default function InstructorAnalysisPage() {
                         return (
                           <tr
                             key={item.itemId}
-                            onClick={() => setOpenItem(item.itemId)}
+                            onClick={() => {
+                              setOpenArm(arm);
+                              setOpenItem(item.itemId);
+                            }}
                             className="cursor-pointer border-b border-stone-100 last:border-b-0 hover:bg-stone-50"
                           >
                             <td className="px-3 py-2 font-semibold text-stone-800 underline decoration-stone-300 underline-offset-2">
@@ -1599,8 +1728,10 @@ export default function InstructorAnalysisPage() {
             {openItem && view.insights && (
               <ItemDetailPanel
                 item={
-                  view.insights.items.find((i) => i.itemId === openItem) ??
-                  null
+                  (openArm === "all"
+                    ? summary.insights
+                    : summary.armViews[openArm].insights
+                  ).items.find((i) => i.itemId === openItem) ?? null
                 }
                 onClose={() => setOpenItem(null)}
               />

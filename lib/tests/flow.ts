@@ -46,6 +46,18 @@ export type PhaseTiming = {
   label: string;
   medianMin: number | null;
   n: number;
+  /** A sub-step of the row above it (e.g. one task of the instruction). */
+  sub?: boolean;
+};
+
+/** Aggregate over agent completers for one task of the agent instruction. */
+export type AgentStepSummary = {
+  step: string;
+  medianMin: number | null;
+  /** Mean score rate (0–1) across participants, where the task is scored. */
+  meanRate: number | null;
+  avgAiRuns: number;
+  n: number;
 };
 
 export type InstructionSummary = {
@@ -55,6 +67,8 @@ export type InstructionSummary = {
   lessonMedianHints: number | null;
   /** Average number of AI interactions per part, across agent completers. */
   avgAiPerPart: { part: string; avg: number; total: number }[];
+  /** Agent arm, per task: median time, mean score, average AI runs. */
+  agentSteps: AgentStepSummary[];
 };
 
 export type AnswerLine = { label: string; value: string };
@@ -75,6 +89,8 @@ export type AiExchange = {
 
 /** One lesson-arm question attempt. */
 export type LessonItemDetail = {
+  /** Which LearnVia lesson ("Lesson 1" / "Lesson 2"). */
+  lesson: string;
   itemId: string;
   firstTryCorrect: boolean;
   attempts: number;
@@ -96,25 +112,43 @@ export type AgentPartScore = {
   aiRuns: number;
 };
 
-/** One turn in a reconstructed Apply-Rubric discussion. */
+/**
+ * One turn of the agent instruction, from either side.
+ *
+ * The participant plays the TA. On the AI side, the "professor" and the
+ * "student" are both AI personas (who speaks depends on the call being
+ * discussed — see lib/grading-voice.ts and lib/status-flow.ts).
+ */
 export type ConvTurn = {
-  speaker: "professor" | "ta";
-  /** scripted = canned flow line; llm = model-written; action = the TA's own move/words. */
-  kind: "scripted" | "llm" | "action";
+  speaker: "participant" | "professor" | "student" | "system";
+  /**
+   * action  = something the participant did (picked, dragged, marked);
+   * reply   = something the participant typed or clicked in reply;
+   * scripted = a fixed AI line from the decision tree;
+   * llm     = an AI line written by the model;
+   * note    = how the system read / judged a response.
+   */
+  kind: "action" | "reply" | "scripted" | "llm" | "note";
   text: string;
+  /** For participant moves/replies: whether it was right, when that is known. */
+  correct?: boolean | null;
 };
 
-/**
- * One criterion's discussion thread in the Apply-Rubric step — either the
- * placement (which step it belongs on) or the pass/fail decision, rebuilt turn
- * by turn from the flow transitions (scripted lines) interleaved with the LLM
- * exchanges.
- */
-export type ConvThread = {
-  heading: string;
-  phase: "placement" | "status" | "question";
+/** One unit of a task: a question part, a rubric attempt, or one criterion's discussion. */
+export type AgentTaskItem = {
+  title: string;
+  /** Why the AI engaged here (what the participant did that triggered it). */
+  trigger: string;
+  /** How it ended. */
   outcome: string;
   turns: ConvTurn[];
+};
+
+/** One task of the agent instruction, in stepper order. */
+export type AgentTask = {
+  task: "Question" | "Create Rubric" | "Apply Rubric";
+  summary: string;
+  items: AgentTaskItem[];
 };
 
 export type InstructionDetail = {
@@ -128,8 +162,12 @@ export type InstructionDetail = {
   agentLowestPart: string | null;
   agentSlowestPart: string | null;
   agentFastestPart: string | null;
-  /** Agent arm: the reconstructed conversation, grouped by criterion/phase. */
-  agentThreads: ConvThread[];
+  /** Lesson arm: seconds spent in each LearnVia lesson. */
+  lessonTimes: { lesson: string; seconds: number | null }[];
+  /** Agent arm: every task, with how the participant responded and what the AI said. */
+  agentTasks: AgentTask[];
+  /** True when the exact discussion transcript was logged (newer runs). */
+  agentExactTranscript: boolean;
   /** Agent arm: the raw AI exchanges, in order (fallback / full detail). */
   agent: AiExchange[];
 };
@@ -388,26 +426,36 @@ function summariseExchange(d: LogDoc): AiExchange {
   };
 }
 
-/** Lesson-arm per-question attempts, in order. */
+/** The two LearnVia lessons, by the scenario id their events are logged under. */
+const LESSON_LABELS: Record<string, string> = {
+  "lesson-1": "Lesson 1",
+  "lesson-2": "Lesson 2",
+};
+const lessonLabel = (id: string | undefined) =>
+  LESSON_LABELS[id ?? ""] ?? id ?? "Lesson";
+
+/** Lesson-arm per-question attempts, in order, tagged with their lesson. */
 function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
   const first = new Map<
     string,
-    { firstTryCorrect: boolean; attempts: number; at: string }
+    { lesson: string; itemId: string; firstTryCorrect: boolean; attempts: number; at: string }
   >();
   const hints = new Map<string, number>();
   for (const d of [...list].sort((a, b) =>
     (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
   )) {
+    const id = String(d.data?.item_id ?? "");
+    const key = `${d.scenario_id ?? ""}::${id}`;
     if (d.event === "lesson_hint_shown") {
-      const id = String(d.data?.item_id ?? "");
-      if (id) hints.set(id, (hints.get(id) ?? 0) + 1);
+      if (id) hints.set(key, (hints.get(key) ?? 0) + 1);
     }
     if (d.event !== "lesson_item_attempted") continue;
-    const id = String(d.data?.item_id ?? "");
     if (!id) continue;
-    const e = first.get(id);
+    const e = first.get(key);
     if (!e) {
-      first.set(id, {
+      first.set(key, {
+        lesson: lessonLabel(d.scenario_id),
+        itemId: id,
         firstTryCorrect: d.data?.is_correct === true,
         attempts: 1,
         at: d.timestamp ?? "",
@@ -417,14 +465,29 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     }
   }
   return [...first.entries()]
-    .map(([itemId, e]) => ({
-      itemId,
-      firstTryCorrect: e.firstTryCorrect,
-      attempts: e.attempts,
-      hints: hints.get(itemId) ?? 0,
-      at: e.at,
-    }))
+    .map(([key, e]) => ({ ...e, hints: hints.get(key) ?? 0 }))
     .sort((a, b) => a.at.localeCompare(b.at));
+}
+
+/**
+ * Seconds spent in each LearnVia lesson, from that lesson's own completion
+ * event (each lesson times itself from when it opens to when it is finished).
+ * The latest completion wins if a lesson was somehow finished twice.
+ */
+function lessonTimesOf(list: LogDoc[]): { lesson: string; seconds: number | null }[] {
+  const byLesson = new Map<string, number | null>();
+  for (const id of Object.keys(LESSON_LABELS)) byLesson.set(id, null);
+  for (const d of [...list].sort((a, b) =>
+    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+  )) {
+    if (d.event !== "lesson_completed" || !d.scenario_id) continue;
+    const s = Number(d.data?.seconds);
+    if (Number.isFinite(s) && s > 0) byLesson.set(d.scenario_id, s);
+  }
+  return [...byLesson.entries()].map(([id, seconds]) => ({
+    lesson: lessonLabel(id),
+    seconds,
+  }));
 }
 
 /**
@@ -504,29 +567,24 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
     ? (rubric!.data!.missed_essential as unknown[]).length
     : 0;
 
-  // Apply Rubric: latest placement + pass/fail verdict per criterion. Each
-  // criterion is both dropped on a step (stepCorrect) and marked pass/fail
-  // (statusCorrect); both count toward how well the TA judged the work.
-  const verdicts = new Map<
-    string,
-    { stepCorrect: boolean; statusCorrect: boolean }
-  >();
-  for (const d of sorted) {
-    if (d.event !== "grade_lines_criterion_graded") continue;
-    const key = `${d.data?.answer_id ?? ""}::${d.data?.criterion_id ?? ""}`;
-    const p = d.data?.placement as Record<string, unknown> | undefined;
-    if (!p) continue;
-    const prev = verdicts.get(key) ?? { stepCorrect: false, statusCorrect: false };
-    verdicts.set(key, {
-      stepCorrect: p.stepCorrect === true,
-      // status is only set on the pass/fail phase; keep an earlier true.
-      statusCorrect: p.statusCorrect === true || prev.statusCorrect,
-    });
+  // Apply Rubric: FIRST-try correctness per criterion — whether the participant
+  // put it on the right step on their first drag, and marked it right on their
+  // first pass/fail. The verdicts come from the grading call's response (the
+  // drag event itself only records the step index, not whether it was right).
+  const firstPlace = new Map<string, boolean>();
+  const firstStatus = new Map<string, boolean>();
+  for (const v of gradeVerdictsOf(sorted)) {
+    const key = `${v.answerId}::${v.criterionId}`;
+    if (v.phase === "placement") {
+      if (!firstPlace.has(key)) firstPlace.set(key, v.item.stepCorrect);
+    } else if (!firstStatus.has(key)) {
+      firstStatus.set(key, v.item.statusCorrect);
+    }
   }
-  const vlist = [...verdicts.values()];
-  const stepOk = vlist.filter((v) => v.stepCorrect).length;
-  const statusOk = vlist.filter((v) => v.statusCorrect).length;
-  const jTotal = vlist.length;
+  const stepOk = [...firstPlace.values()].filter(Boolean).length;
+  const statusOk = [...firstStatus.values()].filter(Boolean).length;
+  const jTotal = firstPlace.size;
+  const sTotal = firstStatus.size;
 
   const parts: AgentPartScore[] = AGENT_PARTS.map(({ key, label }) => {
     const seconds = secondsByKey.get(key) ?? null;
@@ -547,9 +605,9 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
         rate = rubricPerfect ? 1 : 0;
       }
     } else if (key === "grade-lines") {
-      if (jTotal) {
-        scoreLabel = `${stepOk}/${jTotal} placed right, ${statusOk}/${jTotal} marked right`;
-        rate = (stepOk + statusOk) / (2 * jTotal);
+      if (jTotal || sTotal) {
+        scoreLabel = `${stepOk}/${jTotal} placed on the right step, ${statusOk}/${sTotal} marked pass/fail right (first try)`;
+        rate = (stepOk + statusOk) / Math.max(1, jTotal + sTotal);
       }
     }
 
@@ -562,115 +620,374 @@ function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
   );
 }
 
-type FlowCtx = {
-  criterionLabel: string;
+/** The verdict the grader returned for one drag or pass/fail mark. */
+type GradeItem = {
+  criterion: string;
   placedStep: number | null;
   expectedStep: number;
-  marked: "pass" | "fail" | null;
-  expected: "pass" | "fail" | null;
+  stepCorrect: boolean;
+  status: "pass" | "fail" | null;
+  expectedStatus: "pass" | "fail" | null;
+  statusCorrect: boolean;
 };
 
-function emptyCtx(): FlowCtx {
-  return {
-    criterionLabel: "",
-    placedStep: null,
-    expectedStep: 0,
-    marked: null,
-    expected: null,
-  };
-}
-
-/** Render a scripted flow line for whichever phase the thread is in. */
-function scriptedLine(
-  phase: "placement" | "status",
-  line: PlacementLineId,
-  ctx: FlowCtx
-): string {
-  return phase === "status"
-    ? statusLine(line, {
-        marked: ctx.marked,
-        expected: ctx.expected,
-        placedStep: ctx.placedStep,
-      })
-    : placementLine(line, {
-        criterionLabel: ctx.criterionLabel,
-        placedStep: ctx.placedStep,
-        expectedStep: ctx.expectedStep,
-      });
-}
-
-const REPLY_PHRASE: Record<string, string> = {
-  yes: "Yes, I'm keeping it.",
-  no: "No, I'm not sure.",
-  unclear: "(reply the AI couldn't read as yes/no)",
+type GradeVerdict = {
+  at: string;
+  answerId: string;
+  answerTitle: string;
+  criterionId: string;
+  phase: "placement" | "status";
+  item: GradeItem;
 };
 
 /**
- * Rebuild the Apply-Rubric conversation for one agent participant.
- *
- * The visible dialogue is a deterministic state machine (lib/placement-flow.ts,
- * shared by placement and pass/fail) with a few lines written by the model. So
- * the transcript is reconstructed by replaying each logged transition to get
- * its scripted lines, and splicing in the model-written lines and the TA's
- * free-text replies from the AI exchanges — grouped per criterion and phase.
+ * Every grading verdict in Apply Rubric, in order. Each drag (placement) and
+ * each pass/fail mark (status) is sent to /api/grade-lines-feedback, which
+ * returns whether it was right — that response is the ground truth for what
+ * the participant did and whether it was correct.
  */
-function agentConversation(list: LogDoc[]): ConvThread[] {
-  const sorted = [...list].sort((a, b) =>
-    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
-  );
+function gradeVerdictsOf(sorted: LogDoc[]): GradeVerdict[] {
+  const out: GradeVerdict[] = [];
+  for (const d of sorted) {
+    if (d.event !== "ai_exchange" || d.data?.route !== "grade-lines-feedback") continue;
+    const req = (d.data?.request ?? {}) as Record<string, unknown>;
+    const res = (d.data?.response ?? {}) as Record<string, unknown>;
+    const fb = Array.isArray(res.feedback) ? (res.feedback[0] as Record<string, unknown>) : null;
+    if (!fb) continue;
+    const rubric = Array.isArray(req.rubric) ? (req.rubric[0] as Record<string, unknown>) : {};
+    const criterionId = String(fb.criterionId ?? rubric?.criterionId ?? "");
+    const placements = (req.placements ?? {}) as Record<string, Record<string, unknown>>;
+    const sent = placements[criterionId];
+    const status = sent?.status === "pass" || sent?.status === "fail" ? sent.status : null;
+    out.push({
+      at: d.timestamp ?? "",
+      answerId: String(req.answerId ?? ""),
+      answerTitle: String(req.answerTitle ?? req.answerId ?? "Answer"),
+      criterionId,
+      phase: status ? "status" : "placement",
+      item: {
+        criterion: String(fb.criterion ?? rubric?.criterion ?? criterionId),
+        placedStep: typeof fb.placedStep === "number" ? fb.placedStep : null,
+        expectedStep: typeof fb.expectedStep === "number" ? fb.expectedStep : 0,
+        stepCorrect: fb.stepCorrect === true,
+        status: fb.status === "pass" || fb.status === "fail" ? fb.status : status,
+        expectedStatus:
+          fb.expectedStatus === "pass" || fb.expectedStatus === "fail" ? fb.expectedStatus : null,
+        statusCorrect: fb.statusCorrect === true,
+      },
+    });
+  }
+  return out;
+}
 
-  const threads = new Map<string, ConvThread>();
-  const ctxByKey = new Map<string, FlowCtx>();
-  let currentKey: string | null = null;
-  let pendingReply: string | null = null;
+const UP = (s: string | null) => (s ?? "?").toUpperCase();
 
-  const questionThread: ConvThread = {
-    heading: "Question — explanation feedback",
-    phase: "question",
-    outcome: "",
-    turns: [],
+/** Render a fixed decision-tree line for whichever phase is being discussed. */
+function scriptedLine(
+  phase: "placement" | "status",
+  line: PlacementLineId,
+  item: GradeItem
+): string {
+  return phase === "status"
+    ? statusLine(line, {
+        marked: item.status,
+        expected: item.expectedStatus,
+        placedStep: item.placedStep,
+      })
+    : placementLine(line, {
+        criterionLabel: item.criterion,
+        placedStep: item.placedStep,
+        expectedStep: item.expectedStep,
+      });
+}
+
+/** What the participant did, in words, and whether it was right. */
+function describeMove(phase: "placement" | "status", item: GradeItem): ConvTurn {
+  if (phase === "placement") {
+    return {
+      speaker: "participant",
+      kind: "action",
+      correct: item.stepCorrect,
+      text: item.stepCorrect
+        ? `Dragged "${item.criterion}" onto step ${item.placedStep ?? "?"} — correct.`
+        : `Dragged "${item.criterion}" onto step ${item.placedStep ?? "?"} — wrong (it belongs on step ${item.expectedStep}).`,
+    };
+  }
+  return {
+    speaker: "participant",
+    kind: "action",
+    correct: item.statusCorrect,
+    text: item.statusCorrect
+      ? `Marked step ${item.placedStep ?? "?"} as ${UP(item.status)} for "${item.criterion}" — correct.`
+      : `Marked step ${item.placedStep ?? "?"} as ${UP(item.status)} for "${item.criterion}" — wrong (should be ${UP(item.expectedStatus)}).`,
   };
+}
 
-  const threadFor = (
-    answer: string,
-    criterion: string,
-    phase: "placement" | "status",
-    ctx: FlowCtx
-  ): ConvThread => {
-    const key = `${answer}::${criterion}::${phase}`;
-    let t = threads.get(key);
-    if (!t) {
-      const name = ctx.criterionLabel || criterion || "criterion";
-      t = {
-        heading: `Apply Rubric · ${name} · ${
-          phase === "status" ? "pass/fail" : "placement"
+/** Which AI persona voices a discussion (mirrors grading-voice / status-flow). */
+function personaFor(phase: "placement" | "status", item: GradeItem): "professor" | "student" {
+  if (phase === "placement") return "professor";
+  return item.status === "fail" ? "student" : "professor";
+}
+
+/** Why the AI opened a discussion about this move. */
+function triggerFor(phase: "placement" | "status", item: GradeItem): string {
+  const persona = personaFor(phase, item);
+  const who = persona === "student" ? "The student (AI)" : "The professor (AI)";
+  if (phase === "placement") {
+    return item.stepCorrect
+      ? `${who} double-checked a correct drag (correct calls are challenged 20% of the time).`
+      : `${who} questioned a drag onto the wrong step.`;
+  }
+  if (!item.statusCorrect) return `${who} questioned a wrong ${UP(item.status)} call.`;
+  return item.status === "fail"
+    ? `${who} pushed back on a FAIL — a FAIL is always questioned, even when correct.`
+    : `${who} double-checked a correct PASS (challenged 20% of the time).`;
+}
+
+const QUICK_REPLY_TEXT: Record<string, string> = {
+  yes: "Yes, I'm sure",
+  no: "No, I'm not sure",
+};
+
+const NODE_QUESTION: Record<string, string> = {
+  askSure: '"Are you sure?"',
+  askWhy: '"Why do you think that?"',
+  askUnsure: '"What are you unsure about?"',
+  consider: '"Consider this…" hint',
+};
+
+/**
+ * Question task: each part's attempts. Every submit sends the chosen option's
+ * text and the participant's explanation to /api/question-feedback, and the
+ * AI's feedback comes back per part — so each attempt is fully recoverable.
+ */
+function questionTaskOf(sorted: LogDoc[]): AgentTask | null {
+  const parts = new Map<string, AgentTaskItem & { tries: boolean[] }>();
+  for (const d of sorted) {
+    if (d.event !== "ai_exchange" || d.data?.route !== "question-feedback") continue;
+    const req = (d.data?.request ?? {}) as Record<string, unknown>;
+    const res = (d.data?.response ?? {}) as Record<string, unknown>;
+    const fbByPart = (res.feedbackByPart ?? {}) as Record<string, unknown>;
+    const responses = Array.isArray(req.responses)
+      ? (req.responses as Record<string, unknown>[])
+      : [];
+    for (const r of responses) {
+      const partId = String(r.partId ?? "");
+      if (!partId) continue;
+      const item =
+        parts.get(partId) ??
+        ({
+          title: String(r.partLabel ?? `Part ${partId}`),
+          trigger: "The AI gives feedback on every submitted choice and explanation.",
+          outcome: "",
+          turns: [],
+          tries: [],
+        } as AgentTaskItem & { tries: boolean[] });
+      const correct = r.selectedChoiceCorrect === true;
+      item.tries.push(correct);
+      item.turns.push({
+        speaker: "participant",
+        kind: "action",
+        correct,
+        text: `Attempt ${item.tries.length}: chose "${String(r.selectedChoiceText ?? "?")}" — ${
+          correct ? "correct" : "wrong"
+        }.`,
+      });
+      const explanation = String(r.explanation ?? "").trim();
+      item.turns.push({
+        speaker: "participant",
+        kind: "reply",
+        text: explanation ? `Explanation: ${explanation}` : "(no explanation written)",
+      });
+      const fb = fbByPart[partId];
+      const fbText =
+        typeof fb === "string"
+          ? fb
+          : fb && typeof fb === "object"
+            ? pick(fb as Record<string, unknown>, ["feedback", "text", "message", "comment"]) ||
+              JSON.stringify(fb)
+            : "";
+      if (fbText) item.turns.push({ speaker: "professor", kind: "llm", text: fbText });
+      parts.set(partId, item);
+    }
+  }
+  if (parts.size === 0) return null;
+
+  const items = [...parts.values()].map(({ tries, ...item }) => {
+    const firstRight = tries[0] === true;
+    const solvedAt = tries.indexOf(true);
+    return {
+      ...item,
+      outcome: firstRight
+        ? "Correct on the first try."
+        : solvedAt >= 0
+          ? `Correct on attempt ${solvedAt + 1} (first try wrong).`
+          : `Not answered correctly (${tries.length} attempt${tries.length === 1 ? "" : "s"}).`,
+    };
+  });
+  const firstRight = items.filter((i) => i.outcome.startsWith("Correct on the first")).length;
+  return {
+    task: "Question",
+    summary: `${firstRight}/${items.length} parts correct on the first try.`,
+    items,
+  };
+}
+
+/**
+ * Create Rubric task: each submission — which criteria the participant
+ * included or left out, and what the check found wrong. There is no AI chat in
+ * this task; the system's check is the response.
+ */
+function rubricTaskOf(sorted: LogDoc[]): AgentTask | null {
+  const labels = new Map<string, string>();
+  for (const d of sorted) {
+    if (d.event === "rubric_decision" && d.data?.criterion_id) {
+      labels.set(String(d.data.criterion_id), String(d.data.criterion_label ?? d.data.criterion_id));
+    }
+  }
+  const name = (id: unknown) => labels.get(String(id)) ?? String(id);
+  const names = (v: unknown) => (Array.isArray(v) ? v.map(name) : []);
+
+  const items: AgentTaskItem[] = [];
+  for (const d of sorted) {
+    if (d.event !== "rubric_submitted") continue;
+    const decisions = (d.data?.decisions ?? {}) as Record<string, string>;
+    const included = Object.entries(decisions).filter(([, v]) => v === "include").map(([k]) => name(k));
+    const excluded = Object.entries(decisions).filter(([, v]) => v !== "include").map(([k]) => name(k));
+    const wrongly = names(d.data?.wrongly_included);
+    const missed = names(d.data?.missed_essential);
+    const perfect = d.data?.is_perfect === true;
+    items.push({
+      title: `Submission ${items.length + 1}`,
+      trigger: "The rubric selection is checked against the answer key on submit.",
+      outcome: perfect
+        ? "Perfect selection."
+        : [
+            wrongly.length ? `Wrongly included: ${wrongly.join("; ")}.` : "",
+            missed.length ? `Missed essential: ${missed.join("; ")}.` : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+      turns: [
+        {
+          speaker: "participant",
+          kind: "action",
+          correct: perfect,
+          text: `Included: ${included.join("; ") || "—"}`,
+        },
+        { speaker: "participant", kind: "action", text: `Left out: ${excluded.join("; ") || "—"}` },
+        {
+          speaker: "system",
+          kind: "note",
+          text: perfect
+            ? "Check: perfect selection."
+            : `Check: ${wrongly.length} wrongly included, ${missed.length} essential missed.`,
+        },
+      ],
+    });
+  }
+  if (items.length === 0) return null;
+  const perfectAt = items.findIndex((i) => i.outcome === "Perfect selection.");
+  return {
+    task: "Create Rubric",
+    summary:
+      perfectAt === 0
+        ? "Perfect on the first submission."
+        : perfectAt > 0
+          ? `Perfect on submission ${perfectAt + 1} of ${items.length}.`
+          : `Never perfect (${items.length} submission${items.length === 1 ? "" : "s"}).`,
+    items,
+  };
+}
+
+/**
+ * Apply Rubric task: one item per criterion per phase (which step it belongs
+ * on, then pass/fail), showing every move the participant made, why the AI
+ * engaged, what it said, and exactly how the participant replied.
+ *
+ * Newer runs log every displayed line (grade_lines_flow_message), which is used
+ * verbatim. Older runs are rebuilt: the decision tree is deterministic
+ * (lib/placement-flow.ts), so replaying each logged transition recovers the
+ * fixed AI lines; model-written lines and replies come from the AI exchanges.
+ * In older runs, a typed reply that never reached an AI route was not saved.
+ */
+function applyRubricTaskOf(sorted: LogDoc[]): { task: AgentTask | null; exact: boolean } {
+  const exact = sorted.some((d) => d.event === "grade_lines_flow_message");
+  const items = new Map<string, AgentTaskItem & { phase: "placement" | "status"; started: boolean }>();
+  const lastVerdict = new Map<string, GradeVerdict>();
+  const order: string[] = [];
+  let currentKey: string | null = null;
+  let pendingClassify: { reply: string; label: string } | null = null;
+  // The last participant reply in each item whose text still needs filling in.
+  const unfilled = new Map<string, ConvTurn>();
+
+  const itemFor = (key: string, v: GradeVerdict | undefined, phase: "placement" | "status") => {
+    let it = items.get(key);
+    if (!it) {
+      it = {
+        title: `${v?.answerTitle ?? "Answer"} · "${v?.item.criterion ?? key}" — ${
+          phase === "status" ? "pass / fail" : "which step"
         }`,
-        phase,
+        trigger: "",
         outcome: "",
         turns: [],
+        phase,
+        started: false,
       };
-      threads.set(key, t);
+      items.set(key, it);
+      order.push(key);
     }
-    return t;
+    return it;
   };
 
   for (const d of sorted) {
     const data = (d.data ?? {}) as Record<string, unknown>;
 
-    if (d.event === "grade_lines_criterion_graded") {
-      const answer = String(data.answer_id ?? "");
-      const criterion = String(data.criterion_id ?? "");
-      const phase = data.phase === "status" ? "status" : "placement";
-      const key = `${answer}::${criterion}::${phase}`;
-      const p = (data.placement ?? {}) as Record<string, unknown>;
-      const ctx = ctxByKey.get(key) ?? emptyCtx();
-      if (typeof p.placedStep === "number") ctx.placedStep = p.placedStep;
-      if (typeof p.expectedStep === "number") ctx.expectedStep = p.expectedStep;
-      if (p.status === "pass" || p.status === "fail") ctx.marked = p.status;
-      if (p.expectedStatus === "pass" || p.expectedStatus === "fail")
-        ctx.expected = p.expectedStatus;
-      ctxByKey.set(key, ctx);
+    // A drag or a pass/fail mark, graded.
+    if (d.event === "ai_exchange" && data.route === "grade-lines-feedback") {
+      const [v] = gradeVerdictsOf([d]);
+      if (!v) continue;
+      const key = `${v.answerId}::${v.criterionId}::${v.phase}`;
+      lastVerdict.set(key, v);
+      const it = itemFor(key, v, v.phase);
+      it.turns.push(describeMove(v.phase, v.item));
       currentKey = key;
+      continue;
+    }
+
+    // A correct call accepted without any discussion.
+    if (
+      d.event === "grade_lines_placement_unchallenged" ||
+      d.event === "grade_lines_status_unchallenged"
+    ) {
+      const phase = d.event === "grade_lines_status_unchallenged" ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      const it = itemFor(key, lastVerdict.get(key), phase);
+      if (!it.trigger) it.trigger = "No discussion — the correct call was accepted as-is.";
+      it.turns.push({
+        speaker: "system",
+        kind: "note",
+        text: "Accepted without discussion (correct calls are only challenged 20% of the time).",
+      });
+      it.outcome = "Accepted — correct, no discussion.";
+      continue;
+    }
+
+    // Exact transcript lines (newer runs).
+    if (d.event === "grade_lines_flow_message") {
+      const phase = data.kind === "status" ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      const it = itemFor(key, lastVerdict.get(key), phase);
+      const role = String(data.role ?? "");
+      it.turns.push(
+        role === "user"
+          ? { speaker: "participant", kind: "reply", text: String(data.text ?? "") }
+          : {
+              speaker: role === "student" ? "student" : "professor",
+              kind: "llm",
+              text: String(data.text ?? ""),
+            }
+      );
       continue;
     }
 
@@ -678,125 +995,145 @@ function agentConversation(list: LogDoc[]): ConvThread[] {
       d.event === "grade_lines_placement_transition" ||
       d.event === "grade_lines_status_transition"
     ) {
-      const phase =
-        d.event === "grade_lines_status_transition" ? "status" : "placement";
-      const answer = String(data.answer_id ?? "");
-      const criterion = String(data.criterion_id ?? "");
-      const key = `${answer}::${criterion}::${phase}`;
+      const phase = d.event === "grade_lines_status_transition" ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
       currentKey = key;
-      const ctx = ctxByKey.get(key) ?? emptyCtx();
-      ctxByKey.set(key, ctx);
-      const thread = threadFor(answer, criterion, phase, ctx);
-
+      const v = lastVerdict.get(key);
+      const it = itemFor(key, v, phase);
       const from = data.from as PlacementFlow | undefined;
       const event = data.event as PlacementEvent | undefined;
       if (!from || !event) continue;
 
-      // The TA's own move / reply that drives this transition.
-      if (event.type === "DROP") {
-        thread.turns.push({
-          speaker: "ta",
-          kind: "action",
-          text:
-            phase === "status"
-              ? `Marked it ${(ctx.marked ?? "?").toUpperCase()}.`
-              : `Dragged "${ctx.criterionLabel || criterion}" onto step ${
-                  ctx.placedStep ?? "?"
-                }.`,
-        });
-      } else {
-        thread.turns.push({
-          speaker: "ta",
-          kind: "action",
-          text:
-            pendingReply ??
-            REPLY_PHRASE[event.label ?? "unclear"] ??
-            "(reply)",
-        });
-        pendingReply = null;
+      if (event.type === "DROP" && !it.started && v) {
+        it.trigger = triggerFor(phase, v.item);
+        it.started = true;
       }
 
-      // Replay the state machine to get the scripted professor lines.
-      const { next, effects } = transitionPlacement(from, event);
-      for (const effect of effects) {
-        if (effect.type === "say") {
-          thread.turns.push({
-            speaker: "professor",
-            kind: "scripted",
-            text: scriptedLine(phase, effect.line, ctx),
-          });
+      if (!exact) {
+        if (event.type === "REPLY") {
+          const node = from.kind === "chat" ? from.node : "";
+          const label = event.label ?? null;
+          let turn: ConvTurn;
+          if (node === "askSure" && pendingClassify) {
+            turn = { speaker: "participant", kind: "reply", text: pendingClassify.reply };
+          } else if (node === "askSure" && label && QUICK_REPLY_TEXT[label]) {
+            turn = { speaker: "participant", kind: "reply", text: QUICK_REPLY_TEXT[label] };
+          } else {
+            turn = {
+              speaker: "participant",
+              kind: "reply",
+              text: `(typed a reply to the ${NODE_QUESTION[node] ?? "question"} — not saved in this run)`,
+            };
+            unfilled.set(key, turn);
+          }
+          it.turns.push(turn);
+          if (node === "askSure") {
+            it.turns.push({
+              speaker: "system",
+              kind: "note",
+              text: `Read as: ${label ?? "unclear"}${
+                label === "unclear" && from.kind === "chat" && from.unclear >= 1
+                  ? " (second unclear reply — treated as no)"
+                  : ""
+              }.`,
+            });
+          }
+          pendingClassify = null;
         }
-        // `explain` effects are model-written: filled by the placement-explain
-        // exchange that follows this transition.
+
+        const { effects } = transitionPlacement(from, event);
+        const persona = v ? personaFor(phase, v.item) : "professor";
+        for (const effect of effects) {
+          if (effect.type === "say" && v) {
+            it.turns.push({
+              speaker: persona,
+              kind: "scripted",
+              text: scriptedLine(phase, effect.line, v.item),
+            });
+          }
+          // `explain` lines are model-written; they arrive as the next
+          // placement-explain exchange.
+        }
       }
+
+      const { next } = transitionPlacement(from, event);
       if (next.kind === "resolved") {
-        thread.outcome =
+        it.outcome =
           next.how === "accepted"
-            ? `Resolved — stood by the call (attempt ${next.attempt}).`
-            : `Resolved — moved after being told (attempt ${next.attempt}).`;
+            ? `Resolved — the participant stood by a correct call (attempt ${next.attempt}).`
+            : `Resolved — the participant moved it after being told the answer (attempt ${next.attempt}).`;
+      } else if (next.kind === "dragging" && next.revealed) {
+        it.outcome = "Out of attempts — the AI revealed the correct answer.";
       }
       continue;
     }
 
-    if (d.event === "ai_exchange") {
+    if (d.event === "ai_exchange" && !exact) {
       const route = String(data.route ?? "");
       const req = (data.request ?? {}) as Record<string, unknown>;
       const res = (data.response ?? {}) as Record<string, unknown>;
 
-      // Keep the criterion label / steps fresh for scripted-line rendering.
-      if (currentKey) {
-        const ctx = ctxByKey.get(currentKey) ?? emptyCtx();
-        if (typeof req.criterionLabel === "string")
-          ctx.criterionLabel = req.criterionLabel;
-        if (typeof req.placedStep === "number") ctx.placedStep = req.placedStep;
-        if (typeof req.expectedStep === "number")
-          ctx.expectedStep = req.expectedStep;
-        ctxByKey.set(currentKey, ctx);
-      }
-
-      if (route === "question-feedback") {
-        const student = pick(req, ["explanation", "answer", "text"]);
-        const ai = pick(res, ["feedback", "reply", "comment", "text"]);
-        if (student)
-          questionThread.turns.push({
-            speaker: "ta",
-            kind: "action",
-            text: student,
-          });
-        if (ai)
-          questionThread.turns.push({ speaker: "professor", kind: "llm", text: ai });
-        continue;
-      }
-
       if (route === "placement-classify") {
-        // The TA's free answer to "Are you sure?" — attached to the REPLY
-        // transition that immediately follows.
-        pendingReply = pick(req, ["reply", "message", "text"]) || pendingReply;
+        pendingClassify = {
+          reply: pick(req, ["reply", "message", "text"]),
+          label: String(res.label ?? ""),
+        };
         continue;
       }
 
-      // The remaining routes are model-written professor lines in the current
-      // thread (affirm/hint/reveal, line feedback, or open chat).
-      const target =
-        currentKey && threads.get(currentKey)
-          ? threads.get(currentKey)!
-          : null;
-      if (!target) continue;
-
-      if (route === "grade-chat") {
-        const student = pick(req, ["message", "reply", "text"]);
-        if (student)
-          target.turns.push({ speaker: "ta", kind: "action", text: student });
+      if (route === "placement-explain" && currentKey) {
+        const it = items.get(currentKey);
+        if (!it) continue;
+        // The explain call carries the participant's reply that prompted it.
+        const ta = typeof req.taMessage === "string" ? req.taMessage.trim() : "";
+        const hole = unfilled.get(currentKey);
+        if (ta && hole) {
+          hole.text = ta;
+          unfilled.delete(currentKey);
+        }
+        const text = pick(res, ["text"]);
+        const persona = req.speaker === "student" ? "student" : "professor";
+        if (text) it.turns.push({ speaker: persona, kind: "llm", text });
       }
-      const ai = pick(res, ["text", "reply", "feedback", "comment", "message"]);
-      if (ai) target.turns.push({ speaker: "professor", kind: "llm", text: ai });
     }
   }
 
-  const out: ConvThread[] = [];
-  if (questionThread.turns.length) out.push(questionThread);
-  out.push(...threads.values());
-  return out;
+  if (order.length === 0) return { task: null, exact };
+
+  const list = order.map((k) => {
+    const { phase: _phase, started: _started, ...item } = items.get(k)!;
+    void _phase;
+    void _started;
+    return {
+      ...item,
+      trigger: item.trigger || "—",
+      outcome: item.outcome || "—",
+    };
+  });
+
+  const discussed = list.filter((i) => !i.outcome.startsWith("Accepted")).length;
+  const firstMoves = order.map((k) => items.get(k)!.turns.find((t) => t.kind === "action"));
+  const firstRight = firstMoves.filter((t) => t?.correct === true).length;
+  return {
+    exact,
+    task: {
+      task: "Apply Rubric",
+      summary: `${firstRight}/${list.length} calls right on the first try · ${discussed} discussed with the AI.`,
+      items: list,
+    },
+  };
+}
+
+/** Every task of the agent instruction, in stepper order. */
+function agentTasksOf(list: LogDoc[]): { tasks: AgentTask[]; exact: boolean } {
+  const sorted = [...list].sort((a, b) =>
+    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+  );
+  const apply = applyRubricTaskOf(sorted);
+  const tasks = [questionTaskOf(sorted), rubricTaskOf(sorted), apply.task].filter(
+    (t): t is AgentTask => t != null
+  );
+  return { tasks, exact: apply.exact };
 }
 
 export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
@@ -871,20 +1208,68 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     })
     .filter((v): v is number => v != null);
 
+  // Each lesson on its own, from its own completion event.
+  const perLessonMin = (label: string) => {
+    const vals = completerLists
+      .filter((l) => armOf(l) === "lesson")
+      .map((l) => lessonTimesOf(l).find((t) => t.lesson === label)?.seconds ?? null)
+      .filter((v): v is number => v != null)
+      .map((s) => s / 60);
+    return { medianMin: median(vals), n: vals.length };
+  };
+
+  // Each task of the agent instruction (Question / Create Rubric / Apply
+  // Rubric), with time, score and AI runs, across agent completers.
+  const agentPartLists = completerLists
+    .filter((l) => armOf(l) === "agent")
+    .map((l) => agentPartsOf(l));
+  const agentSteps: AgentStepSummary[] = AGENT_PARTS.map(({ label }) => {
+    const rows = agentPartLists
+      .map((parts) => parts.find((p) => p.part === label))
+      .filter((p): p is AgentPartScore => p != null);
+    const mins = rows
+      .map((p) => p.seconds)
+      .filter((s): s is number => s != null)
+      .map((s) => s / 60);
+    const rates = rows.map((p) => p.rate).filter((r): r is number => r != null);
+    return {
+      step: label,
+      medianMin: median(mins),
+      meanRate: rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null,
+      avgAiRuns: agentPartLists.length
+        ? rows.reduce((a, p) => a + p.aiRuns, 0) / agentPartLists.length
+        : 0,
+      n: rows.length,
+    };
+  });
+
   const phases: PhaseTiming[] = [
     { key: "pre_survey", label: "Pre-survey", ...medPhase("pre_survey") },
     { key: "pretest", label: "Pre-test", ...medPhase("pretest") },
     {
       key: "instruction_agent",
-      label: "Instruction (agent)",
+      label: "Instruction (agent) — total",
       ...medPhase("scenarios", (x) => x.arm === "agent"),
     },
+    ...agentSteps.map((s) => ({
+      key: `agent_${s.step}`,
+      label: s.step,
+      medianMin: s.medianMin,
+      n: s.n,
+      sub: true,
+    })),
     {
       key: "lesson",
-      label: "LearnVia lesson (both lessons)",
+      label: "LearnVia lesson — total (both lessons)",
       medianMin: median(lessonTotalsMin),
       n: lessonTotalsMin.length,
     },
+    ...Object.values(LESSON_LABELS).map((label) => ({
+      key: `lesson_${label}`,
+      label,
+      ...perLessonMin(label),
+      sub: true,
+    })),
     { key: "posttest", label: "Post-test", ...medPhase("posttest") },
     { key: "post_survey", label: "Post-survey", ...medPhase("post_survey") },
   ];
@@ -961,7 +1346,12 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       agentLowestPart: minBy(scored, (p) => p.rate ?? 1)?.part ?? null,
       agentSlowestPart: maxBy(timed, (p) => p.seconds ?? 0)?.part ?? null,
       agentFastestPart: minBy(timed, (p) => p.seconds ?? Infinity)?.part ?? null,
-      agentThreads: arm === "agent" ? agentConversation(list) : [],
+      lessonTimes: arm === "lesson" ? lessonTimesOf(list) : [],
+      ...(() => {
+        if (arm !== "agent") return { agentTasks: [], agentExactTranscript: false };
+        const { tasks, exact } = agentTasksOf(list);
+        return { agentTasks: tasks, agentExactTranscript: exact };
+      })(),
       agent:
         arm === "agent"
           ? list
@@ -1029,6 +1419,7 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       lessonMedianMin: median(lessonMinutes),
       lessonMedianHints: median(lessonHints),
       avgAiPerPart,
+      agentSteps,
     },
     participants,
   };

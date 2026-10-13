@@ -287,6 +287,17 @@ function GradeLinesPageContent() {
     role: DiscussionMessage["role"],
     text: string
   ) => {
+    // Record every line of the discussion exactly as shown — the TA's own replies
+    // included. Not every reply reaches an AI route (e.g. answers to "What are you
+    // unsure about?" that lead straight to "Take another look"), so without this
+    // the analysis could not show how the TA responded at each step.
+    logEvent("grade_lines_flow_message", scenarioId, {
+      kind,
+      answer_id: answerId,
+      criterion_id: criterionId,
+      role,
+      text,
+    });
     updateFlowThread(kind, answerId, criterionId, (thread) => ({
       ...thread,
       messages: [
