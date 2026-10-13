@@ -290,9 +290,26 @@ function buildItemDetail(
 
 export function buildInsights(
   docs: LogDoc[],
-  graded: GradedSubmission[]
+  gradedAll: GradedSubmission[]
 ): Insights {
-  const timing = secondsPerItem(docs);
+  // Only participants who finished the WHOLE flow (reached and submitted the
+  // post-survey) are analysed — partial drop-offs would skew every item, timing,
+  // and goal stat. The post-survey is the last step, so its completion is the
+  // "did the whole study" signal.
+  const flowComplete = new Set(
+    docs
+      .filter((d) => d.event === "survey_completed" && d.scenario_id === "post")
+      .map((d) => d.subject_id)
+      .filter((s): s is string => Boolean(s))
+  );
+  const graded = gradedAll.filter((g) =>
+    flowComplete.has(g.submission.subjectId)
+  );
+  const completeDocs = docs.filter(
+    (d) => !!d.subject_id && flowComplete.has(d.subject_id)
+  );
+
+  const timing = secondsPerItem(completeDocs);
   const overall = accuracyByItem(graded);
 
   const items: ItemStat[] = [...overall.entries()]
