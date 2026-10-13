@@ -45,9 +45,43 @@ export type InstructionSummary = {
   lessonFirstTry: { itemId: string; firstTryRate: number; n: number }[];
   lessonMedianMin: number | null;
   lessonMedianHints: number | null;
+  /** Average number of AI interactions per part, across agent completers. */
+  avgAiPerPart: { part: string; avg: number; total: number }[];
 };
 
 export type AnswerLine = { label: string; value: string };
+
+/** One student↔AI exchange in the agent scenario, with context. */
+export type AiExchange = {
+  at: string;
+  /** Human label for which part of the activity this was. */
+  part: string;
+  route: string;
+  path: string;
+  /** What the step/placement/criterion was, and whether it was right. */
+  context: string;
+  student: string;
+  ai: string;
+  durationMs: number | null;
+};
+
+/** One lesson-arm question attempt. */
+export type LessonItemDetail = {
+  itemId: string;
+  firstTryCorrect: boolean;
+  attempts: number;
+  hints: number;
+  at: string;
+};
+
+export type InstructionDetail = {
+  arm: string | null;
+  minutes: number | null;
+  /** Lesson arm: per-question correctness + timestamp. */
+  lesson: LessonItemDetail[];
+  /** Agent arm: the full AI conversation, in order. */
+  agent: AiExchange[];
+};
 
 /** Everything one completer answered, step by step, for the bottom-of-page dump. */
 export type ParticipantDetail = {
@@ -56,6 +90,7 @@ export type ParticipantDetail = {
   screening: AnswerLine[];
   preSurvey: AnswerLine[];
   preTest: AnswerLine[];
+  instruction: InstructionDetail;
   postTest: AnswerLine[];
   postSurvey: AnswerLine[];
 };
@@ -214,6 +249,132 @@ function testAnswerLines(doc: LogDoc | null): AnswerLine[] {
     .filter((l) => l.value !== "");
 }
 
+const AI_PART_LABELS: Record<string, string> = {
+  "question-feedback": "Explanation feedback",
+  "grade-chat": "Chat with the AI",
+  "apply-rubric-feedback": "Rubric feedback",
+  "grade-lines-comment": "Comment on a solution line",
+  "grade-lines-feedback": "Line-grading feedback",
+  "placement-classify": "Judge a step — classify reply",
+  "placement-explain": "Judge a step — explain",
+  "ai-student-answers": "AI sample answers",
+};
+
+function pick(o: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const v = o[k];
+    if (typeof v === "string" && v.trim()) return v;
+  }
+  return "";
+}
+
+function boolStr(v: unknown, yes: string, no: string): string {
+  if (v === true) return yes;
+  if (v === false) return no;
+  return "";
+}
+
+/** Turn one ai_exchange event into a readable exchange with context. */
+function summariseExchange(d: LogDoc): AiExchange {
+  const data = (d.data ?? {}) as Record<string, unknown>;
+  const route = String(data.route ?? "");
+  const path = String(data.path ?? "");
+  const req = (data.request ?? {}) as Record<string, unknown>;
+  const res = (data.response ?? {}) as Record<string, unknown>;
+
+  // Context: what step/criterion this was about, and whether it was right.
+  const ctx: string[] = [];
+  if (req.criterionLabel) ctx.push(String(req.criterionLabel));
+  if (req.placedStep !== undefined && req.expectedStep !== undefined) {
+    ctx.push(
+      `placed on step ${req.placedStep} (expected ${req.expectedStep}, ${boolStr(req.stepCorrect, "correct", "wrong")})`
+    );
+  }
+  if (req.userStatus !== undefined && req.expectedStatus !== undefined) {
+    ctx.push(
+      `marked ${req.userStatus} (expected ${req.expectedStatus}, ${boolStr(req.statusCorrect, "correct", "wrong")})`
+    );
+  }
+  if (route === "placement-classify" && res.label) {
+    ctx.push(`reply read as "${String(res.label)}"`);
+  }
+
+  const student =
+    pick(req, [
+      "reply",
+      "message",
+      "comment",
+      "studentMessage",
+      "text",
+      "answer",
+      "explanation",
+      "userStatus",
+    ]) || (req.question ? `Q: ${String(req.question)}` : "");
+  const ai =
+    pick(res, [
+      "reply",
+      "feedback",
+      "comment",
+      "message",
+      "text",
+      "label",
+      "verdict",
+    ]) ||
+    (typeof data.response === "object"
+      ? JSON.stringify(data.response).slice(0, 300)
+      : String(data.response ?? ""));
+
+  return {
+    at: d.timestamp ?? "",
+    part: AI_PART_LABELS[route] ?? route,
+    route,
+    path,
+    context: ctx.join("; "),
+    student,
+    ai,
+    durationMs: typeof data.duration_ms === "number" ? data.duration_ms : null,
+  };
+}
+
+/** Lesson-arm per-question attempts, in order. */
+function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
+  const first = new Map<
+    string,
+    { firstTryCorrect: boolean; attempts: number; at: string }
+  >();
+  const hints = new Map<string, number>();
+  for (const d of [...list].sort((a, b) =>
+    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+  )) {
+    if (d.event === "lesson_hint_shown") {
+      const id = String(d.data?.item_id ?? "");
+      if (id) hints.set(id, (hints.get(id) ?? 0) + 1);
+    }
+    if (d.event !== "lesson_item_attempted") continue;
+    const id = String(d.data?.item_id ?? "");
+    if (!id) continue;
+    const e = first.get(id);
+    if (!e) {
+      first.set(id, {
+        firstTryCorrect: d.data?.is_correct === true,
+        attempts: 1,
+        at: d.timestamp ?? "",
+      });
+    } else {
+      e.attempts += 1;
+    }
+  }
+  return [...first.entries()]
+    .map(([itemId, e]) => ({
+      itemId,
+      firstTryCorrect: e.firstTryCorrect,
+      attempts: e.attempts,
+      hints: hints.get(itemId) ?? 0,
+      at: e.at,
+    }))
+    .sort((a, b) => a.at.localeCompare(b.at));
+}
+
 const PHASE_LABELS: Record<Phase, string> = {
   welcome: "Welcome",
   pre_survey: "Pre-survey",
@@ -324,6 +485,25 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));
 
   // Every completer's full set of answers, step by step, for the page bottom.
+  const instructionDetailOf = (list: LogDoc[]): InstructionDetail => {
+    const arm = armOf(list);
+    const mins = minutesPerPhase(list).scenarios;
+    return {
+      arm,
+      minutes: mins > 0 ? mins : null,
+      lesson: arm === "lesson" ? lessonItemsOf(list) : [],
+      agent:
+        arm === "agent"
+          ? list
+              .filter((d) => d.event === "ai_exchange")
+              .sort((a, b) =>
+                (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+              )
+              .map(summariseExchange)
+          : [],
+    };
+  };
+
   const participants: ParticipantDetail[] = completerSubjects.map(
     ([subjectId, list]) => ({
       subjectId,
@@ -337,6 +517,7 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
         answersOf(latest(list, "survey_completed", "pre"))
       ),
       preTest: testAnswerLines(latest(list, "test_completed", "pretest")),
+      instruction: instructionDetailOf(list),
       postTest: testAnswerLines(latest(list, "test_completed", "posttest")),
       postSurvey: surveyAnswerLines(
         "post",
@@ -344,6 +525,25 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       ),
     })
   );
+
+  // Average AI interactions per part, across agent completers.
+  const agentLists = completerLists.filter((l) => armOf(l) === "agent");
+  const partTotals = new Map<string, number>();
+  for (const l of agentLists) {
+    for (const d of l) {
+      if (d.event !== "ai_exchange") continue;
+      const r = String(d.data?.route ?? "");
+      const part = AI_PART_LABELS[r] ?? r;
+      partTotals.set(part, (partTotals.get(part) ?? 0) + 1);
+    }
+  }
+  const avgAiPerPart = [...partTotals.entries()]
+    .map(([part, total]) => ({
+      part,
+      total,
+      avg: agentLists.length ? total / agentLists.length : 0,
+    }))
+    .sort((a, b) => b.total - a.total);
 
   return {
     totalParticipants: subjects.length,
@@ -358,6 +558,7 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       lessonFirstTry,
       lessonMedianMin: median(lessonMinutes),
       lessonMedianHints: median(lessonHints),
+      avgAiPerPart,
     },
     participants,
   };
