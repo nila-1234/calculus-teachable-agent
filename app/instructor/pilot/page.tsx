@@ -434,17 +434,42 @@ function ScreeningGroupsCard({
       ? "—"
       : `${s.avg.toFixed(1)}/${s.max} (${Math.round((100 * s.avg) / (s.max || 1))}%)`;
 
-  const groups = GROUP_LABELS.map(([key, label]) => {
-    const members = rows.filter((r) => screenGroup(r) === key);
-    const a = members.filter((r) => r.form === "A");
-    const b = members.filter((r) => r.form === "B");
-    return { key, label, members, a, b };
-  }).filter((g) => g.key !== "both" || g.members.length > 0);
+  const groupOf = (key: string, label: string, members: Row[]) => ({
+    key,
+    label,
+    members,
+    a: members.filter((r) => r.form === "A"),
+    b: members.filter((r) => r.form === "B"),
+  });
+  const groups = [
+    ...GROUP_LABELS.map(([key, label]) =>
+      groupOf(key, label, rows.filter((r) => screenGroup(r) === key))
+    ).filter((g) => g.key !== "both" || g.members.length > 0),
+    groupOf("all", "All participants", rows),
+  ];
+
+  // Overall spread of each score, per form and pooled.
+  const summary = (
+    [
+      ["Form A", rows.filter((r) => r.form === "A")],
+      ["Form B", rows.filter((r) => r.form === "B")],
+      ["Both forms", rows],
+    ] as [string, Row[]][]
+  ).map(([label, list]) => ({
+    label,
+    q1: describe(list.filter((r) => r.q1_total > 0).map((r) => r.q1_correct)),
+    q1Max: list.find((r) => r.q1_total > 0)?.q1_total ?? 4,
+    sheet: describe(
+      list.map((r) => grades[r.subject]?.total).filter((t): t is number => t != null)
+    ),
+    sheetMax: list.map((r) => grades[r.subject]?.max).find((m) => m != null) ?? 22,
+  }));
+  const fmtStat = (v: number | null, digits = 1) => (v == null ? "—" : v.toFixed(digits));
 
   return (
     <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
       <h2 className="text-base font-bold text-stone-800">
-        Performance by screening group
+        Performance — overall and by screening group
       </h2>
       <p className="mt-1 text-xs text-stone-400">
         Low level = failed the algebra or power-rule check. High level = Calculus
@@ -479,10 +504,21 @@ function ScreeningGroupsCard({
         </thead>
         <tbody>
           {groups.map((g) => (
-            <tr key={g.key} className="border-t border-stone-100">
+            <tr
+              key={g.key}
+              className={
+                g.key === "all"
+                  ? "border-t-2 border-stone-300 bg-stone-50"
+                  : "border-t border-stone-100"
+              }
+            >
               <td
                 className={`py-1 pr-3 font-semibold ${
-                  g.key === "eligible" ? "text-lime-700" : "text-rose-700"
+                  g.key === "all"
+                    ? "text-stone-800"
+                    : g.key === "eligible"
+                      ? "text-lime-700"
+                      : "text-rose-700"
                 }`}
               >
                 {g.label}
@@ -504,8 +540,288 @@ function ScreeningGroupsCard({
           ))}
         </tbody>
       </table>
+
+      <h3 className="mt-5 text-sm font-bold text-stone-700">
+        Overall score summary (all participants)
+      </h3>
+      <table className="mt-1 w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-xs text-stone-400">
+            <th className="py-1 pr-3 font-semibold" rowSpan={2}>Form</th>
+            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={6}>
+              New Q1 (items correct)
+            </th>
+            <th className="border-l border-stone-100 py-1 pl-2 font-semibold" colSpan={6}>
+              Scoring sheet total
+            </th>
+          </tr>
+          <tr className="text-left text-xs text-stone-400">
+            {[0, 1].map((k) => (
+              <Fragment key={k}>
+                {["n", "mean", "median", "SD", "min", "max"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`py-1 pr-3 font-normal ${i === 0 ? "border-l border-stone-100 pl-2" : ""}`}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {summary.map((s) => (
+            <tr key={s.label} className="border-t border-stone-100">
+              <td className="py-1 pr-3 font-semibold text-stone-700">{s.label}</td>
+              {(
+                [
+                  [s.q1, s.q1Max],
+                  [s.sheet, s.sheetMax],
+                ] as const
+              ).map(([d, max], i) => (
+                <Fragment key={i}>
+                  <td className="border-l border-stone-100 py-1 pl-2 pr-3 text-stone-500">{d.n}</td>
+                  <td className="py-1 pr-3 text-stone-800">
+                    {fmtStat(d.mean)}
+                    <span className="text-xs text-stone-400">/{max}</span>
+                  </td>
+                  <td className="py-1 pr-3 text-stone-800">{fmtStat(d.median)}</td>
+                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.sd)}</td>
+                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.min, 0)}</td>
+                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.max, 0)}</td>
+                </Fragment>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
+}
+
+/** One column of the scores-only sheet. */
+type ScoreColumn = {
+  key: string;
+  label: string;
+  max: number | null;
+  score: (r: Row) => number | null;
+};
+
+/**
+ * Columns of the scores-only sheet: each new-Q1 item (0/1), the new-Q1 total,
+ * each AI-graded item's points — Q2.1 split into its choice and explanation
+ * points, as it is graded — and the scoring-sheet total. Scores only, no
+ * answers.
+ */
+function scoreColumns(grades: Record<string, GradeInfo>): ScoreColumn[] {
+  const item = (r: Row, id: string) => grades[r.subject]?.items?.[id];
+  const anyMax = (id: string) =>
+    Object.values(grades).find((g) => g.items?.[id])?.items[id].max ?? null;
+  const q21 = (r: Row, part: "choice" | "expl") => {
+    const c = item(r, "2.1")?.criteria;
+    if (!c) return null;
+    return part === "choice"
+      ? c["chose-c"] === "met"
+        ? 1
+        : 0
+      : (c["uses-examples"] === "met" ? 1 : 0) +
+          (c["price-times-quantity"] === "met" ? 1 : 0);
+  };
+  const rubric = (id: string, label: string): ScoreColumn => ({
+    key: id,
+    label,
+    max: anyMax(id),
+    score: (r) => item(r, id)?.points ?? null,
+  });
+  return [
+    ...NUMERIC_Q1_LABELS.map(([id]) => ({
+      key: id,
+      label: `Q${id}`,
+      max: 1,
+      score: (r: Row) => (r.q1?.[id] ? (r.q1[id].correct ? 1 : 0) : null),
+    })),
+    {
+      key: "q1-total",
+      label: "New Q1 total",
+      max: 4,
+      score: (r) => (r.q1_total > 0 ? r.q1_correct : null),
+    },
+    rubric("1", "Q1a"),
+    { key: "2.1-choice", label: "Q2.1 choice", max: 1, score: (r) => q21(r, "choice") },
+    { key: "2.1-expl", label: "Q2.1 explanation", max: 2, score: (r) => q21(r, "expl") },
+    rubric("2.2", "Q2.2"),
+    rubric("2.3", "Q2.3"),
+    rubric("2.4", "Q2.4"),
+    rubric("3.1", "Q3.1"),
+    rubric("3.2", "Q3.2"),
+    {
+      key: "sheet-total",
+      label: "Scoring sheet total",
+      max: Object.values(grades)[0]?.max ?? 22,
+      score: (r) => grades[r.subject]?.total ?? null,
+    },
+  ];
+}
+
+const GROUP_SHORT: Record<ScreenGroup, string> = {
+  low: "low level",
+  eligible: "eligible",
+  high: "high level",
+  both: "low + high",
+};
+
+/**
+ * Every participant's scores, with no answers — one row per participant, one
+ * column per scored item — so the distribution of scores can be read at a
+ * glance, plus a CSV of the same sheet.
+ */
+function ScoresOnlyCard({
+  rows,
+  grades,
+}: {
+  rows: Row[];
+  grades: Record<string, GradeInfo>;
+}) {
+  const cols = scoreColumns(grades);
+  const sorted = [...rows].sort(
+    (a, b) => a.form.localeCompare(b.form) || shortId(a).localeCompare(shortId(b))
+  );
+  const stat = (col: ScoreColumn, kind: "mean" | "median") => {
+    const d = describe(
+      sorted.map(col.score).filter((v): v is number => v != null)
+    );
+    return d[kind];
+  };
+
+  const downloadCsv = () => {
+    const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const header = [
+      "participant",
+      "subject_id",
+      "form",
+      "screening_group",
+      ...cols.map((c) => (c.max != null ? `${c.label} (/${c.max})` : c.label)),
+    ];
+    const lines = [header.map(q).join(",")];
+    for (const r of sorted) {
+      lines.push(
+        [
+          r.prolific_pid ?? "",
+          r.subject,
+          r.form,
+          GROUP_SHORT[screenGroup(r)],
+          ...cols.map((c) => c.score(r) ?? ""),
+        ]
+          .map(q)
+          .join(",")
+      );
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pilot-scores-only-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold text-stone-800">
+          Scores only (no answers)
+        </h2>
+        <Button onClick={downloadCsv}>Download scores only (CSV)</Button>
+      </div>
+      <p className="mt-1 text-xs text-stone-400">
+        One row per participant, one column per scored item (points awarded; max
+        in the header). New Q1 items are 1 = correct, 0 = wrong. Blank = not
+        answered / not graded yet.
+      </p>
+      <table className="mt-3 w-full border-collapse text-xs">
+        <thead>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold">Participant</th>
+            <th className="py-1 pr-2 font-semibold">Form</th>
+            <th className="py-1 pr-2 font-semibold">Group</th>
+            {cols.map((c) => (
+              <th key={c.key} className="py-1 pr-2 text-right font-semibold whitespace-nowrap">
+                {c.label}
+                {c.max != null && <span className="font-normal"> /{c.max}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r) => (
+            <tr key={r.subject} className="border-t border-stone-100">
+              <td className="py-1 pr-2 font-mono text-stone-600">{shortId(r)}…</td>
+              <td className="py-1 pr-2 text-stone-600">{r.form}</td>
+              <td className="py-1 pr-2 whitespace-nowrap text-stone-500">
+                {GROUP_SHORT[screenGroup(r)]}
+              </td>
+              {cols.map((c) => {
+                const v = c.score(r);
+                const full = v != null && c.max != null && v >= c.max;
+                return (
+                  <td
+                    key={c.key}
+                    className={`py-1 pr-2 text-right ${
+                      v == null
+                        ? "text-stone-300"
+                        : full
+                          ? "font-semibold text-lime-700"
+                          : v === 0
+                            ? "text-rose-600"
+                            : "text-stone-800"
+                    } ${c.key.endsWith("total") ? "font-semibold" : ""}`}
+                  >
+                    {v ?? ""}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+          {(["mean", "median"] as const).map((kind) => (
+            <tr
+              key={kind}
+              className={`bg-stone-50 ${kind === "mean" ? "border-t-2 border-stone-300" : "border-t border-stone-100"}`}
+            >
+              <td className="py-1 pr-2 font-semibold capitalize text-stone-700" colSpan={3}>
+                {kind} (n={sorted.length})
+              </td>
+              {cols.map((c) => {
+                const v = stat(c, kind);
+                return (
+                  <td key={c.key} className="py-1 pr-2 text-right font-semibold text-stone-700">
+                    {v == null ? "" : Number.isInteger(v) ? v : v.toFixed(2)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** n, mean, median, sample SD, min and max of a list of scores. */
+function describe(values: number[]) {
+  const n = values.length;
+  if (!n) return { n, mean: null, median: null, sd: null, min: null, max: null };
+  const sorted = [...values].sort((a, b) => a - b);
+  const m = values.reduce((a, b) => a + b, 0) / n;
+  const mid = Math.floor(n / 2);
+  return {
+    n,
+    mean: m,
+    median: n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2,
+    sd: n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : null,
+    min: sorted[0],
+    max: sorted[n - 1],
+  };
 }
 
 /**
@@ -806,35 +1122,7 @@ export default function PilotAnalysisPage() {
   // but not identical (numbers/context differ, and Q1b–Q1e are deliberately
   // within-range vs on-the-edge variants), so they are always read separately.
   const [analysisForm, setAnalysisForm] = useState<"A" | "B">("A");
-  const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
-    null
-  );
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
   const [grades, setGrades] = useState<Record<string, GradeInfo>>(STATIC_GRADES);
-
-  const runAi = async (force: boolean) => {
-    setAiLoading(true);
-    setAiError("");
-    try {
-      const res = await fetch(
-        `/api/pilot-ai-analysis${force ? "?force=1" : ""}`,
-        { headers: { "x-grading-token": token } }
-      ).then((r) => r.json());
-      if (res.ok) {
-        setAi({
-          analysis: res.analysis,
-          model: res.cached ? `${res.model} (cached)` : res.model,
-        });
-      } else {
-        setAiError(res.error || "Could not run the AI analysis.");
-      }
-    } catch (e) {
-      setAiError(String(e));
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   const load = async () => {
     setLoading(true);
@@ -852,9 +1140,6 @@ export default function PilotAnalysisPage() {
       } else {
         setRows(exp.rows as Row[]);
         setSplit(asg?.ok ? (asg as Split) : null);
-        // Auto-run the AI difficulty analysis. The server only calls the model
-        // when the dataset changed, so a refresh on unchanged data is free.
-        void runAi(false);
         // AI rubric grades for the free-response items (cached server-side).
         fetch("/api/pilot-grade", { headers: { "x-grading-token": token } })
           .then((r) => r.json())
@@ -1246,41 +1531,6 @@ export default function PilotAnalysisPage() {
               time: {fmtSec(view.medianAssessment)} (completed participants).
             </p>
 
-            <div className="rounded-xl border-2 border-lime-300 bg-lime-50/50 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-stone-800">
-                  AI overall results check — screening & pretest review
-                </h2>
-                <Button
-                  onClick={() => runAi(true)}
-                  disabled={aiLoading || !token}
-                >
-                  {aiLoading ? "Analyzing…" : "Re-run"}
-                </Button>
-              </div>
-              {aiError && (
-                <p className="mt-2 text-sm text-amber-800">{aiError}</p>
-              )}
-              {ai ? (
-                <>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
-                    {ai.analysis}
-                  </p>
-                  {ai.model && (
-                    <p className="mt-2 text-xs text-stone-400">
-                      Model: {ai.model}. Regenerated only when the dataset
-                      changes.
-                    </p>
-                  )}
-                </>
-              ) : (
-                !aiError && (
-                  <p className="mt-2 text-sm text-stone-500">
-                    {aiLoading ? "Analyzing the dataset…" : "Preparing…"}
-                  </p>
-                )
-              )}
-            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
@@ -1385,6 +1635,8 @@ export default function PilotAnalysisPage() {
             </div>
 
             <ScreeningGroupsCard rows={view.completed} grades={grades} />
+
+            <ScoresOnlyCard rows={view.completed} grades={grades} />
 
             {analysis && (
               <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
