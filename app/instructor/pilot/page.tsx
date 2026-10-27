@@ -419,20 +419,19 @@ function ScreeningGroupsCard({
   rows: Row[];
   grades: Record<string, GradeInfo>;
 }) {
-  const q1Avg = (list: Row[]) =>
-    mean(list.filter((r) => r.q1_total > 0).map((r) => r.q1_correct / r.q1_total));
-  const sheet = (list: Row[]) => {
-    const g = list.map((r) => grades[r.subject]).filter((x): x is GradeInfo => !!x);
+  // Every scored item, plus the new-Q1 and scoring-sheet totals.
+  const cols = scoreColumns(grades);
+  const avgOf = (col: ScoreColumn, list: Row[]) =>
+    describe(list.map(col.score).filter((v): v is number => v != null));
+  const fmtAvg = (col: ScoreColumn, list: Row[]) => {
+    const d = avgOf(col, list);
+    if (d.mean == null) return null;
     return {
-      avg: mean(g.map((x) => x.total)),
-      max: g[0]?.max ?? null,
-      n: g.length,
+      mean: d.mean,
+      pct: col.max ? Math.round((100 * d.mean) / col.max) : null,
+      n: d.n,
     };
   };
-  const fmtSheet = (s: ReturnType<typeof sheet>) =>
-    s.avg == null
-      ? "—"
-      : `${s.avg.toFixed(1)}/${s.max} (${Math.round((100 * s.avg) / (s.max || 1))}%)`;
 
   const groupOf = (key: string, label: string, members: Row[]) => ({
     key,
@@ -448,23 +447,14 @@ function ScreeningGroupsCard({
     groupOf("all", "All participants", rows),
   ];
 
-  // Overall spread of each score, per form and pooled.
-  const summary = (
-    [
-      ["Form A", rows.filter((r) => r.form === "A")],
-      ["Form B", rows.filter((r) => r.form === "B")],
-      ["Both forms", rows],
-    ] as [string, Row[]][]
-  ).map(([label, list]) => ({
-    label,
-    q1: describe(list.filter((r) => r.q1_total > 0).map((r) => r.q1_correct)),
-    q1Max: list.find((r) => r.q1_total > 0)?.q1_total ?? 4,
-    sheet: describe(
-      list.map((r) => grades[r.subject]?.total).filter((t): t is number => t != null)
-    ),
-    sheetMax: list.map((r) => grades[r.subject]?.max).find((m) => m != null) ?? 22,
-  }));
-  const fmtStat = (v: number | null, digits = 1) => (v == null ? "—" : v.toFixed(digits));
+  // Overall spread of every score, per form and pooled.
+  const forms: [string, Row[]][] = [
+    ["Form A", rows.filter((r) => r.form === "A")],
+    ["Form B", rows.filter((r) => r.form === "B")],
+    ["Both forms", rows],
+  ];
+  const fmtStat = (v: number | null, digits = 2) =>
+    v == null ? "—" : Number.isInteger(v) ? String(v) : v.toFixed(digits);
 
   return (
     <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
@@ -474,94 +464,117 @@ function ScreeningGroupsCard({
       <p className="mt-1 text-xs text-stone-400">
         Low level = failed the algebra or power-rule check. High level = Calculus
         II or higher, or 3+ calculus courses. Each participant took one form.
-        New Q1 = the four short numeric items (1b–1e), % correct. Scoring sheet
-        = the AI-graded answer-key total.
+        Each cell is the mean score on that item (max in the header), with the %
+        of the maximum underneath. New Q1 items: 1 = correct. Scoring sheet = the
+        AI-graded answer-key total.
       </p>
-      <table className="mt-3 w-full border-collapse text-sm">
+      <table className="mt-3 w-full border-collapse text-xs">
         <thead>
-          <tr className="text-left text-xs text-stone-400">
-            <th className="py-1 pr-3 font-semibold" rowSpan={2}>Group</th>
-            <th className="py-1 pr-3 font-semibold" rowSpan={2}>n</th>
-            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={3}>
-              Form A
-            </th>
-            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={3}>
-              Form B
-            </th>
-            <th className="border-l border-stone-100 py-1 pl-2 font-semibold" rowSpan={2}>
-              Scoring sheet avg (both forms)
-            </th>
-          </tr>
-          <tr className="text-left text-xs text-stone-400">
-            {["A", "B"].map((f) => (
-              <Fragment key={f}>
-                <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-normal">n</th>
-                <th className="py-1 pr-3 font-normal">New Q1 avg</th>
-                <th className="py-1 pr-3 font-normal">Scoring sheet avg</th>
-              </Fragment>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold">Group</th>
+            <th className="py-1 pr-2 font-semibold">Form</th>
+            <th className="py-1 pr-2 text-right font-semibold">n</th>
+            {cols.map((c) => (
+              <th
+                key={c.key}
+                className={`py-1 pr-2 text-right font-semibold whitespace-nowrap ${
+                  c.key.endsWith("total") ? "text-stone-600" : ""
+                }`}
+              >
+                {c.label}
+                {c.max != null && <span className="font-normal"> /{c.max}</span>}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {groups.map((g) => (
-            <tr
-              key={g.key}
-              className={
-                g.key === "all"
-                  ? "border-t-2 border-stone-300 bg-stone-50"
-                  : "border-t border-stone-100"
-              }
-            >
-              <td
-                className={`py-1 pr-3 font-semibold ${
-                  g.key === "all"
-                    ? "text-stone-800"
-                    : g.key === "eligible"
-                      ? "text-lime-700"
-                      : "text-rose-700"
+          {groups.map((g) =>
+            (
+              [
+                ["Form A", g.a],
+                ["Form B", g.b],
+                ["Both forms", g.members],
+              ] as [string, Row[]][]
+            ).map(([form, list], i) => (
+              <tr
+                key={`${g.key}-${form}`}
+                className={`${
+                  i === 0
+                    ? g.key === "all"
+                      ? "border-t-2 border-stone-400"
+                      : "border-t-2 border-stone-200"
+                    : "border-t border-stone-100"
+                } ${g.key === "all" ? "bg-stone-50" : ""} ${
+                  form === "Both forms" ? "font-semibold" : ""
                 }`}
               >
-                {g.label}
-              </td>
-              <td className="py-1 pr-3 text-stone-700">{g.members.length}</td>
-              {[g.a, g.b].map((list, i) => (
-                <Fragment key={i}>
-                  <td className="border-l border-stone-100 py-1 pl-2 pr-3 text-stone-500">
-                    {list.length}
+                {i === 0 && (
+                  <td
+                    rowSpan={3}
+                    className={`py-1 pr-2 align-top font-semibold ${
+                      g.key === "all"
+                        ? "text-stone-800"
+                        : g.key === "eligible"
+                          ? "text-lime-700"
+                          : "text-rose-700"
+                    }`}
+                  >
+                    {g.label}
                   </td>
-                  <td className="py-1 pr-3 text-stone-800">{pct(q1Avg(list))}</td>
-                  <td className="py-1 pr-3 text-stone-800">{fmtSheet(sheet(list))}</td>
-                </Fragment>
-              ))}
-              <td className="border-l border-stone-100 py-1 pl-2 font-semibold text-stone-800">
-                {fmtSheet(sheet(g.members))}
-              </td>
-            </tr>
-          ))}
+                )}
+                <td className="py-1 pr-2 whitespace-nowrap text-stone-600">{form}</td>
+                <td className="py-1 pr-2 text-right text-stone-500">{list.length}</td>
+                {cols.map((c) => {
+                  const v = fmtAvg(c, list);
+                  return (
+                    <td key={c.key} className="py-1 pr-2 text-right align-top">
+                      {v == null ? (
+                        <span className="text-stone-300">—</span>
+                      ) : (
+                        <>
+                          <span className="text-stone-800">{fmtStat(v.mean)}</span>
+                          {v.pct != null && (
+                            <span className="block text-[10px] font-normal text-stone-400">
+                              {v.pct}%
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
-      <h3 className="mt-5 text-sm font-bold text-stone-700">
-        Overall score summary (all participants)
+      <h3 className="mt-6 text-sm font-bold text-stone-700">
+        Overall score spread — every item (all participants)
       </h3>
-      <table className="mt-1 w-full border-collapse text-sm">
+      <table className="mt-1 w-full border-collapse text-xs">
         <thead>
-          <tr className="text-left text-xs text-stone-400">
-            <th className="py-1 pr-3 font-semibold" rowSpan={2}>Form</th>
-            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={6}>
-              New Q1 (items correct)
-            </th>
-            <th className="border-l border-stone-100 py-1 pl-2 font-semibold" colSpan={6}>
-              Scoring sheet total
-            </th>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold" rowSpan={2}>Item</th>
+            {forms.map(([label, list]) => (
+              <th
+                key={label}
+                colSpan={4}
+                className="border-l border-stone-100 py-1 pl-2 pr-2 font-semibold"
+              >
+                {label} <span className="font-normal">(n={list.length})</span>
+              </th>
+            ))}
           </tr>
-          <tr className="text-left text-xs text-stone-400">
-            {[0, 1].map((k) => (
-              <Fragment key={k}>
-                {["n", "mean", "median", "SD", "min", "max"].map((h, i) => (
+          <tr className="text-left text-stone-400">
+            {forms.map(([label]) => (
+              <Fragment key={label}>
+                {["mean", "median", "SD", "min–max"].map((h, i) => (
                   <th
                     key={h}
-                    className={`py-1 pr-3 font-normal ${i === 0 ? "border-l border-stone-100 pl-2" : ""}`}
+                    className={`py-1 pr-2 text-right font-normal ${
+                      i === 0 ? "border-l border-stone-100 pl-2" : ""
+                    }`}
                   >
                     {h}
                   </th>
@@ -571,27 +584,32 @@ function ScreeningGroupsCard({
           </tr>
         </thead>
         <tbody>
-          {summary.map((s) => (
-            <tr key={s.label} className="border-t border-stone-100">
-              <td className="py-1 pr-3 font-semibold text-stone-700">{s.label}</td>
-              {(
-                [
-                  [s.q1, s.q1Max],
-                  [s.sheet, s.sheetMax],
-                ] as const
-              ).map(([d, max], i) => (
-                <Fragment key={i}>
-                  <td className="border-l border-stone-100 py-1 pl-2 pr-3 text-stone-500">{d.n}</td>
-                  <td className="py-1 pr-3 text-stone-800">
-                    {fmtStat(d.mean)}
-                    <span className="text-xs text-stone-400">/{max}</span>
-                  </td>
-                  <td className="py-1 pr-3 text-stone-800">{fmtStat(d.median)}</td>
-                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.sd)}</td>
-                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.min, 0)}</td>
-                  <td className="py-1 pr-3 text-stone-600">{fmtStat(d.max, 0)}</td>
-                </Fragment>
-              ))}
+          {cols.map((c) => (
+            <tr
+              key={c.key}
+              className={`border-t border-stone-100 ${
+                c.key.endsWith("total") ? "bg-stone-50 font-semibold" : ""
+              }`}
+            >
+              <td className="py-1 pr-2 whitespace-nowrap text-stone-700">
+                {c.label}
+                {c.max != null && <span className="font-normal text-stone-400"> /{c.max}</span>}
+              </td>
+              {forms.map(([label, list]) => {
+                const d = avgOf(c, list);
+                return (
+                  <Fragment key={label}>
+                    <td className="border-l border-stone-100 py-1 pl-2 pr-2 text-right text-stone-800">
+                      {fmtStat(d.mean)}
+                    </td>
+                    <td className="py-1 pr-2 text-right text-stone-700">{fmtStat(d.median)}</td>
+                    <td className="py-1 pr-2 text-right text-stone-500">{fmtStat(d.sd)}</td>
+                    <td className="py-1 pr-2 text-right whitespace-nowrap text-stone-500">
+                      {d.min == null ? "—" : `${d.min}–${d.max}`}
+                    </td>
+                  </Fragment>
+                );
+              })}
             </tr>
           ))}
         </tbody>
