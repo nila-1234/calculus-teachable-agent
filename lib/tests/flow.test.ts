@@ -282,3 +282,71 @@ test("dragging a criterion back to the bank shows in the transcript", () => {
   const lines = a.items.flatMap((i) => i.turns.map((t) => t.text));
   assert.ok(lines.some((l) => /back to the criteria bank \(off step 3\)/.test(l)), lines.join("\n"));
 });
+
+// ---- Every move is scored, even if the grading reply was never logged ----
+test("moves are scored from the answer key without the grading reply", () => {
+  const K = (event: string, data: Record<string, unknown>) => ev(event, "5", data);
+  const graded = [
+    K("grade_lines_criterion_graded", { answer_id: "answer-a", criterion_id: "derivative", phase: "placement", placement: { criterionId: "derivative", stepIndex: 2, status: null } }),
+    K("grade_lines_placement_transition", { answer_id: "answer-a", criterion_id: "derivative", from: { kind: "dragging", attempt: 1 }, event: { type: "DROP", correct: false } }),
+    K("grade_lines_criterion_graded", { answer_id: "answer-a", criterion_id: "derivative", phase: "status", placement: { criterionId: "derivative", stepIndex: 1, status: "fail" } }),
+    K("grade_lines_completed", {}),
+  ];
+  const flow = buildFlowSummary([...docs.slice(0, 4), ...graded, ...docs.slice(-3)]);
+  const a = flow.participants[0].instruction.agentTasks.find((x) => x.task === "Apply Rubric")!;
+  const lines = a.items.flatMap((i) => i.turns.map((t) => t.text));
+  assert.ok(
+    lines.includes('Dragged "Correctly computes the derivative" onto step 3 — wrong (it belongs on step 2).'),
+    lines.join("\n")
+  );
+  assert.ok(
+    lines.includes('Marked step 2 as FAIL for "Correctly computes the derivative" — wrong (should be PASS).'),
+    lines.join("\n")
+  );
+  assert.ok(!lines.some((l) => /not recorded|wasn't recorded/.test(l)), "nothing unrecorded");
+  assert.match(a.items[0].title, /^Alex · "Correctly computes the derivative"/);
+  // The scenario's AI asked "Are you sure?" about the wrong drag.
+  assert.ok(lines.some((l) => /Are you sure "Correctly computes the derivative" belongs on step 3\?/.test(l)));
+});
+
+// ---- LearnVia hints: whether a question has one, and whether it was opened ----
+test("lesson hints: has-a-hint vs opened, and untouched questions still listed", async () => {
+  const { getLesson } = await import("@/lib/lessons/definitions");
+  const qs = getLesson("lesson-1")!.sections.flatMap((s) => s.questions ?? []);
+  const noHint = qs[0];
+  const withHint = qs[1];
+  const base = Date.UTC(2026, 9, 27, 15, 0, 0);
+  const L = (event: string, scenario_id: string, sec: number, data: Record<string, unknown> = {}) =>
+    ({ event, scenario_id, subject_id: "H1", session_id: "hs", timestamp: new Date(base + sec * 1000).toISOString(), data }) as LogDoc;
+  const flow = buildFlowSummary([
+    L("screening_completed", "screening", 0, { eligible: true, answers: {} }),
+    L("survey_completed", "pre", 1, { answers: {} }),
+    L("test_completed", "pretest", 2, { answers: {} }),
+    L("condition_assigned", "instruction", 3, { condition: "lesson" }),
+    L("lesson_started", "lesson-1", 10),
+    L("lesson_item_attempted", "lesson-1", 40, { item_id: noHint.id, response: "x", is_correct: true, attempt: 1 }),
+    L("lesson_hint_shown", "lesson-1", 50, { item_id: withHint.id, hint_index: 1 }),
+    L("lesson_item_attempted", "lesson-1", 70, { item_id: withHint.id, response: "x", is_correct: true, attempt: 1 }),
+    L("lesson_completed", "lesson-1", 600, { seconds: 590 }),
+    L("test_completed", "posttest", 700, { answers: {} }),
+    L("survey_completed", "post", 800, { answers: {} }),
+  ]);
+  const lesson = flow.participants[0].instruction.lesson.filter((i) => i.lesson === "Lesson 1");
+  const q1 = lesson.find((i) => i.itemId === noHint.id)!;
+  const q2 = lesson.find((i) => i.itemId === withHint.id)!;
+  assert.equal(q1.hintsAvailable, 0, "Q1 has no hint");
+  assert.deepEqual(q1.hintsOpened, []);
+  assert.ok(q2.hintsAvailable >= 1, "Q2 has a hint");
+  assert.equal(q2.hintsOpened.length, 1);
+  assert.equal(q2.hintsOpened[0].index, 1);
+  assert.equal(q2.hintsOpened[0].beforeTry, 1, "opened before the first try");
+  assert.equal(q2.tries[0].hintsBefore, 1);
+  assert.equal(lesson.length, qs.length, "every question of the lesson is listed");
+  assert.equal(lesson.filter((i) => i.attempts === 0).length, qs.length - 2, "the rest are 'not attempted'");
+});
+
+test("events stored in fallback form are read back normally", async () => {
+  const { rehydrateLog } = await import("@/lib/log-rehydrate");
+  const back = rehydrateLog({ event: "ai_exchange", data: null, data_json: '{"route":"x","request":[[1,2]]}' } as Record<string, unknown>);
+  assert.deepEqual(back.data, { route: "x", request: [[1, 2]] });
+});

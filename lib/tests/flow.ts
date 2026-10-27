@@ -3,6 +3,7 @@ import { fullFlowSubjects, minutesPerPhase, type Phase } from "./export";
 import { getSurvey } from "@/lib/surveys/definitions";
 import type { SurveyItem } from "@/lib/surveys/types";
 import { getLesson } from "@/lib/lessons/definitions";
+import { getScenario } from "@/lib/scenarios/registry";
 import type { LessonQuestion } from "@/lib/lessons/types";
 import {
   transitionPlacement,
@@ -115,7 +116,12 @@ export type LessonItemDetail = {
   prompt: string;
   firstTryCorrect: boolean;
   attempts: number;
+  /** How many hints the participant opened on this question. */
   hints: number;
+  /** How many hints the question offers (0 = it has no hint). */
+  hintsAvailable: number;
+  /** Each hint opened: which one, when, and before which try. */
+  hintsOpened: { index: number; at: string; beforeTry: number }[];
   /** Which try was the first correct one; null if never answered correctly. */
   passedOnTry: number | null;
   /** Time of the first try. */
@@ -510,6 +516,8 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
   const sorted = causalSort(list);
   const items = new Map<string, LessonItemDetail>();
   const hintsSoFar = new Map<string, number>();
+  // Hints opened per question (shared with the item once it exists).
+  const hintLog = new Map<string, LessonItemDetail["hintsOpened"]>();
   // Previous answer (or lesson start) per lesson, to time each try.
   const lastMark = new Map<string, number>();
 
@@ -522,7 +530,17 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     const id = String(d.data?.item_id ?? "");
     const key = `${lessonId}::${id}`;
     if (d.event === "lesson_hint_shown" && id) {
-      hintsSoFar.set(key, (hintsSoFar.get(key) ?? 0) + 1);
+      const count = (hintsSoFar.get(key) ?? 0) + 1;
+      hintsSoFar.set(key, count);
+      const opened = hintLog.get(key) ?? [];
+      hintLog.set(key, opened);
+      opened.push({
+        index: typeof d.data?.hint_index === "number" ? d.data.hint_index : count,
+        at: d.timestamp ?? "",
+        beforeTry: (items.get(key)?.tries.length ?? 0) + 1,
+      });
+      const existing = items.get(key);
+      if (existing) existing.hints = count;
       continue;
     }
     if (d.event !== "lesson_item_attempted" || !id) continue;
@@ -540,10 +558,13 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
         firstTryCorrect: d.data?.is_correct === true,
         attempts: 0,
         hints: 0,
+        hintsAvailable: q?.hints?.length ?? 0,
+        hintsOpened: hintLog.get(key) ?? [],
         passedOnTry: null,
         at: d.timestamp ?? "",
         tries: [],
       };
+      if (!hintLog.has(key)) hintLog.set(key, item.hintsOpened);
       items.set(key, item);
     }
 
@@ -563,6 +584,29 @@ function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
     item.hints = hintsSoFar.get(key) ?? 0;
     if (correct && item.passedOnTry == null) item.passedOnTry = n;
     lastMark.set(lessonId, now);
+  }
+
+  // Questions in a lesson the participant opened but never answered still get
+  // a row, so a missing question reads as "not attempted", not as nothing.
+  for (const lessonId of lastMark.keys()) {
+    lessonQuestions(lessonId).forEach((q, index) => {
+      const key = `${lessonId}::${q.id}`;
+      if (items.has(key)) return;
+      items.set(key, {
+        lesson: lessonLabel(lessonId),
+        itemId: q.id,
+        number: index + 1,
+        prompt: q.prompt,
+        firstTryCorrect: false,
+        attempts: 0,
+        hints: hintsSoFar.get(key) ?? 0,
+        hintsAvailable: q.hints?.length ?? 0,
+        hintsOpened: hintLog.get(key) ?? [],
+        passedOnTry: null,
+        at: "",
+        tries: [],
+      });
+    });
   }
 
   return [...items.values()].sort(
@@ -788,15 +832,106 @@ type GradeVerdict = {
   criterionId: string;
   phase: "placement" | "status";
   item: GradeItem;
+  /** The logged event this move is shown at (the move itself when possible). */
+  anchor: LogDoc;
 };
 
 /**
- * Every grading verdict in Apply Rubric, in order. Each drag (placement) and
- * each pass/fail mark (status) is sent to /api/grade-lines-feedback, which
- * returns whether it was right — that response is the ground truth for what
- * the participant did and whether it was correct.
+ * Score one logged move against the scenario's answer key.
+ *
+ * Grading is deterministic — /api/grade-lines-feedback only compares the step
+ * and pass/fail the TA chose with the key's — so the verdict can be computed
+ * from the move itself (grade_lines_criterion_graded, logged before the grading
+ * call) and never depends on the grading reply having been logged.
+ */
+function keyVerdict(d: LogDoc): GradeVerdict | null {
+  const data = (d.data ?? {}) as Record<string, unknown>;
+  const answerId = String(data.answer_id ?? "");
+  const criterionId = String(data.criterion_id ?? "");
+  const p = (data.placement ?? {}) as Record<string, unknown>;
+  const status = p.status === "pass" || p.status === "fail" ? p.status : null;
+  const placedStep =
+    typeof data.placed_step === "number"
+      ? data.placed_step
+      : typeof p.stepIndex === "number"
+        ? p.stepIndex + 1
+        : null;
+
+  const schema = getScenario(Number(d.scenario_id))?.schema;
+  const answer = schema?.FINAL_AI_ANSWERS.find((a) => a.id === answerId);
+  const fit = answer?.rubricFit?.[criterionId];
+  const expectedStep =
+    fit?.step ?? (typeof data.expected_step === "number" ? data.expected_step : null);
+  const expectedStatus: "pass" | "fail" | null = fit
+    ? fit.pass
+      ? "pass"
+      : "fail"
+    : data.expected_status === "pass" || data.expected_status === "fail"
+      ? data.expected_status
+      : null;
+  if (placedStep == null || expectedStep == null) return null;
+
+  return {
+    at: d.timestamp ?? "",
+    answerId,
+    answerTitle: answer?.label ?? String(data.answer_title ?? answerId),
+    criterionId,
+    phase: data.phase === "status" || status ? "status" : "placement",
+    anchor: d,
+    item: {
+      criterion:
+        schema?.RUBRIC_OPTIONS.find((o) => o.id === criterionId)?.label ??
+        (typeof data.criterion_label === "string" ? data.criterion_label : criterionId),
+      placedStep,
+      expectedStep,
+      stepCorrect: placedStep === expectedStep,
+      status,
+      expectedStatus,
+      statusCorrect: status != null && status === expectedStatus,
+    },
+  };
+}
+
+/**
+ * Every drag (placement) and pass/fail mark (status) in Apply Rubric, with
+ * whether it was right, in order. Scored from the logged move and the answer
+ * key; the grading reply is only a fallback (e.g. a scenario not in the
+ * registry), and a grading reply with no logged move still counts as a move.
  */
 function gradeVerdictsOf(sorted: LogDoc[]): GradeVerdict[] {
+  const replies = serverVerdictsOf(sorted).map((v) => ({ ...v, used: false }));
+  const out: GradeVerdict[] = [];
+
+  for (const d of sorted) {
+    if (d.event !== "grade_lines_criterion_graded") continue;
+    const phase = d.data?.phase === "status" ? "status" : "placement";
+    const key = `${d.data?.answer_id}::${d.data?.criterion_id}::${phase}`;
+    // The grading reply for this move: same criterion, arriving just after.
+    let reply: (typeof replies)[number] | null = null;
+    for (const r of replies) {
+      if (r.used || `${r.answerId}::${r.criterionId}::${r.phase}` !== key) continue;
+      const gap = ms(r) - ms(d);
+      if (gap < -1000 || gap > PAIR_WINDOW_MS) continue;
+      if (!reply || Math.abs(gap) < Math.abs(ms(reply) - ms(d))) reply = r;
+    }
+    if (reply) reply.used = true;
+
+    const v = keyVerdict(d) ?? (reply ? { ...reply, anchor: d } : null);
+    if (v) out.push(v);
+  }
+
+  // Grading replies whose move was never logged still show the move.
+  for (const r of replies) {
+    if (r.used) continue;
+    const { used: _used, ...v } = r;
+    void _used;
+    out.push(v);
+  }
+  return out.sort((a, b) => ms(a.anchor) - ms(b.anchor));
+}
+
+/** Verdicts as returned by /api/grade-lines-feedback (fallback source). */
+function serverVerdictsOf(sorted: LogDoc[]): GradeVerdict[] {
   const out: GradeVerdict[] = [];
   for (const d of sorted) {
     if (d.event !== "ai_exchange" || d.data?.route !== "grade-lines-feedback") continue;
@@ -815,6 +950,7 @@ function gradeVerdictsOf(sorted: LogDoc[]): GradeVerdict[] {
       answerTitle: String(req.answerTitle ?? req.answerId ?? "Answer"),
       criterionId,
       phase: status ? "status" : "placement",
+      anchor: d,
       item: {
         criterion: String(fb.criterion ?? rubric?.criterion ?? criterionId),
         placedStep: typeof fb.placedStep === "number" ? fb.placedStep : null,
@@ -1117,7 +1253,10 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
 
   // Every graded drag / mark, and every classified reply, up front — so each
   // can be paired with its own discussion step regardless of log order.
-  const verdicts = gradeVerdictsOf(sorted).map((v) => ({ ...v, used: false }));
+  // Every drag / mark, scored, keyed by the logged event it is shown at.
+  const moveAt = new Map<LogDoc, GradeVerdict>(
+    gradeVerdictsOf(sorted).map((v) => [v.anchor, v])
+  );
   const classifies = sorted
     .filter((d) => d.event === "ai_exchange" && d.data?.route === "placement-classify")
     .map((d) => {
@@ -1129,19 +1268,6 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
         used: false,
       };
     });
-
-  const takeVerdict = (key: string, at: number) => {
-    let best: (typeof verdicts)[number] | null = null;
-    for (const v of verdicts) {
-      if (v.used || `${v.answerId}::${v.criterionId}::${v.phase}` !== key) continue;
-      const gap = Math.abs(ms(v) - at);
-      // The grade always comes just before its drop/mark is discussed.
-      if (ms(v) > at + 1000 || gap > PAIR_WINDOW_MS) continue;
-      if (!best || gap < Math.abs(ms(best) - at)) best = v;
-    }
-    if (best) best.used = true;
-    return best;
-  };
 
   const takeClassify = (at: number, questions: string[]) => {
     let best: (typeof classifies)[number] | null = null;
@@ -1162,7 +1288,6 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
 
   const items = new Map<string, AgentTaskItem>();
   const current = new Map<string, GradeVerdict>();
-  const lastGraded = new Map<string, { step: number | null; status: string | null }>();
   const order: string[] = [];
   const unfilled = new Map<string, ConvTurn>();
   let activeKey: string | null = null;
@@ -1201,26 +1326,11 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
       const event = data.event as PlacementEvent | undefined;
       const from = data.from as PlacementFlow | undefined;
 
-      // A new drag / mark: pair it with its own grade, then show the move.
+      // The move itself was already shown when it was made (see the
+      // grade_lines_criterion_graded branch); here the AI decides to discuss it.
       if (isUnchallenged || event?.type === "DROP") {
-        const v = takeVerdict(key, ms(d));
-        if (v) current.set(key, v);
-        const it = itemFor(key, v ?? current.get(key), phase);
-        if (v) {
-          it.turns.push(describeMove(phase, v.item));
-        } else {
-          // The grade for this move was lost; still show what they did.
-          const g = lastGraded.get(key);
-          it.turns.push({
-            speaker: "participant",
-            kind: "action",
-            correct: null,
-            text:
-              phase === "status"
-                ? `Marked it ${UP(g?.status ?? null)} (whether that was right wasn't recorded).`
-                : `Dragged it onto step ${g?.step ?? "?"} (whether that was right wasn't recorded).`,
-          });
-        }
+        const v = current.get(key);
+        const it = itemFor(key, v, phase);
         if (isUnchallenged) {
           if (!it.trigger) it.trigger = "No discussion — the correct call was accepted as-is.";
           it.turns.push({
@@ -1302,13 +1412,31 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
       continue;
     }
 
-    // Where each graded move landed (used if its grade went missing).
+    // A drag or a pass/fail mark, shown at the moment it was made, scored.
+    const move = moveAt.get(d);
+    if (move) {
+      const key = `${move.answerId}::${move.criterionId}::${move.phase}`;
+      current.set(key, move);
+      activeKey = key;
+      itemFor(key, move, move.phase).turns.push(describeMove(move.phase, move.item));
+      continue;
+    }
     if (d.event === "grade_lines_criterion_graded") {
+      // A move that could not be scored at all (no answer key and no grading
+      // reply) — still shown, with where it went.
       const p = (data.placement ?? {}) as Record<string, unknown>;
       const phase = data.phase === "status" ? "status" : "placement";
-      lastGraded.set(`${data.answer_id}::${data.criterion_id}::${phase}`, {
-        step: typeof p.stepIndex === "number" ? p.stepIndex + 1 : null,
-        status: p.status === "pass" || p.status === "fail" ? p.status : null,
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      activeKey = key;
+      const step = typeof p.stepIndex === "number" ? p.stepIndex + 1 : "?";
+      itemFor(key, current.get(key), phase).turns.push({
+        speaker: "participant",
+        kind: "action",
+        correct: null,
+        text:
+          phase === "status"
+            ? `Marked step ${step} as ${UP((p.status as string) ?? null)} (no answer key found for this item).`
+            : `Dragged it onto step ${step} (no answer key found for this item).`,
       });
       continue;
     }
@@ -1366,14 +1494,6 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
       const persona = req.speaker === "student" ? "student" : "professor";
       if (text) it.turns.push({ speaker: persona, kind: "llm", text });
     }
-  }
-
-  // Graded moves with no discussion step at all (e.g. outside discussion mode).
-  for (const v of verdicts) {
-    if (v.used) continue;
-    const key = `${v.answerId}::${v.criterionId}::${v.phase}`;
-    const it = itemFor(key, v, v.phase);
-    it.turns.push(describeMove(v.phase, v.item));
   }
 
   if (order.length === 0) return { task: null, exact };

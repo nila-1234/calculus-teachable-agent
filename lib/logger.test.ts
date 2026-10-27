@@ -52,3 +52,67 @@ test("a queue bigger than the keepalive limit is still fully delivered", async (
   assert.equal(JSON.parse(store.get("logQueue") ?? "[]").length, 0, "queue drained");
   assert.ok(requests >= 1);
 });
+
+const small = (id: string) => ({ ...bigEvent(0), event_id: id, data: { n: 1 } });
+
+test("one event the server can't store doesn't block the others", async () => {
+  const { flushLogQueue } = await import("./logger");
+  g.fetch = async (_u: string, init: { body: string }) => {
+    const ids = (JSON.parse(init.body).entries as { event_id: string }[]).map((e) => e.event_id);
+    return { ok: true, json: async () => ({ ok: false, failed: ids.filter((i) => i === "b1") }) };
+  };
+  store.set("logQueue", JSON.stringify([small("b0"), small("b1"), small("b2")]));
+  await flushLogQueue();
+  assert.deepEqual(
+    (JSON.parse(store.get("logQueue") ?? "[]") as { event_id: string }[]).map((e) => e.event_id),
+    ["b1"],
+    "only the unstored event is kept for retry"
+  );
+});
+
+test("closing the page hands every queued event to sendBeacon, each under 64 KiB", async () => {
+  const { beaconLogQueue } = await import("./logger");
+  const beaconed: string[] = [];
+  const sizes: number[] = [];
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+    sendBeacon: (_u: string, blob: Blob) => {
+      void blob.text().then((t) => {
+        sizes.push(new TextEncoder().encode(t).length);
+        beaconed.push(...(JSON.parse(t).entries as { event_id: string }[]).map((e) => e.event_id));
+      });
+      return true;
+    },
+    },
+  });
+  store.set("logQueue", JSON.stringify(Array.from({ length: 10 }, (_, i) => bigEvent(i))));
+  beaconLogQueue();
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(beaconed.length, 10, "all ten handed over");
+  assert.ok(sizes.length > 1 && sizes.every((s) => s <= 64 * 1024), `chunk sizes ${sizes}`);
+});
+
+// Last: it leaves the logger in its storage-full (in-memory) mode.
+test("a full browser storage keeps events in memory and still delivers them", async () => {
+  const { flushLogQueue, logEvent } = await import("./logger");
+  const got: string[] = [];
+  g.fetch = async (_u: string, init: { body: string }) => {
+    got.push(...(JSON.parse(init.body).entries as { event: string }[]).map((e) => e.event));
+    return { ok: true, json: async () => ({ ok: true, failed: [] }) };
+  };
+  store.set("logQueue", "[]");
+  const ls = g.localStorage as { setItem: (k: string, v: string) => void };
+  const realSet = ls.setItem;
+  ls.setItem = (k: string, v: string) => {
+    if (k === "logQueue") throw new Error("QuotaExceededError");
+    realSet(k, v);
+  };
+  try {
+    await logEvent("storage_full_probe", "5", { x: 1 });
+    await flushLogQueue();
+  } finally {
+    ls.setItem = realSet;
+  }
+  assert.ok(got.includes("storage_full_probe"), "event delivered despite full storage");
+});

@@ -553,11 +553,28 @@ function GradeLinesPageContent() {
     gradeGenerationRef.current[generationKey] = generation;
     const isLatest = () => gradeGenerationRef.current[generationKey] === generation;
 
+    // Grading is a fixed lookup against the answer key, so record the verdict
+    // with the move itself — the analysis never has to rely on the grading
+    // reply having been logged.
+    const fit = answer.rubricFit?.[criterionId];
+    const placedStep = placement.stepIndex + 1;
+    const expectedStatus = fit ? (fit.pass ? "pass" : "fail") : null;
     logEvent("grade_lines_criterion_graded", scenarioId, {
       answer_id: answerId,
+      answer_title: answer.label,
       criterion_id: criterionId,
+      criterion_label: criterion.label,
       phase,
       placement,
+      placed_step: placedStep,
+      expected_step: fit?.step ?? null,
+      step_correct: fit ? placedStep === fit.step : null,
+      status: placement.status,
+      expected_status: expectedStatus,
+      status_correct:
+        placement.status != null && expectedStatus != null
+          ? placement.status === expectedStatus
+          : null,
     });
 
     setGradingCriteria((prev) => ({
@@ -639,14 +656,18 @@ function GradeLinesPageContent() {
             : toStatus == null
               ? "unmarked"
               : "marked";
+      const fit = FINAL_AI_ANSWERS.find((a) => a.id === answerId)?.rubricFit?.[criterionId];
       logEvent("grade_lines_move", scenarioId, {
         answer_id: answerId,
         criterion_id: criterionId,
+        criterion_label: rubric.find((c) => c.id === criterionId)?.label ?? null,
         action,
         from_step: fromStep,
         to_step: toStep,
         from_status: fromStatus,
         to_status: toStatus,
+        expected_step: fit?.step ?? null,
+        expected_status: fit ? (fit.pass ? "pass" : "fail") : null,
       });
     });
 

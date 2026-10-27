@@ -408,13 +408,37 @@ function InstructionBlock({
                             : "font-semibold text-rose-600"
                       }
                     >
-                      {it.passedOnTry == null
-                        ? `never right (${it.attempts} tr${it.attempts === 1 ? "y" : "ies"})`
-                        : `passed on try ${it.passedOnTry} of ${it.attempts}`}
+                      {it.attempts === 0
+                        ? "not attempted"
+                        : it.passedOnTry == null
+                          ? `never right (${it.attempts} tr${it.attempts === 1 ? "y" : "ies"})`
+                          : `passed on try ${it.passedOnTry} of ${it.attempts}`}
                     </span>
-                    {it.hints > 0 && (
-                      <span className="ml-1 text-stone-400">
-                        · {it.hints} hint{it.hints === 1 ? "" : "s"}
+                  </p>
+                  <p className="mt-0.5 text-[11px]">
+                    <span className="font-semibold text-stone-500">Hint: </span>
+                    {it.hintsAvailable === 0 ? (
+                      <span className="text-stone-400">this question has no hint</span>
+                    ) : it.hintsOpened.length === 0 ? (
+                      <span className="text-stone-600">
+                        {it.hintsAvailable} available —{" "}
+                        <span className="font-semibold">not opened</span>
+                      </span>
+                    ) : (
+                      <span className="text-amber-700">
+                        {it.hintsAvailable} available —{" "}
+                        <span className="font-semibold">
+                          opened {it.hintsOpened.length}
+                        </span>
+                        :{" "}
+                        {it.hintsOpened
+                          .map(
+                            (h) =>
+                              `hint ${h.index} before try ${h.beforeTry}${
+                                h.at ? ` (${new Date(h.at).toLocaleTimeString()})` : ""
+                              }`
+                          )
+                          .join("; ")}
                       </span>
                     )}
                   </p>

@@ -13,11 +13,11 @@ function isPilotRoute(): boolean {
 const QUEUE_KEY = "logQueue";
 
 /**
- * Cap on locally buffered events. A full study session is a few hundred events,
- * so this holds an entire run offline; past it the oldest are dropped rather
- * than letting localStorage fill up and start throwing.
+ * In-memory copy of the queue, used when localStorage can't hold it (quota
+ * full, storage blocked). Nothing is ever dropped to make room: an event that
+ * can't be persisted is still kept here and delivered on the next flush.
  */
-const MAX_QUEUE = 1000;
+let memoryQueue: LogEntry[] | null = null;
 
 export type LogEntry = {
   event_id: string;
@@ -129,6 +129,7 @@ function getSessionId(): string {
 
 function readQueue(): LogEntry[] {
   if (typeof window === "undefined") return [];
+  if (memoryQueue) return memoryQueue;
 
   try {
     const raw = localStorage.getItem(QUEUE_KEY);
@@ -144,21 +145,24 @@ function writeQueue(entries: LogEntry[]) {
   if (typeof window === "undefined") return;
 
   try {
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(entries.slice(-MAX_QUEUE)));
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(entries));
+    memoryQueue = null;
   } catch (err) {
-    console.error("[logger] could not persist the log queue:", err);
+    // Storage full or blocked: keep every event in memory instead of losing it.
+    memoryQueue = entries;
+    console.error("[logger] could not persist the log queue; holding it in memory:", err);
   }
 }
 
 /**
- * Browsers reject a `keepalive` request whose body is over 64 KiB — the fetch
- * fails outright. Batches are therefore sized, and keepalive is only used when
- * the batch fits under this.
+ * Browsers reject a `keepalive` request (and a sendBeacon) whose body is over
+ * 64 KiB. Every batch is kept under this, so every upload can survive the tab
+ * closing mid-request.
  */
 const KEEPALIVE_MAX_BYTES = 60 * 1024;
 
-/** Cap on one ordinary (non-keepalive) request. */
-const BATCH_MAX_BYTES = 512 * 1024;
+/** Cap on one request — kept under the keepalive limit (see above). */
+const BATCH_MAX_BYTES = KEEPALIVE_MAX_BYTES;
 
 /** Most batches sent in one flush before yielding (each is confirmed first). */
 const MAX_BATCHES_PER_FLUSH = 50;
@@ -221,22 +225,31 @@ export async function flushLogQueue(): Promise<void> {
       }
 
       const reply = await res.json().catch(() => null);
-      if (!reply?.ok) {
+      // The server reports which events (if any) it could not store; every
+      // other event in the batch is safely written and leaves the queue.
+      const failed = new Set<string>(
+        Array.isArray(reply?.failed) ? (reply.failed as string[]) : []
+      );
+      if (!reply?.ok && failed.size === 0) {
         throw new Error(reply?.error ?? "/api/log reported failure");
       }
 
       // Re-read rather than reusing `queue`: events logged while the request
       // was in flight must survive.
-      const delivered = new Set(batch.map((entry) => entry.event_id));
+      const delivered = new Set(
+        batch.map((entry) => entry.event_id).filter((id) => !failed.has(id))
+      );
       const remaining = readQueue().filter(
         (entry) => !delivered.has(entry.event_id)
       );
       writeQueue(remaining);
       emit({
-        status: remaining.length ? "pending" : "ok",
+        status: failed.size ? "failing" : remaining.length ? "pending" : "ok",
         queued: remaining.length,
-        lastError: null,
+        lastError: failed.size ? `${failed.size} event(s) not stored yet` : null,
       });
+      // Retry the ones the server couldn't store on the next flush, not now.
+      if (failed.size) return;
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -247,6 +260,29 @@ export async function flushLogQueue(): Promise<void> {
     emit({ status: "failing", queued: readQueue().length, lastError: message });
   } finally {
     flushing = false;
+  }
+}
+
+/**
+ * Last-chance delivery when the page is hidden or closed: hands every queued
+ * event to the browser via sendBeacon, which survives the page unloading,
+ * in chunks under the 64 KiB beacon limit. Events stay queued (a beacon can't
+ * confirm delivery); the server de-duplicates by event_id, so resending them
+ * on a later visit is harmless.
+ */
+export function beaconLogQueue(): void {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return;
+  if (typeof navigator.sendBeacon !== "function") return;
+  let rest = readQueue();
+  while (rest.length) {
+    const batch = takeBatch(rest);
+    const body = JSON.stringify({ entries: batch });
+    const sent = navigator.sendBeacon(
+      "/api/log",
+      new Blob([body], { type: "application/json" })
+    );
+    if (!sent) break;
+    rest = rest.slice(batch.length);
   }
 }
 

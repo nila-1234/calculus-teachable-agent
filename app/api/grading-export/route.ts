@@ -18,6 +18,7 @@ import {
   buildEventSheet,
   buildSubjectSheet,
 } from "@/lib/tests/export";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Instructor-only grading export.
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     query = query.orderBy("timestamp", "asc");
 
     const snapshot = await query.get();
-    const docs = snapshot.docs.map((doc) => doc.data() as LogDoc);
+    const docs = snapshot.docs.map((doc) => rehydrateLog(doc.data()) as LogDoc);
 
     const submissions = collectSubmissions(docs);
 

@@ -9,6 +9,7 @@ import {
 } from "@/lib/surveys/eligibility";
 import type { SurveyAnswers } from "@/lib/surveys/types";
 import { resolveGraderClient } from "@/lib/tests/grading-model";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Instructor-only AI read of the pilot: does the pretest (Form A) and the
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const snap = await getFirestore().collection("pilot_logs").get();
-    const events = snap.docs.map((d) => d.data() as Ev);
+    const events = snap.docs.map((d) => rehydrateLog(d.data()) as Ev);
 
     const bySubject = new Map<string, Ev[]>();
     for (const e of events) {
