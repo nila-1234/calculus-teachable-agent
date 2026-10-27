@@ -2,6 +2,8 @@ import type { LogDoc } from "./report";
 import { fullFlowSubjects, minutesPerPhase, type Phase } from "./export";
 import { getSurvey } from "@/lib/surveys/definitions";
 import type { SurveyItem } from "@/lib/surveys/types";
+import { getLesson } from "@/lib/lessons/definitions";
+import type { LessonQuestion } from "@/lib/lessons/types";
 import {
   transitionPlacement,
   placementLine,
@@ -87,15 +89,38 @@ export type AiExchange = {
   durationMs: number | null;
 };
 
-/** One lesson-arm question attempt. */
+/** One try at a LearnVia question. */
+export type LessonTry = {
+  n: number;
+  at: string;
+  correct: boolean;
+  /** What the participant answered (option text, or what they typed). */
+  response: string;
+  /** Hints opened on this question before this try. */
+  hintsBefore: number;
+  /**
+   * Seconds since the participant's previous answer in this lesson (or since
+   * the lesson opened, for the first) — i.e. how long this try took.
+   */
+  seconds: number | null;
+};
+
+/** One LearnVia question, with every try the participant made. */
 export type LessonItemDetail = {
   /** Which LearnVia lesson ("Lesson 1" / "Lesson 2"). */
   lesson: string;
   itemId: string;
+  /** Question number within its lesson, in lesson order (1-based). */
+  number: number;
+  prompt: string;
   firstTryCorrect: boolean;
   attempts: number;
   hints: number;
+  /** Which try was the first correct one; null if never answered correctly. */
+  passedOnTry: number | null;
+  /** Time of the first try. */
   at: string;
+  tries: LessonTry[];
 };
 
 /**
@@ -311,6 +336,26 @@ function surveyAnswerLines(
     .filter((l) => l.value !== "");
 }
 
+/**
+ * Answers to pre-survey items that earlier participants were asked in the
+ * post-survey (the motivation items moved from post to pre). They are shown on
+ * that participant's card, labelled as answered after the activity — but kept
+ * out of the pre-survey distribution, since before- and after-activity answers
+ * are not the same measure.
+ */
+function movedItemLines(postAnswers: Record<string, unknown>): AnswerLine[] {
+  const pre = getSurvey("pre");
+  if (!pre) return [];
+  return pre.sections
+    .flatMap((s) => s.items)
+    .filter((item) => postAnswers[item.id] !== undefined)
+    .map((item) => ({
+      label: `${item.prompt} (answered after the activity — before this item moved to the pre-survey)`,
+      value: formatValue(postAnswers[item.id]),
+    }))
+    .filter((l) => l.value !== "");
+}
+
 /** Format one test item's answer object (choice / text / matching) readably. */
 function formatTestAnswer(v: unknown): string {
   if (!v || typeof v !== "object") return formatValue(v);
@@ -434,60 +479,125 @@ const LESSON_LABELS: Record<string, string> = {
 const lessonLabel = (id: string | undefined) =>
   LESSON_LABELS[id ?? ""] ?? id ?? "Lesson";
 
-/** Lesson-arm per-question attempts, in order, tagged with their lesson. */
-function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
-  const first = new Map<
-    string,
-    { lesson: string; itemId: string; firstTryCorrect: boolean; attempts: number; at: string }
-  >();
-  const hints = new Map<string, number>();
-  for (const d of [...list].sort((a, b) =>
-    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
-  )) {
-    const id = String(d.data?.item_id ?? "");
-    const key = `${d.scenario_id ?? ""}::${id}`;
-    if (d.event === "lesson_hint_shown") {
-      if (id) hints.set(key, (hints.get(key) ?? 0) + 1);
-    }
-    if (d.event !== "lesson_item_attempted") continue;
-    if (!id) continue;
-    const e = first.get(key);
-    if (!e) {
-      first.set(key, {
-        lesson: lessonLabel(d.scenario_id),
-        itemId: id,
-        firstTryCorrect: d.data?.is_correct === true,
-        attempts: 1,
-        at: d.timestamp ?? "",
-      });
-    } else {
-      e.attempts += 1;
-    }
+/** A lesson's questions in the order the participant meets them. */
+function lessonQuestions(lessonId: string): LessonQuestion[] {
+  const lesson = getLesson(lessonId);
+  return lesson ? lesson.sections.flatMap((s) => s.questions ?? []) : [];
+}
+
+/** A logged lesson response, in words: the option's text, or what was typed. */
+function lessonResponseText(q: LessonQuestion | undefined, value: unknown): string {
+  if (value === undefined || value === null || value === "") return "(blank)";
+  if (q?.kind === "choice" && q.choices) {
+    const ids = Array.isArray(value) ? value.map(String) : [String(value)];
+    return ids
+      .map((id) => {
+        const c = q.choices!.find((x) => x.id === id);
+        return c ? c.label || "(diagram option)" : id;
+      })
+      .join("; ");
   }
-  return [...first.entries()]
-    .map(([key, e]) => ({ ...e, hints: hints.get(key) ?? 0 }))
-    .sort((a, b) => a.at.localeCompare(b.at));
+  return formatValue(value);
 }
 
 /**
- * Seconds spent in each LearnVia lesson, from that lesson's own completion
- * event (each lesson times itself from when it opens to when it is finished).
- * The latest completion wins if a lesson was somehow finished twice.
+ * Lesson-arm questions, each with EVERY try: when it was made, what was
+ * answered, whether it was right, hints opened before it, and how long it took
+ * (since the participant's previous answer in that lesson, or since the lesson
+ * opened). Also which try was the first correct one.
+ */
+function lessonItemsOf(list: LogDoc[]): LessonItemDetail[] {
+  const sorted = causalSort(list);
+  const items = new Map<string, LessonItemDetail>();
+  const hintsSoFar = new Map<string, number>();
+  // Previous answer (or lesson start) per lesson, to time each try.
+  const lastMark = new Map<string, number>();
+
+  for (const d of sorted) {
+    const lessonId = d.scenario_id ?? "";
+    if (d.event === "lesson_started") {
+      lastMark.set(lessonId, ms(d));
+      continue;
+    }
+    const id = String(d.data?.item_id ?? "");
+    const key = `${lessonId}::${id}`;
+    if (d.event === "lesson_hint_shown" && id) {
+      hintsSoFar.set(key, (hintsSoFar.get(key) ?? 0) + 1);
+      continue;
+    }
+    if (d.event !== "lesson_item_attempted" || !id) continue;
+
+    const questions = lessonQuestions(lessonId);
+    const index = questions.findIndex((q) => q.id === id);
+    const q = index >= 0 ? questions[index] : undefined;
+    let item = items.get(key);
+    if (!item) {
+      item = {
+        lesson: lessonLabel(lessonId),
+        itemId: id,
+        number: index >= 0 ? index + 1 : items.size + 1,
+        prompt: q?.prompt ?? "",
+        firstTryCorrect: d.data?.is_correct === true,
+        attempts: 0,
+        hints: 0,
+        passedOnTry: null,
+        at: d.timestamp ?? "",
+        tries: [],
+      };
+      items.set(key, item);
+    }
+
+    const now = ms(d);
+    const since = lastMark.get(lessonId);
+    const correct = d.data?.is_correct === true;
+    const n = item.tries.length + 1;
+    item.tries.push({
+      n,
+      at: d.timestamp ?? "",
+      correct,
+      response: lessonResponseText(q, d.data?.response),
+      hintsBefore: hintsSoFar.get(key) ?? 0,
+      seconds: since && now >= since ? Math.round((now - since) / 1000) : null,
+    });
+    item.attempts = n;
+    item.hints = hintsSoFar.get(key) ?? 0;
+    if (correct && item.passedOnTry == null) item.passedOnTry = n;
+    lastMark.set(lessonId, now);
+  }
+
+  return [...items.values()].sort(
+    (a, b) => a.lesson.localeCompare(b.lesson) || a.number - b.number
+  );
+}
+
+/**
+ * Time spent in each LearnVia lesson: from that lesson opening
+ * (lesson_started) to it being finished (lesson_completed), by the event
+ * clock.
+ *
+ * Not the lesson's self-reported `seconds`: the lesson component wasn't reset
+ * between lessons, so Lesson 2's own timer could still be counting from when
+ * Lesson 1 opened — that inflated Lesson 2 and double-counted Lesson 1 in the
+ * total. The self-reported value is only a fallback when the start is missing.
  */
 function lessonTimesOf(list: LogDoc[]): { lesson: string; seconds: number | null }[] {
-  const byLesson = new Map<string, number | null>();
-  for (const id of Object.keys(LESSON_LABELS)) byLesson.set(id, null);
-  for (const d of [...list].sort((a, b) =>
-    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
-  )) {
-    if (d.event !== "lesson_completed" || !d.scenario_id) continue;
-    const s = Number(d.data?.seconds);
-    if (Number.isFinite(s) && s > 0) byLesson.set(d.scenario_id, s);
-  }
-  return [...byLesson.entries()].map(([id, seconds]) => ({
-    lesson: lessonLabel(id),
-    seconds,
-  }));
+  const sorted = causalSort(list);
+  return Object.keys(LESSON_LABELS).map((lessonId) => {
+    const started = sorted.find(
+      (d) => d.event === "lesson_started" && d.scenario_id === lessonId
+    );
+    const completed = [...sorted]
+      .reverse()
+      .find((d) => d.event === "lesson_completed" && d.scenario_id === lessonId);
+    let seconds: number | null = null;
+    if (started && completed && ms(completed) > ms(started)) {
+      seconds = Math.round((ms(completed) - ms(started)) / 1000);
+    } else if (completed) {
+      const s = Number(completed.data?.seconds);
+      if (Number.isFinite(s) && s > 0) seconds = s;
+    }
+    return { lesson: lessonLabel(lessonId), seconds };
+  });
 }
 
 /**
@@ -518,27 +628,67 @@ function lastSegment(path: string): string {
   return path.split("/").filter(Boolean).pop() ?? "";
 }
 
+/** Longest single stretch on one page that still counts as working on it. */
+const MAX_PAGE_SPAN_MS = 90 * 60 * 1000;
+
+/**
+ * Seconds on each page (keyed by the path's last segment), measured from
+ * arriving on the page to arriving on the next one — the last page of a
+ * session falls back to its exit dwell.
+ *
+ * The page's own exit dwell is NOT summed for the others: the step timer used
+ * to stop for good at the first tab switch and never resume, so a participant
+ * who glanced at another tab during the Question step was credited with only
+ * the seconds before that glance.
+ */
+function secondsByPage(list: LogDoc[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const bySession = new Map<string, LogDoc[]>();
+  for (const d of list) {
+    if (d.event !== "step_entered" && d.event !== "step_exited") continue;
+    const key = d.session_id ?? "";
+    bySession.set(key, [...(bySession.get(key) ?? []), d]);
+  }
+  for (const events of bySession.values()) {
+    const ordered = causalSort(events);
+    const entries = ordered.filter((d) => d.event === "step_entered");
+    entries.forEach((entry, i) => {
+      const path = String(entry.data?.path ?? "");
+      const next = entries[i + 1];
+      let span = 0;
+      if (next) {
+        span = ms(next) - ms(entry);
+      } else {
+        const exit = ordered.find(
+          (d) =>
+            d.event === "step_exited" &&
+            d.data?.path === path &&
+            ms(d) >= ms(entry)
+        );
+        const dwell = Number(exit?.data?.dwell_ms);
+        if (Number.isFinite(dwell)) span = dwell;
+      }
+      if (span > 0 && span <= MAX_PAGE_SPAN_MS) {
+        const seg = lastSegment(path);
+        out.set(seg, (out.get(seg) ?? 0) + span / 1000);
+      }
+    });
+  }
+  return out;
+}
+
 /**
  * Score each part of the agent scenario for one participant, from that part's
  * own events: first-try MCQ correctness when composing the question, whether
- * the rubric selection was perfect, how many answers were reviewed, and how
- * many step placements were judged correctly. Time is the dwell on that page;
- * AI runs are the exchanges routed to that part.
+ * the rubric selection was perfect, and how many step placements / pass-fail
+ * marks were right. Time is the time on that page; AI runs are the exchanges
+ * routed to that part.
  */
 function agentPartsOf(list: LogDoc[]): AgentPartScore[] {
-  const sorted = [...list].sort((a, b) =>
-    (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
-  );
+  const sorted = causalSort(list);
 
-  // Time on task per part (summed dwell), and AI runs per part.
-  const secondsByKey = new Map<string, number>();
-  for (const d of sorted) {
-    if (d.event !== "step_exited") continue;
-    const seg = lastSegment(String(d.data?.path ?? ""));
-    const dwell = Number(d.data?.dwell_ms);
-    if (seg && Number.isFinite(dwell))
-      secondsByKey.set(seg, (secondsByKey.get(seg) ?? 0) + dwell / 1000);
-  }
+  // Time on task per part, and AI runs per part.
+  const secondsByKey = secondsByPage(list);
   const aiByPart = new Map<string, number>();
   for (const d of sorted) {
     if (d.event !== "ai_exchange") continue;
@@ -1012,6 +1162,7 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
 
   const items = new Map<string, AgentTaskItem>();
   const current = new Map<string, GradeVerdict>();
+  const lastGraded = new Map<string, { step: number | null; status: string | null }>();
   const order: string[] = [];
   const unfilled = new Map<string, ConvTurn>();
   let activeKey: string | null = null;
@@ -1055,7 +1206,21 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
         const v = takeVerdict(key, ms(d));
         if (v) current.set(key, v);
         const it = itemFor(key, v ?? current.get(key), phase);
-        if (v) it.turns.push(describeMove(phase, v.item));
+        if (v) {
+          it.turns.push(describeMove(phase, v.item));
+        } else {
+          // The grade for this move was lost; still show what they did.
+          const g = lastGraded.get(key);
+          it.turns.push({
+            speaker: "participant",
+            kind: "action",
+            correct: null,
+            text:
+              phase === "status"
+                ? `Marked it ${UP(g?.status ?? null)} (whether that was right wasn't recorded).`
+                : `Dragged it onto step ${g?.step ?? "?"} (whether that was right wasn't recorded).`,
+          });
+        }
         if (isUnchallenged) {
           if (!it.trigger) it.trigger = "No discussion — the correct call was accepted as-is.";
           it.turns.push({
@@ -1134,6 +1299,36 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
       } else if (next.kind === "dragging" && next.revealed) {
         it.outcome = "Out of attempts — the AI told them the answer.";
       }
+      continue;
+    }
+
+    // Where each graded move landed (used if its grade went missing).
+    if (d.event === "grade_lines_criterion_graded") {
+      const p = (data.placement ?? {}) as Record<string, unknown>;
+      const phase = data.phase === "status" ? "status" : "placement";
+      lastGraded.set(`${data.answer_id}::${data.criterion_id}::${phase}`, {
+        step: typeof p.stepIndex === "number" ? p.stepIndex + 1 : null,
+        status: p.status === "pass" || p.status === "fail" ? p.status : null,
+      });
+      continue;
+    }
+
+    // Moves that are never graded: back to the bank, or a mark cleared.
+    if (d.event === "grade_lines_move") {
+      const action = String(data.action ?? "");
+      if (action !== "removed" && action !== "unmarked") continue;
+      const phase = action === "unmarked" ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      const it = itemFor(key, current.get(key), phase);
+      it.turns.push({
+        speaker: "participant",
+        kind: "action",
+        correct: null,
+        text:
+          action === "removed"
+            ? `Dragged it back to the criteria bank (off step ${data.from_step ?? "?"}).`
+            : `Cleared the ${UP((data.from_status as string) ?? null)} mark.`,
+      });
       continue;
     }
 
@@ -1271,18 +1466,18 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       .filter((v) => v > 0);
     return { medianMin: median(vals), n: vals.length };
   };
-  // LearnVia lesson time is measured from the lessons' own completion events
-  // (each lesson logs its own elapsed seconds), summed across BOTH lessons per
-  // participant. This is more reliable than page-dwell for the lesson arm, and
-  // it is the actual on-task time across the two lessons.
+  // LearnVia total = Lesson 1 + Lesson 2, each timed from opening to finishing
+  // (see lessonTimesOf — the lesson's self-reported timer could double count).
+  const lessonTotalMinOf = (l: LogDoc[]): number | null => {
+    const secs = lessonTimesOf(l)
+      .map((t) => t.seconds)
+      .filter((s): s is number => s != null);
+    return secs.length ? secs.reduce((a, b) => a + b, 0) / 60 : null;
+  };
   const lessonTotalsMin = completerLists
     .filter((l) => armOf(l) === "lesson")
     .map((l) => {
-      const secs = l
-        .filter((d) => d.event === "lesson_completed")
-        .map((d) => Number(d.data?.seconds))
-        .filter((n) => Number.isFinite(n) && n > 0);
-      return secs.length ? secs.reduce((a, b) => a + b, 0) / 60 : null;
+      return lessonTotalMinOf(l);
     })
     .filter((v): v is number => v != null);
 
@@ -1394,11 +1589,8 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       if (d.data?.is_correct === true) e.correct += 1;
       firstTry.set(id, e);
     }
-    const secs = list
-      .filter((d) => d.event === "lesson_completed")
-      .map((d) => Number(d.data?.seconds))
-      .filter((n) => Number.isFinite(n));
-    if (secs.length) lessonMinutes.push(secs.reduce((a, b) => a + b, 0) / 60);
+    const total = lessonTotalMinOf(list);
+    if (total != null) lessonMinutes.push(total);
     lessonHints.push(list.filter((d) => d.event === "lesson_hint_shown").length);
   }
   const lessonFirstTry = [...firstTry.entries()]
@@ -1457,10 +1649,13 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
       preTest: testAnswerLines(latest(list, "test_completed", "pretest")),
       instruction: instructionDetailOf(list),
       postTest: testAnswerLines(latest(list, "test_completed", "posttest")),
-      postSurvey: surveyAnswerLines(
-        "post",
-        answersOf(latest(list, "survey_completed", "post"))
-      ),
+      postSurvey: [
+        ...surveyAnswerLines(
+          "post",
+          answersOf(latest(list, "survey_completed", "post"))
+        ),
+        ...movedItemLines(answersOf(latest(list, "survey_completed", "post"))),
+      ],
     })
   );
 

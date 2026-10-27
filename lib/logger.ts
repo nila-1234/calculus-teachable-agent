@@ -151,54 +151,100 @@ function writeQueue(entries: LogEntry[]) {
 }
 
 /**
- * Delivers everything buffered locally. Entries stay in the queue until the
- * server confirms it wrote them, so a failed request (offline, 500, missing
- * Firebase credentials) is retried on the next event, on the next page load, and when
- * the browser comes back online instead of being silently dropped.
+ * Browsers reject a `keepalive` request whose body is over 64 KiB — the fetch
+ * fails outright. Batches are therefore sized, and keepalive is only used when
+ * the batch fits under this.
+ */
+const KEEPALIVE_MAX_BYTES = 60 * 1024;
+
+/** Cap on one ordinary (non-keepalive) request. */
+const BATCH_MAX_BYTES = 512 * 1024;
+
+/** Most batches sent in one flush before yielding (each is confirmed first). */
+const MAX_BATCHES_PER_FLUSH = 50;
+
+const utf8Bytes = (text: string) => new TextEncoder().encode(text).length;
+
+/** The oldest events that fit in one request, in order (always at least one). */
+function takeBatch(queue: LogEntry[]): LogEntry[] {
+  const batch: LogEntry[] = [];
+  let bytes = 16;
+  for (const entry of queue) {
+    const size = utf8Bytes(JSON.stringify(entry)) + 1;
+    if (batch.length && bytes + size > BATCH_MAX_BYTES) break;
+    batch.push(entry);
+    bytes += size;
+  }
+  return batch;
+}
+
+/**
+ * Delivers everything buffered locally, in size-bounded batches, until the
+ * queue is empty. Entries stay in the queue until the server confirms it wrote
+ * them, so a failed request (offline, 500, missing Firebase credentials) is
+ * retried on the next event, on the next page load, and when the browser comes
+ * back online instead of being silently dropped.
+ *
+ * This used to send the WHOLE queue as one keepalive request. AI exchanges are
+ * large, so a few queued together could exceed the browser's 64 KiB keepalive
+ * limit; that request failed every time, the queue only grew, and the rest of
+ * the participant's session was never delivered.
  */
 export async function flushLogQueue(): Promise<void> {
   if (typeof window === "undefined" || flushing) return;
 
-  const batch = readQueue();
-  if (!batch.length) {
-    emit({ status: "ok", queued: 0 });
-    return;
-  }
-
   flushing = true;
+  let attempted = 0;
 
   try {
-    const res = await fetch("/api/log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ entries: batch }),
-      keepalive: true,
-    });
+    for (let i = 0; i < MAX_BATCHES_PER_FLUSH; i++) {
+      const queue = readQueue();
+      if (!queue.length) {
+        emit({ status: "ok", queued: 0, lastError: null });
+        return;
+      }
 
-    if (!res.ok) {
-      throw new Error(`/api/log responded ${res.status}`);
+      const batch = takeBatch(queue);
+      attempted = batch.length;
+      const body = JSON.stringify({ entries: batch });
+
+      const res = await fetch("/api/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        // Lets the last events survive the tab closing — but only legal when small.
+        keepalive: utf8Bytes(body) <= KEEPALIVE_MAX_BYTES,
+      });
+
+      if (!res.ok) {
+        throw new Error(`/api/log responded ${res.status}`);
+      }
+
+      const reply = await res.json().catch(() => null);
+      if (!reply?.ok) {
+        throw new Error(reply?.error ?? "/api/log reported failure");
+      }
+
+      // Re-read rather than reusing `queue`: events logged while the request
+      // was in flight must survive.
+      const delivered = new Set(batch.map((entry) => entry.event_id));
+      const remaining = readQueue().filter(
+        (entry) => !delivered.has(entry.event_id)
+      );
+      writeQueue(remaining);
+      emit({
+        status: remaining.length ? "pending" : "ok",
+        queued: remaining.length,
+        lastError: null,
+      });
     }
-
-    const body = await res.json().catch(() => null);
-    if (!body?.ok) {
-      throw new Error(body?.error ?? "/api/log reported failure");
-    }
-
-    // Re-read rather than reusing `batch`: events logged while the request was
-    // in flight must survive.
-    const delivered = new Set(batch.map((entry) => entry.event_id));
-    const remaining = readQueue().filter(
-      (entry) => !delivered.has(entry.event_id)
-    );
-    writeQueue(remaining);
-    emit({ status: "ok", queued: remaining.length, lastError: null });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(
-      `[logger] failed to deliver ${batch.length} event(s); they stay queued and will be retried:`,
+      `[logger] failed to deliver ${attempted} event(s); they stay queued and will be retried:`,
       err
     );
-    emit({ status: "failing", queued: batch.length, lastError: message });
+    emit({ status: "failing", queued: readQueue().length, lastError: message });
   } finally {
     flushing = false;
   }

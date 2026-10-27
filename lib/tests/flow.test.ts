@@ -206,3 +206,79 @@ test("exact transcript: AI line, then the participant's reply, even on ties", ()
     "professor:Why do you think step 3 is the right place for it?",
   ]);
 });
+
+// ---- LearnVia: every try, and per-lesson time from the event clock ----
+test("lesson: each try with time and answer; passed-on-try; lesson times not double counted", async () => {
+  const { getLesson } = await import("@/lib/lessons/definitions");
+  const q1 = getLesson("lesson-1")!.sections.flatMap((s) => s.questions ?? [])[0];
+  const wrong = q1.choices?.find((c) => !c.correct);
+  const right = q1.choices?.find((c) => c.correct);
+  const base = Date.UTC(2026, 9, 27, 14, 0, 0);
+  const L = (event: string, scenario_id: string, sec: number, data: Record<string, unknown> = {}) =>
+    ({ event, scenario_id, subject_id: "L1", session_id: "ls", timestamp: new Date(base + sec * 1000).toISOString(), data }) as LogDoc;
+  const lessonDocs: LogDoc[] = [
+    L("screening_completed", "screening", 0, { eligible: true, answers: {} }),
+    L("survey_completed", "pre", 1, { answers: {} }),
+    L("test_completed", "pretest", 2, { answers: {} }),
+    L("condition_assigned", "instruction", 3, { condition: "lesson" }),
+    L("lesson_started", "lesson-1", 10),
+    L("lesson_item_attempted", "lesson-1", 130, { item_id: q1.id, response: wrong?.id ?? "x", is_correct: false, attempt: 1 }),
+    L("lesson_hint_shown", "lesson-1", 140, { item_id: q1.id }),
+    L("lesson_item_attempted", "lesson-1", 160, { item_id: q1.id, response: wrong?.id ?? "x", is_correct: false, attempt: 2 }),
+    L("lesson_item_attempted", "lesson-1", 175, { item_id: q1.id, response: right?.id ?? "y", is_correct: true, attempt: 3 }),
+    // Lesson 1 truly took 600 s (10 → 610).
+    L("lesson_completed", "lesson-1", 610, { seconds: 600 }),
+    L("lesson_started", "lesson-2", 620),
+    // Lesson 2 took 300 s, but its own timer kept counting from Lesson 1 (900).
+    L("lesson_completed", "lesson-2", 920, { seconds: 910 }),
+    L("test_completed", "posttest", 1000, { answers: {} }),
+    L("survey_completed", "post", 1100, { answers: {} }),
+  ];
+  const flow = buildFlowSummary(lessonDocs);
+  assert.equal(flow.completers, 1);
+  const instr = flow.participants[0].instruction;
+
+  assert.deepEqual(
+    instr.lessonTimes.map((t) => [t.lesson, t.seconds]),
+    [["Lesson 1", 600], ["Lesson 2", 300]]
+  );
+  const total = flow.phases.find((p) => p.key === "lesson")!;
+  assert.equal(total.medianMin, 15, "total = 600 + 300 s, not 600 + 910");
+
+  const item = instr.lesson.find((i) => i.itemId === q1.id)!;
+  assert.equal(item.number, 1);
+  assert.equal(item.passedOnTry, 3);
+  assert.equal(item.firstTryCorrect, false);
+  assert.deepEqual(item.tries.map((t) => t.correct), [false, false, true]);
+  assert.deepEqual(item.tries.map((t) => t.seconds), [120, 30, 15], "time per try");
+  assert.deepEqual(item.tries.map((t) => t.hintsBefore), [0, 1, 1]);
+  assert.ok(item.tries.every((t) => t.at), "every try has a timestamp");
+  if (wrong?.label) assert.equal(item.tries[0].response, wrong.label, "answer shown as option text");
+});
+
+// ---- Instruction step time survives a tab switch ----
+test("agent Question time keeps counting after a tab switch", () => {
+  const out = docs.map((d) => ({ ...d }));
+  const q0 = Date.parse(out.find((d) => d.event === "condition_assigned")!.timestamp!) + 1000;
+  const at2 = (s: number) => new Date(q0 + s * 1000).toISOString();
+  const steps: LogDoc[] = [
+    { event: "step_entered", scenario_id: "5", subject_id: S, session_id: "s1", timestamp: at2(0), data: { path: "/5/question" } },
+    // Old timer: stopped for good when the tab was backgrounded 10 s in.
+    { event: "step_exited", scenario_id: "5", subject_id: S, session_id: "s1", timestamp: at2(10), data: { path: "/5/question", dwell_ms: 10000, reason: "tab_backgrounded" } },
+    { event: "step_entered", scenario_id: "5", subject_id: S, session_id: "s1", timestamp: at2(300), data: { path: "/5/create-rubric" } },
+    { event: "step_entered", scenario_id: "5", subject_id: S, session_id: "s1", timestamp: at2(420), data: { path: "/5/grade-lines" } },
+  ] as LogDoc[];
+  const flow = buildFlowSummary([...out, ...steps]);
+  const parts = flow.participants[0].instruction.agentParts;
+  assert.equal(parts.find((p) => p.part === "Question")?.seconds, 300, "not 10");
+  assert.equal(parts.find((p) => p.part === "Create Rubric")?.seconds, 120);
+});
+
+// ---- Moves that are never graded now appear ----
+test("dragging a criterion back to the bank shows in the transcript", () => {
+  const extra = { ...ev("grade_lines_move", "5", { answer_id: "a1", criterion_id: "c1", action: "removed", from_step: 3, to_step: null }), timestamp: docs[docs.length - 4].timestamp } as LogDoc;
+  const flow = buildFlowSummary([...docs.slice(0, -3), extra, ...docs.slice(-3)]);
+  const a = flow.participants[0].instruction.agentTasks.find((x) => x.task === "Apply Rubric")!;
+  const lines = a.items.flatMap((i) => i.turns.map((t) => t.text));
+  assert.ok(lines.some((l) => /back to the criteria bank \(off step 3\)/.test(l)), lines.join("\n"));
+});

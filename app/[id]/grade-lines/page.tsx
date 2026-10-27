@@ -618,6 +618,38 @@ function GradeLinesPageContent() {
     const prevForAnswer = placements[answerId] ?? {};
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
 
+    // Record every change the TA makes, as it happens — including the ones that
+    // are never graded (dragging a criterion back to the bank, clearing a mark),
+    // which were previously not logged at all. Steps are 1-based, as shown.
+    const ids = new Set([...Object.keys(prevForAnswer), ...Object.keys(next)]);
+    ids.forEach((criterionId) => {
+      const before = prevForAnswer[criterionId];
+      const after = next[criterionId];
+      const fromStep = before ? before.stepIndex + 1 : null;
+      const toStep = after ? after.stepIndex + 1 : null;
+      const fromStatus = before?.status ?? null;
+      const toStatus = after?.status ?? null;
+      if (fromStep === toStep && fromStatus === toStatus) return;
+      const action = !after
+        ? "removed"
+        : !before
+          ? "placed"
+          : fromStep !== toStep
+            ? "moved"
+            : toStatus == null
+              ? "unmarked"
+              : "marked";
+      logEvent("grade_lines_move", scenarioId, {
+        answer_id: answerId,
+        criterion_id: criterionId,
+        action,
+        from_step: fromStep,
+        to_step: toStep,
+        from_status: fromStatus,
+        to_status: toStatus,
+      });
+    });
+
     // Newly placed, or moved to a different step: the old check (if any) no longer
     // applies, so drop it and re-check placement from scratch.
     Object.entries(next).forEach(([criterionId, placement]) => {
