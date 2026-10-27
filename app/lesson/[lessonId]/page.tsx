@@ -110,6 +110,9 @@ function LessonPageContent() {
       </div>
       <div className="mx-auto max-w-3xl px-6 py-8">
         <LessonRunner
+          // A fresh runner per lesson, so each lesson's timer and answers start
+          // from zero rather than carrying over from the previous lesson.
+          key={lesson.id}
           lesson={lesson}
           onComplete={handleComplete}
           completeLabel={next ? "Continue" : "Continue to the next section"}

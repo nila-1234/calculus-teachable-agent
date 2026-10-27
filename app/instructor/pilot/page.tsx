@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 
@@ -382,6 +382,130 @@ function screenOut(r: Row): { out: boolean; reasons: string[] } {
   if (!r.screening_algebra_correct) reasons.push("algebra check failed");
   if (!r.screening_power_rule_correct) reasons.push("power-rule check failed");
   return { out: reasons.length > 0, reasons };
+}
+
+type ScreenGroup = "low" | "eligible" | "high" | "both";
+
+/**
+ * Which screening group a participant is in, by WHY the real study's rule
+ * would screen them out: too low a level (failed the algebra or power-rule
+ * check) or too high (Calculus II or higher, or 3+ calculus courses). Anyone
+ * who trips both is kept in a group of their own so no one is counted twice.
+ */
+function screenGroup(r: Row): ScreenGroup {
+  const high =
+    INELIGIBLE.highest_math.includes(String(r.highest_math)) ||
+    INELIGIBLE.calculus_courses.includes(String(r.calculus_courses));
+  const low = !r.screening_algebra_correct || !r.screening_power_rule_correct;
+  return high && low ? "both" : high ? "high" : low ? "low" : "eligible";
+}
+
+const GROUP_LABELS: [ScreenGroup, string][] = [
+  ["low", "Screened out — low level"],
+  ["eligible", "Eligible"],
+  ["high", "Screened out — high level"],
+  ["both", "Failed a check AND high level"],
+];
+
+/**
+ * Test performance of the three screening groups, per form. Each pilot
+ * participant took one form, so Form A and Form B are averaged over different
+ * people; the scoring-sheet average pools both forms.
+ */
+function ScreeningGroupsCard({
+  rows,
+  grades,
+}: {
+  rows: Row[];
+  grades: Record<string, GradeInfo>;
+}) {
+  const q1Avg = (list: Row[]) =>
+    mean(list.filter((r) => r.q1_total > 0).map((r) => r.q1_correct / r.q1_total));
+  const sheet = (list: Row[]) => {
+    const g = list.map((r) => grades[r.subject]).filter((x): x is GradeInfo => !!x);
+    return {
+      avg: mean(g.map((x) => x.total)),
+      max: g[0]?.max ?? null,
+      n: g.length,
+    };
+  };
+  const fmtSheet = (s: ReturnType<typeof sheet>) =>
+    s.avg == null
+      ? "—"
+      : `${s.avg.toFixed(1)}/${s.max} (${Math.round((100 * s.avg) / (s.max || 1))}%)`;
+
+  const groups = GROUP_LABELS.map(([key, label]) => {
+    const members = rows.filter((r) => screenGroup(r) === key);
+    const a = members.filter((r) => r.form === "A");
+    const b = members.filter((r) => r.form === "B");
+    return { key, label, members, a, b };
+  }).filter((g) => g.key !== "both" || g.members.length > 0);
+
+  return (
+    <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+      <h2 className="text-base font-bold text-stone-800">
+        Performance by screening group
+      </h2>
+      <p className="mt-1 text-xs text-stone-400">
+        Low level = failed the algebra or power-rule check. High level = Calculus
+        II or higher, or 3+ calculus courses. Each participant took one form.
+        New Q1 = the four short numeric items (1b–1e), % correct. Scoring sheet
+        = the AI-graded answer-key total.
+      </p>
+      <table className="mt-3 w-full border-collapse text-sm">
+        <thead>
+          <tr className="text-left text-xs text-stone-400">
+            <th className="py-1 pr-3 font-semibold" rowSpan={2}>Group</th>
+            <th className="py-1 pr-3 font-semibold" rowSpan={2}>n</th>
+            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={3}>
+              Form A
+            </th>
+            <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-semibold" colSpan={3}>
+              Form B
+            </th>
+            <th className="border-l border-stone-100 py-1 pl-2 font-semibold" rowSpan={2}>
+              Scoring sheet avg (both forms)
+            </th>
+          </tr>
+          <tr className="text-left text-xs text-stone-400">
+            {["A", "B"].map((f) => (
+              <Fragment key={f}>
+                <th className="border-l border-stone-100 py-1 pl-2 pr-3 font-normal">n</th>
+                <th className="py-1 pr-3 font-normal">New Q1 avg</th>
+                <th className="py-1 pr-3 font-normal">Scoring sheet avg</th>
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => (
+            <tr key={g.key} className="border-t border-stone-100">
+              <td
+                className={`py-1 pr-3 font-semibold ${
+                  g.key === "eligible" ? "text-lime-700" : "text-rose-700"
+                }`}
+              >
+                {g.label}
+              </td>
+              <td className="py-1 pr-3 text-stone-700">{g.members.length}</td>
+              {[g.a, g.b].map((list, i) => (
+                <Fragment key={i}>
+                  <td className="border-l border-stone-100 py-1 pl-2 pr-3 text-stone-500">
+                    {list.length}
+                  </td>
+                  <td className="py-1 pr-3 text-stone-800">{pct(q1Avg(list))}</td>
+                  <td className="py-1 pr-3 text-stone-800">{fmtSheet(sheet(list))}</td>
+                </Fragment>
+              ))}
+              <td className="border-l border-stone-100 py-1 pl-2 font-semibold text-stone-800">
+                {fmtSheet(sheet(g.members))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 /**
@@ -1259,6 +1383,8 @@ export default function PilotAnalysisPage() {
                 .
               </p>
             </div>
+
+            <ScreeningGroupsCard rows={view.completed} grades={grades} />
 
             {analysis && (
               <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">

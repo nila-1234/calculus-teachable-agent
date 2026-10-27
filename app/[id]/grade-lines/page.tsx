@@ -553,11 +553,28 @@ function GradeLinesPageContent() {
     gradeGenerationRef.current[generationKey] = generation;
     const isLatest = () => gradeGenerationRef.current[generationKey] === generation;
 
+    // Grading is a fixed lookup against the answer key, so record the verdict
+    // with the move itself — the analysis never has to rely on the grading
+    // reply having been logged.
+    const fit = answer.rubricFit?.[criterionId];
+    const placedStep = placement.stepIndex + 1;
+    const expectedStatus = fit ? (fit.pass ? "pass" : "fail") : null;
     logEvent("grade_lines_criterion_graded", scenarioId, {
       answer_id: answerId,
+      answer_title: answer.label,
       criterion_id: criterionId,
+      criterion_label: criterion.label,
       phase,
       placement,
+      placed_step: placedStep,
+      expected_step: fit?.step ?? null,
+      step_correct: fit ? placedStep === fit.step : null,
+      status: placement.status,
+      expected_status: expectedStatus,
+      status_correct:
+        placement.status != null && expectedStatus != null
+          ? placement.status === expectedStatus
+          : null,
     });
 
     setGradingCriteria((prev) => ({
@@ -617,6 +634,42 @@ function GradeLinesPageContent() {
   const handlePlacementsChange = (answerId: string, next: Record<string, StepPlacement>) => {
     const prevForAnswer = placements[answerId] ?? {};
     setPlacements((prev) => ({ ...prev, [answerId]: next }));
+
+    // Record every change the TA makes, as it happens — including the ones that
+    // are never graded (dragging a criterion back to the bank, clearing a mark),
+    // which were previously not logged at all. Steps are 1-based, as shown.
+    const ids = new Set([...Object.keys(prevForAnswer), ...Object.keys(next)]);
+    ids.forEach((criterionId) => {
+      const before = prevForAnswer[criterionId];
+      const after = next[criterionId];
+      const fromStep = before ? before.stepIndex + 1 : null;
+      const toStep = after ? after.stepIndex + 1 : null;
+      const fromStatus = before?.status ?? null;
+      const toStatus = after?.status ?? null;
+      if (fromStep === toStep && fromStatus === toStatus) return;
+      const action = !after
+        ? "removed"
+        : !before
+          ? "placed"
+          : fromStep !== toStep
+            ? "moved"
+            : toStatus == null
+              ? "unmarked"
+              : "marked";
+      const fit = FINAL_AI_ANSWERS.find((a) => a.id === answerId)?.rubricFit?.[criterionId];
+      logEvent("grade_lines_move", scenarioId, {
+        answer_id: answerId,
+        criterion_id: criterionId,
+        criterion_label: rubric.find((c) => c.id === criterionId)?.label ?? null,
+        action,
+        from_step: fromStep,
+        to_step: toStep,
+        from_status: fromStatus,
+        to_status: toStatus,
+        expected_step: fit?.step ?? null,
+        expected_status: fit ? (fit.pass ? "pass" : "fail") : null,
+      });
+    });
 
     // Newly placed, or moved to a different step: the old check (if any) no longer
     // applies, so drop it and re-check placement from scratch.

@@ -199,6 +199,26 @@ const PRE_SURVEY: SurveyDefinition = {
       shortTitle: "Attitudes",
       items: AGREE_STATEMENTS.map(([id, prompt]) => likertItem(id, prompt)),
     },
+    {
+      id: "motivation",
+      title:
+        "For each statement, please indicate how much you agree or disagree.",
+      shortTitle: "Motivation",
+      items: [
+        likertItem(
+          "motivation-intrinsic",
+          "I was motivated by my interest in the calculus content."
+        ),
+        likertItem(
+          "motivation-identified",
+          "I was motivated to learn because I believed that understanding this calculus content would be valuable to me."
+        ),
+        likertItem(
+          "motivation-external",
+          "I was motivated to complete the learning activities to receive payment for the study."
+        ),
+      ],
+    },
   ],
 };
 
@@ -228,26 +248,6 @@ const POST_SURVEY: SurveyDefinition = {
         likertItem(
           "instruction-ai",
           "The instruction prepared me to better work with AI on real-world calculus problem-solving tasks."
-        ),
-      ],
-    },
-    {
-      id: "motivation",
-      title:
-        "For each statement, please indicate how much you agree or disagree.",
-      shortTitle: "Motivation",
-      items: [
-        likertItem(
-          "motivation-intrinsic",
-          "I was motivated by my interest in the calculus content."
-        ),
-        likertItem(
-          "motivation-identified",
-          "I was motivated to learn because I believed that understanding this calculus content would be valuable to me."
-        ),
-        likertItem(
-          "motivation-external",
-          "I was motivated to complete the learning activities to receive payment for the study."
         ),
       ],
     },

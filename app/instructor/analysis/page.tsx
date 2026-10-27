@@ -376,45 +376,117 @@ function InstructionBlock({
         {minutes != null ? ` · ${minutes.toFixed(1)} min` : ""}
       </p>
 
-      {/* ---- Lesson arm: each lesson, its time, and each question ---- */}
+      {/* ---- Lesson arm: each lesson, its time, each question, every try ---- */}
       {lessonNames.map((name) => {
         const items = lesson.filter((it) => it.lesson === name);
         const secs = lessonTimes.find((t) => t.lesson === name)?.seconds ?? null;
         const right = items.filter((it) => it.firstTryCorrect).length;
+        const passed = items.filter((it) => it.passedOnTry != null).length;
         return (
-          <div key={name} className="mt-2">
+          <div key={name} className="mt-3">
             <p className="text-xs font-semibold text-stone-700">
               {name}
               <span className="ml-2 font-normal text-stone-500">
-                {fmtSec(secs)} · {right}/{items.length} correct on the first try
+                {fmtSec(secs)} · {right}/{items.length} right on the first try ·{" "}
+                {passed}/{items.length} eventually right
               </span>
             </p>
-            <table className="mt-1 w-full border-collapse text-xs">
-              <thead>
-                <tr className="text-left text-stone-400">
-                  <th className="py-1 pr-3 font-semibold">Question</th>
-                  <th className="py-1 pr-3 font-semibold">First try</th>
-                  <th className="py-1 pr-3 font-semibold">Attempts</th>
-                  <th className="py-1 pr-3 font-semibold">Hints</th>
-                  <th className="py-1 font-semibold">Answered at</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it, i) => (
-                  <tr key={it.itemId} className="border-t border-stone-100">
-                    <td className="py-1 pr-3 text-stone-700">Q{i + 1}</td>
-                    <td className="py-1 pr-3">
-                      <Tick ok={it.firstTryCorrect} />
-                    </td>
-                    <td className="py-1 pr-3 text-stone-600">{it.attempts}</td>
-                    <td className="py-1 pr-3 text-stone-600">{it.hints}</td>
-                    <td className="py-1 text-stone-400">
-                      {it.at ? new Date(it.at).toLocaleTimeString() : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="mt-1 space-y-2">
+              {items.map((it) => (
+                <div
+                  key={it.itemId}
+                  className="rounded-lg border border-stone-200 bg-white px-3 py-2"
+                >
+                  <p className="text-xs text-stone-700">
+                    <span className="font-semibold">Q{it.number}</span>{" "}
+                    <span
+                      className={
+                        it.passedOnTry === 1
+                          ? "font-semibold text-lime-700"
+                          : it.passedOnTry != null
+                            ? "font-semibold text-amber-700"
+                            : "font-semibold text-rose-600"
+                      }
+                    >
+                      {it.attempts === 0
+                        ? "not attempted"
+                        : it.passedOnTry == null
+                          ? `never right (${it.attempts} tr${it.attempts === 1 ? "y" : "ies"})`
+                          : `passed on try ${it.passedOnTry} of ${it.attempts}`}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 text-[11px]">
+                    <span className="font-semibold text-stone-500">Hint: </span>
+                    {it.hintsAvailable === 0 ? (
+                      <span className="text-stone-400">this question has no hint</span>
+                    ) : it.hintsOpened.length === 0 ? (
+                      <span className="text-stone-600">
+                        {it.hintsAvailable} available —{" "}
+                        <span className="font-semibold">not opened</span>
+                      </span>
+                    ) : (
+                      <span className="text-amber-700">
+                        {it.hintsAvailable} available —{" "}
+                        <span className="font-semibold">
+                          opened {it.hintsOpened.length}
+                        </span>
+                        :{" "}
+                        {it.hintsOpened
+                          .map(
+                            (h) =>
+                              `hint ${h.index} before try ${h.beforeTry}${
+                                h.at ? ` (${new Date(h.at).toLocaleTimeString()})` : ""
+                              }`
+                          )
+                          .join("; ")}
+                      </span>
+                    )}
+                  </p>
+                  {it.prompt && (
+                    <p className="mt-0.5 whitespace-pre-wrap text-[11px] text-stone-500">
+                      {it.prompt}
+                    </p>
+                  )}
+                  <table className="mt-1 w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="text-left text-stone-400">
+                        <th className="py-0.5 pr-3 font-semibold">Try</th>
+                        <th className="py-0.5 pr-3 font-semibold">Answer</th>
+                        <th className="py-0.5 pr-3 font-semibold">Result</th>
+                        <th className="py-0.5 pr-3 font-semibold">Hints before</th>
+                        <th className="py-0.5 pr-3 font-semibold">Time taken</th>
+                        <th className="py-0.5 font-semibold">At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {it.tries.map((t) => (
+                        <tr key={t.n} className="border-t border-stone-100 align-top">
+                          <td className="py-0.5 pr-3 text-stone-600">{t.n}</td>
+                          <td className="py-0.5 pr-3 whitespace-pre-wrap text-stone-800">
+                            {t.response}
+                          </td>
+                          <td className="py-0.5 pr-3">
+                            <Tick ok={t.correct} />
+                          </td>
+                          <td className="py-0.5 pr-3 text-stone-600">{t.hintsBefore}</td>
+                          <td className="whitespace-nowrap py-0.5 pr-3 text-stone-600">
+                            {fmtSec(t.seconds)}
+                          </td>
+                          <td className="whitespace-nowrap py-0.5 text-stone-400">
+                            {t.at ? new Date(t.at).toLocaleTimeString() : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-stone-400">
+              Time taken = since their previous answer in this lesson (for the
+              first question, since the lesson opened — so it includes reading
+              the lesson content).
+            </p>
           </div>
         );
       })}
