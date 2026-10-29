@@ -18,6 +18,8 @@ const EXEMPT = [
   /^\/consent(\/|$)/,
   /^\/not-eligible(\/|$)/,
   /^\/instructor(\/|$)/,
+  // Internal-testing sandbox: team only, nothing logged, no participant ID.
+  /^\/internal_test(\/|$)/,
   /^\/scenarios(\/|$)/,
   /^\/[^/]+\/(question|apply-rubric|create-rubric|grade|grade-lines)(\/|$)/,
 ];
