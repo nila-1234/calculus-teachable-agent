@@ -760,25 +760,18 @@ export default function GradeLinesActivity({
       <AppHeader />
       <div className="mx-auto max-w-7xl p-3 py-6 sm:px-6">
         {internalTest ? (
-          <div className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p className="font-bold">Internal test — nothing on this page is recorded.</p>
-            <p className="mt-0.5">
-              The AI professor and student discussion only, for trying out the
-              conversation. Reload the page to start over.
+          finished && (
+            <p className="mb-4 rounded-xl border-2 border-lime-300 bg-lime-50 px-4 py-3 text-sm font-semibold text-lime-900">
+              Finished — every criterion has been judged.{" "}
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="underline underline-offset-2 hover:text-lime-700"
+              >
+                Start over
+              </button>
             </p>
-            {finished && (
-              <p className="mt-2 font-semibold">
-                Finished — every criterion has been judged.{" "}
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  className="underline underline-offset-2 hover:text-amber-700"
-                >
-                  Start over
-                </button>
-              </p>
-            )}
-          </div>
+          )
         ) : (
           <StepProgress currentStep={2} scenarioId={scenarioId} />
         )}
