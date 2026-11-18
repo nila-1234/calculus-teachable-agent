@@ -1,5 +1,9 @@
 import type { SurveyDefinition, SurveyId, SurveyItem, SurveyLikert } from "./types";
-import { ALGEBRA_CHECK_OPTIONS, POWER_RULE_OPTIONS } from "./eligibility";
+import {
+  AI_CHECK_ITEM,
+  ALGEBRA_CHECK_OPTIONS,
+  POWER_RULE_OPTIONS,
+} from "./eligibility";
 
 const AGREE_LIKERT: SurveyLikert = {
   min: 1,
@@ -100,6 +104,18 @@ const SCREENING_SURVEY: SurveyDefinition = {
           "For f(x) = x⁵ + 7, what is the derivative f′(x)?",
           POWER_RULE_OPTIONS
         ),
+        // AI-use check: pasting is allowed here, and pasting (or dropping) a
+        // written answer in screens the participant out — see
+        // lib/surveys/eligibility.ts. The answer itself is not graded.
+        {
+          ...openItem(
+            AI_CHECK_ITEM,
+            "In your own words, what does the derivative of a function tell you? (1–2 sentences) Please answer without using AI tools.",
+            true,
+            "Write your answer here…"
+          ),
+          trackTyping: true,
+        },
       ],
     },
   ],

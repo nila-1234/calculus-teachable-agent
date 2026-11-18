@@ -1,7 +1,12 @@
 import type { LogDoc } from "./report";
 import { fullFlowSubjects, minutesPerPhase, type Phase } from "./export";
 import { getSurvey } from "@/lib/surveys/definitions";
-import { parseMulti, type SurveyItem } from "@/lib/surveys/types";
+import {
+  parseMulti,
+  parseTyping,
+  TYPING_SUFFIX,
+  type SurveyItem,
+} from "@/lib/surveys/types";
 import { getLesson } from "@/lib/lessons/definitions";
 import { getScenario } from "@/lib/scenarios/registry";
 import type { LessonQuestion } from "@/lib/lessons/types";
@@ -339,19 +344,52 @@ function surveyAnswerLines(
   if (!survey) return [];
   const current = survey.sections
     .flatMap((s) => s.items)
-    .map((item) => ({
-      label: item.prompt,
-      value:
-        item.kind === "multi" && typeof answers[item.id] === "string"
-          ? parseMulti(answers[item.id] as string).join(", ")
-          : formatValue(answers[item.id]),
-    }));
+    .flatMap((item) => {
+      const line = {
+        label: item.prompt,
+        value:
+          item.kind === "multi" && typeof answers[item.id] === "string"
+            ? parseMulti(answers[item.id] as string).join(", ")
+            : formatValue(answers[item.id]),
+      };
+      if (!item.trackTyping) return [line];
+      // How the answer was entered (the screening AI-use check).
+      return [
+        line,
+        {
+          label: "↳ How this answer was entered (AI-use check)",
+          value: describeTyping(
+            answers[`${item.id}${TYPING_SUFFIX}`] as string | undefined,
+            String(answers[item.id] ?? "").length
+          ),
+        },
+      ];
+    });
   // Questions since replaced: earlier participants' answers stay visible.
   const retired = (RETIRED_ITEMS[surveyId] ?? []).map((r) => ({
     label: `${r.prompt} (earlier version of this question)`,
     value: formatValue(answers[r.id]),
   }));
   return [...current, ...retired].filter((l) => l.value !== "");
+}
+
+/** A readable summary of an answer's typing signals. */
+function describeTyping(raw: string | undefined, answerLength: number): string {
+  if (!raw) return "not recorded";
+  const t = parseTyping(raw);
+  const secs = (from: number | null, to: number | null) =>
+    from != null && to != null && to >= from ? `${Math.round((to - from) / 1000)}s` : "—";
+  const inserted = t.pastedChars + t.droppedChars;
+  return [
+    inserted
+      ? `PASTED ${t.pastedChars} chars (${t.pasteCount}×)${t.droppedChars ? `, dropped ${t.droppedChars}` : ""}`
+      : "nothing pasted",
+    `${t.keystrokes} keystrokes (${t.backspaces} corrections) for a ${answerLength}-character answer`,
+    `first key after ${secs(t.firstFocusAt, t.firstKeyAt)}, last edit at ${secs(t.firstFocusAt, t.lastInputAt)}`,
+    t.tabAwayCount
+      ? `left the tab ${t.tabAwayCount}× (${Math.round(t.tabAwayMs / 1000)}s)`
+      : "never left the tab",
+  ].join(" · ");
 }
 
 /** Survey questions that were replaced, by survey; kept so old answers show. */
