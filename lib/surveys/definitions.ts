@@ -30,6 +30,21 @@ function choiceItem(
   };
 }
 
+/** Select-all-that-apply. Stored as the chosen ids joined by "|". */
+function multiItem(
+  id: string,
+  prompt: string,
+  choices: string[]
+): SurveyItem {
+  return {
+    id,
+    kind: "multi",
+    prompt,
+    required: true,
+    choices: choices.map((text) => ({ id: text, text })),
+  };
+}
+
 function openItem(
   id: string,
   prompt: string,
@@ -154,9 +169,11 @@ const PRE_SURVEY: SurveyDefinition = {
             "Prefer not to say",
           ]
         ),
-        choiceItem(
-          "first-language",
-          "What is your first language (the language you learned first)?",
+        // Replaced "What is your first language?" (id "first-language");
+        // a new id so earlier answers to the old question aren't mixed in.
+        multiItem(
+          "home-language",
+          "What language(s) do you speak at home? Select all that apply.",
           [
             "English",
             "Spanish",
@@ -215,7 +232,7 @@ const PRE_SURVEY: SurveyDefinition = {
         ),
         likertItem(
           "motivation-external",
-          "I was motivated to complete the learning activities to receive payment for the study."
+          "I am motivated to complete the learning activities to receive payment for the study."
         ),
       ],
     },
