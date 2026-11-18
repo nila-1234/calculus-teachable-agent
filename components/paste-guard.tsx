@@ -6,12 +6,14 @@ import { logEvent } from "@/lib/logger";
 import { isPreviewActive } from "@/lib/preview";
 
 /**
- * Pages of the instruction (both arms) where pasting is turned off, so
- * participants can't paste AI-written answers into the activity. Screening
- * deliberately allows pasting — see AI_CHECK_ITEM in lib/surveys/eligibility.ts
- * — so that anyone who pastes an answer is screened out before this point.
+ * Pages where pasting is turned off, so participants can't paste AI-written
+ * answers: the pre-test and post-test, and the instruction (both arms).
+ * Screening deliberately allows pasting — see AI_CHECK_ITEM in
+ * lib/surveys/eligibility.ts — so anyone who pastes an answer is screened out
+ * before this point.
  */
-const INSTRUCTION_PATHS = [
+const NO_PASTE_PATHS = [
+  /^\/test\/(pretest|posttest)(\/|$)/,
   /^\/\d+\/(question|create-rubric|grade-lines)(\/|$)/,
   /^\/lesson(\/|$)/,
 ];
@@ -27,14 +29,14 @@ const isTextField = (target: EventTarget | null): target is HTMLElement => {
 };
 
 /**
- * Blocks pasting and dropping text into any text box on the instruction pages,
+ * Blocks pasting and dropping text into any text box on those pages,
  * shows a short note explaining why, and logs each attempt (`paste_blocked`).
  * Instructor preview is left alone.
  */
 export default function PasteGuard() {
   const pathname = usePathname();
   const [notice, setNotice] = useState(false);
-  const active = INSTRUCTION_PATHS.some((p) => p.test(pathname ?? ""));
+  const active = NO_PASTE_PATHS.some((p) => p.test(pathname ?? ""));
 
   useEffect(() => {
     if (!active || isPreviewActive()) return;
@@ -75,7 +77,7 @@ export default function PasteGuard() {
       role="status"
       className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl border-2 border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-900 shadow-lg"
     >
-      Pasting is turned off in this activity — please type your answer.
+      Pasting is turned off here — please type your answer.
     </div>
   );
 }
