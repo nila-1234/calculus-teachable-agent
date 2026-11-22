@@ -66,30 +66,12 @@ const SCREENING_SURVEY: SurveyDefinition = {
             "Calculus I",
             "Calculus II",
             "Calculus III or higher",
-            "Other college-level mathematics (e.g., linear algebra, differential equations)",
-            "I am not sure",
           ]
         ),
         choiceItem(
           "calculus-courses",
           "How many college-level calculus courses have you taken?",
-          ["None", "1", "2", "3 or more", "I am not sure"]
-        ),
-        choiceItem(
-          "math_courses",
-          "How many college-level mathematics courses have you taken? Include all college-level mathematics (calculus, linear algebra, statistics, discrete mathematics, and so on).",
-          ["0", "1", "2", "3 or more"]
-        ),
-        choiceItem(
-          "calc_history",
-          "Have you ever taken a calculus course?",
-          [
-            "Never",
-            "In high school",
-            "In college",
-            "Both",
-            "I am currently enrolled in a calculus course",
-          ]
+          ["None", "1", "2", "3 or more"]
         ),
         // Skill checks (floor). Options come from eligibility.ts so the graded
         // correct answer is always one of the presented options.
@@ -216,6 +198,26 @@ const PRE_SURVEY: SurveyDefinition = {
         "For each statement, please indicate how much you agree or disagree.",
       shortTitle: "Attitudes",
       items: AGREE_STATEMENTS.map(([id, prompt]) => likertItem(id, prompt)),
+    },
+    {
+      id: "motivation",
+      title:
+        "For each statement, please indicate how much you agree or disagree.",
+      shortTitle: "Motivation",
+      items: [
+        likertItem(
+          "motivation-intrinsic",
+          "I was motivated by my interest in the calculus content."
+        ),
+        likertItem(
+          "motivation-identified",
+          "I was motivated to learn because I believed that understanding this calculus content would be valuable to me."
+        ),
+        likertItem(
+          "motivation-external",
+          "I was motivated to complete the learning activities to receive payment for the study."
+        ),
+      ],
     },
   ],
 };

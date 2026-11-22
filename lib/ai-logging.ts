@@ -18,6 +18,11 @@ import { logEvent } from "@/lib/logger";
 const AI_ROUTES = [
   "grade-lines-comment",
   "grade-lines-feedback",
+  // The grade-lines scenario also classifies and explains the student's line
+  // edits through a model, so those exchanges are part of the AI conversation
+  // and must be recorded too.
+  "placement-classify",
+  "placement-explain",
   "question-feedback",
 ];
 
@@ -90,14 +95,36 @@ export function installAiLogging(): void {
     if (!route) return originalFetch(input as RequestInfo, init);
 
     const startedAt = Date.now();
-    const response = await originalFetch(input as RequestInfo, init);
+    let response: Response;
+    try {
+      response = await originalFetch(input as RequestInfo, init);
+    } catch (err) {
+      // The call never got a reply (network error, tab closing). Still record
+      // that it was attempted and what the student sent.
+      void logEvent("ai_exchange", scenarioIdFromLocation(), {
+        route,
+        path: window.location.pathname,
+        ok: false,
+        status: null,
+        error: String(err).slice(0, 500),
+        duration_ms: Date.now() - startedAt,
+        request: parseBody(init?.body),
+        response: null,
+      });
+      throw err;
+    }
 
-    // Read from a clone so the caller still gets an unconsumed body.
+    // Read from a clone so the caller still gets an unconsumed body. A reply
+    // that isn't JSON is kept as text rather than dropped.
     let responseBody: unknown = null;
     try {
       responseBody = truncate(await response.clone().json());
     } catch {
-      responseBody = null;
+      try {
+        responseBody = truncate(await response.clone().text());
+      } catch {
+        responseBody = null;
+      }
     }
 
     void logEvent("ai_exchange", scenarioIdFromLocation(), {

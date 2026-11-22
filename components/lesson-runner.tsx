@@ -107,16 +107,14 @@ function normalizeAnswer(raw: string): string[] {
     .replace(/\.$/, "");
 
   const withoutLhs = base.replace(/^[a-z]+(\([a-z]\))?=/, "");
-  const alnum = base.replace(/[^a-z0-9]/g, "");
 
+  // Deliberately no sign-stripped form here. Collapsing to letters+digits made
+  // "8 - x" and "8 + x" both become "8x" (and "3" match "-3"), so a wrong-sign
+  // answer was accepted as correct — a real bug caught in piloting. base and
+  // the sorted-term forms preserve signs and still tolerate spacing, term
+  // order, and factor order.
   return [
-    ...new Set([
-      base,
-      withoutLhs,
-      alnum,
-      sortedTerms(base),
-      sortedTerms(withoutLhs),
-    ]),
+    ...new Set([base, withoutLhs, sortedTerms(base), sortedTerms(withoutLhs)]),
   ].filter(Boolean);
 }
 
@@ -147,7 +145,7 @@ function Body({ items }: { items: LessonBodyItem[] }) {
                 <li key={j}>
                   <MathDisplay
                     text={li}
-                    className="text-base leading-7 text-stone-700"
+                    className="text-base leading-7 text-gray-700"
                   />
                 </li>
               ))}
@@ -158,7 +156,7 @@ function Body({ items }: { items: LessonBodyItem[] }) {
           <MathDisplay
             key={i}
             text={item.text}
-            className="my-3 text-base leading-7 text-stone-700"
+            className="my-3 text-base leading-7 text-gray-700"
           />
         );
       })}
@@ -174,6 +172,7 @@ function QuestionCard({
   onSubmit,
   onRetry,
   onHint,
+  inSet = false,
 }: {
   question: LessonQuestion;
   index: number;
@@ -182,16 +181,27 @@ function QuestionCard({
   onSubmit: () => void;
   onRetry: () => void;
   onHint: () => void;
+  /** Rendered inside a QuestionSet card: drop the nested card chrome and the
+   *  "Question N" label, since the set's pills already number the questions. */
+  inSet?: boolean;
 }) {
   const chosen = question.choices?.find((c) => c.id === state.response);
   const locked = state.submitted && state.correct;
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+    <div
+      className={
+        inSet ? "" : "rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+      }
+    >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <span className="text-xs font-bold uppercase tracking-wider text-stone-400">
-          Question {index}
-        </span>
+        {inSet ? (
+          <span />
+        ) : (
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+            Question {index}
+          </span>
+        )}
         {state.submitted && (
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -207,7 +217,7 @@ function QuestionCard({
 
       <MathDisplay
         text={question.prompt}
-        className="text-base leading-7 text-stone-800"
+        className="text-base leading-7 text-gray-800"
       />
 
       {question.promptImages.map((src) => (
@@ -237,8 +247,8 @@ function QuestionCard({
                     : reveal
                       ? "border-amber-500 bg-amber-50"
                       : selected
-                        ? "border-lime-600 bg-white"
-                        : "border-stone-200 bg-white hover:border-stone-300"
+                        ? "border-blue-600 bg-blue-50"
+                        : "border-gray-200 bg-white hover:border-gray-300"
                 } ${locked ? "cursor-default opacity-90" : ""}`}
               >
                 {choice.labelImage ? (
@@ -251,7 +261,7 @@ function QuestionCard({
                 ) : (
                   <MathDisplay
                     text={choice.label}
-                    className="text-sm text-stone-800"
+                    className="text-sm text-gray-800"
                   />
                 )}
               </button>
@@ -268,7 +278,7 @@ function QuestionCard({
             if (e.key === "Enter" && state.response.trim()) onSubmit();
           }}
           placeholder="Type your answer — use ^ for powers, e.g. x^2"
-          className="mt-4 w-full rounded-xl border-2 border-stone-200 bg-white px-4 py-3 text-base text-stone-800 placeholder:text-stone-400 focus:border-lime-600 focus:outline-none focus:ring-4 focus:ring-lime-50 disabled:bg-stone-50"
+          className="mt-4 w-full rounded-xl border-2 border-gray-200 bg-white px-4 py-3 text-base text-gray-800 placeholder:text-gray-400 focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-50 disabled:bg-gray-50"
         />
       )}
 
@@ -282,7 +292,7 @@ function QuestionCard({
         >
           <MathDisplay
             text={chosen.explanation}
-            className="text-sm leading-6 text-stone-700"
+            className="text-sm leading-6 text-gray-700"
           />
         </div>
       )}
@@ -294,14 +304,14 @@ function QuestionCard({
           }`}
         >
           {!state.correct && question.answers?.length ? (
-            <p className="mb-1 text-sm font-semibold text-stone-700">
+            <p className="mb-1 text-sm font-semibold text-gray-700">
               Answer: {question.answers[0]}
             </p>
           ) : null}
           {question.correctExplanation && (
             <MathDisplay
               text={question.correctExplanation}
-              className="text-sm leading-6 text-stone-700"
+              className="text-sm leading-6 text-gray-700"
             />
           )}
         </div>
@@ -310,10 +320,10 @@ function QuestionCard({
       {state.hintsShown > 0 && (
         <div className="mt-3 space-y-2">
           {question.hints.slice(0, state.hintsShown).map((hint, i) => (
-            <div key={i} className="rounded-lg bg-stone-50 p-3">
+            <div key={i} className="rounded-lg bg-gray-50 p-3">
               <MathDisplay
                 text={`Hint ${i + 1}: ${hint}`}
-                className="text-sm leading-6 text-stone-600"
+                className="text-sm leading-6 text-gray-600"
               />
             </div>
           ))}
@@ -326,7 +336,7 @@ function QuestionCard({
             type="button"
             onClick={onSubmit}
             disabled={!state.response.trim()}
-            className="rounded-lg bg-lime-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-lime-700 disabled:bg-stone-200 disabled:text-stone-400"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
           >
             {state.submitted ? "Check again" : "Submit"}
           </button>
@@ -335,7 +345,7 @@ function QuestionCard({
           <button
             type="button"
             onClick={onRetry}
-            className="rounded-lg border-2 border-stone-200 px-4 py-2 text-sm font-semibold text-stone-600 hover:border-stone-300"
+            className="rounded-lg border-2 border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:border-gray-300"
           >
             Try again
           </button>
@@ -345,6 +355,112 @@ function QuestionCard({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A group of related questions shown one at a time with Q1/Q2/… pills, matching
+ * the LearnVia "question set" layout: a single card, a done/total count, pill
+ * navigation, and a "Next question →" control. Multi-part questions stay
+ * together instead of being split into separate stacked cards.
+ */
+function QuestionSet({
+  questions,
+  states,
+  onChange,
+  onSubmit,
+  onRetry,
+  onHint,
+}: {
+  questions: LessonQuestion[];
+  states: Record<string, QuestionState>;
+  onChange: (id: string, value: string) => void;
+  onSubmit: (q: LessonQuestion) => void;
+  onRetry: (id: string) => void;
+  onHint: (q: LessonQuestion) => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const total = questions.length;
+  const done = questions.filter((q) => states[q.id]?.submitted).length;
+  const allDone = done === total;
+  const q = questions[current];
+  const curState = states[q.id] ?? EMPTY;
+  const hasNext = current + 1 < total;
+
+  return (
+    <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+      <header className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-600">
+          Question set
+        </h3>
+        <span className="text-sm text-gray-500">
+          {allDone ? "✓ " : ""}
+          {done} / {total} answered
+        </span>
+      </header>
+
+      {total > 1 && (
+        <div className="my-3 flex flex-wrap items-center gap-1">
+          {questions.map((qq, i) => {
+            const isCurrent = i === current;
+            const st = states[qq.id];
+            const answeredQ = Boolean(st?.submitted);
+            const correctQ = Boolean(st?.correct);
+            return (
+              <button
+                key={qq.id}
+                type="button"
+                onClick={() => setCurrent(i)}
+                aria-current={isCurrent}
+                className={[
+                  "h-9 min-w-[40px] rounded-md border px-2 text-xs font-semibold transition",
+                  isCurrent
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : correctQ
+                      ? "border-green-300 bg-green-50 text-green-800"
+                      : answeredQ
+                        ? "border-amber-300 bg-amber-50 text-amber-800"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-blue-400",
+                ].join(" ")}
+              >
+                {correctQ ? "✓ " : ""}Q{i + 1}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <QuestionCard
+        key={q.id}
+        question={q}
+        index={current + 1}
+        inSet
+        state={curState}
+        onChange={(value) => onChange(q.id, value)}
+        onSubmit={() => onSubmit(q)}
+        onRetry={() => onRetry(q.id)}
+        onHint={() => onHint(q)}
+      />
+
+      {total > 1 && (
+        <div className="mt-6 flex items-center justify-center">
+          {allDone ? (
+            <div className="flex items-center gap-2 rounded-md bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+              <span aria-hidden>🏁</span> All questions answered
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => hasNext && setCurrent((c) => c + 1)}
+              disabled={!curState.submitted || !hasNext}
+              className="rounded-md bg-blue-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              Next question →
+            </button>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -371,14 +487,6 @@ export default function LessonRunner({
     () => lesson.sections.flatMap((s) => s.questions ?? []),
     [lesson]
   );
-
-  // Question numbers run across the whole lesson, so they are derived up front
-  // rather than by incrementing a variable while rendering.
-  const numberOf = useMemo(() => {
-    const map = new Map<string, number>();
-    questions.forEach((q, i) => map.set(q.id, i + 1));
-    return map;
-  }, [questions]);
 
   const answered = questions.filter((q) => states[q.id]?.submitted).length;
   const correct = questions.filter((q) => states[q.id]?.correct).length;
@@ -435,69 +543,72 @@ export default function LessonRunner({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-2xl font-bold text-stone-800">{lesson.title}</h1>
-          <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">
-            {answered} of {questions.length} answered · about{" "}
-            {lesson.durationMin} min
+      <div>
+        <div className="flex items-center gap-2">
+          <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-800">
+            Lesson
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            about {lesson.durationMin} min · {answered} of {questions.length}{" "}
+            answered
           </span>
         </div>
+        <h1 className="mt-1 text-3xl font-bold text-gray-900">
+          {lesson.title}
+        </h1>
       </div>
 
       {lesson.sections.map((section, si) => (
-        <div key={si} className="flex flex-col gap-4">
+        <div
+          key={si}
+          className={
+            si > 0
+              ? "flex flex-col gap-4 border-t border-gray-200 pt-6"
+              : "flex flex-col gap-4"
+          }
+        >
           {section.kind === "video" ? (
-            <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-              <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-400">
-                Walkthrough
-              </span>
-              {/* The source animation is not a video file and cannot be
-                  reproduced outside the original player, so the narration is
-                  shown as text rather than dropping the content entirely. */}
+            /* There is no playable video — the source animation is an Arc
+               resource that cannot be reproduced here — so the narration is
+               shown as the lesson's reading content, not framed as a video. */
+            <section className="my-1 text-gray-800">
               <MathDisplay
                 text={section.transcript}
-                className="text-base leading-7 text-stone-700"
+                className="text-base leading-7 text-gray-700"
               />
-            </div>
+            </section>
           ) : (
             section.body.length > 0 && (
-              <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+              <section className="my-1 text-gray-800">
                 <Body items={section.body} />
-              </div>
+              </section>
             )
           )}
 
-          {(section.questions ?? []).map((question) => {
-            const state = states[question.id] ?? EMPTY;
-            return (
-              <QuestionCard
-                key={question.id}
-                question={question}
-                index={numberOf.get(question.id) ?? 0}
-                state={state}
-                onChange={(value) =>
-                  update(question.id, { response: value, submitted: false })
-                }
-                onSubmit={() => submit(question)}
-                onRetry={() =>
-                  update(question.id, { submitted: false, response: "" })
-                }
-                onHint={() => {
-                  update(question.id, { hintsShown: state.hintsShown + 1 });
-                  logEvent("lesson_hint_shown", lesson.id, {
-                    item_id: question.id,
-                    hint_index: state.hintsShown + 1,
-                  });
-                }}
-              />
-            );
-          })}
+          {(section.questions ?? []).length > 0 && (
+            <QuestionSet
+              questions={section.questions ?? []}
+              states={states}
+              onChange={(id, value) =>
+                update(id, { response: value, submitted: false })
+              }
+              onSubmit={(question) => submit(question)}
+              onRetry={(id) => update(id, { submitted: false, response: "" })}
+              onHint={(question) => {
+                const hintsShown = states[question.id]?.hintsShown ?? 0;
+                update(question.id, { hintsShown: hintsShown + 1 });
+                logEvent("lesson_hint_shown", lesson.id, {
+                  item_id: question.id,
+                  hint_index: hintsShown + 1,
+                });
+              }}
+            />
+          )}
         </div>
       ))}
 
-      <div className="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-stone-500">
+      <div className="mt-4 flex items-center justify-between gap-4 border-t border-gray-200 pt-6">
+        <p className="text-sm text-gray-500">
           {answered === questions.length
             ? "All questions answered."
             : `${questions.length - answered} question${
@@ -508,7 +619,7 @@ export default function LessonRunner({
           type="button"
           onClick={finish}
           disabled={answered < questions.length}
-          className="rounded-lg bg-lime-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-lime-700 disabled:bg-stone-200 disabled:text-stone-400"
+          className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400"
         >
           {completeLabel}
         </button>

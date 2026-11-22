@@ -7,6 +7,8 @@ export type LogDoc = {
   subject_id?: string;
   session_id?: string;
   timestamp?: string;
+  /** Per-browser event counter; orders events logged in the same millisecond. */
+  seq?: number;
   event?: string;
   scenario_id?: string;
   env?: string;

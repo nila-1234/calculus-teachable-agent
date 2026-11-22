@@ -1,13 +1,19 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState, useSyncExternalStore } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import AppHeader from "@/components/app-header";
+import InstructionIntro, {
+  introSeen,
+  markIntroSeen,
+} from "@/components/instruction-intro";
 import LessonRunner from "@/components/lesson-runner";
 import { LESSON_SEQUENCE, lessonFromSlug, lessonPath } from "@/lib/lessons/definitions";
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 import { markLessonComplete } from "@/lib/condition";
+
+const subscribeNothing = () => () => {};
 
 /**
  * One lesson of the lesson arm.
@@ -32,6 +38,23 @@ function LessonPageContent() {
     logEvent("lesson_started", lesson.id, { title: lesson.title });
   }, [lesson]);
 
+  // The lesson arm also starts with the pre-test transition, so it shows even
+  // when an instructor previews a lesson directly. Gated by introSeen so a
+  // participant who already saw it at /scenarios never sees it twice; always in
+  // preview. Read via useSyncExternalStore (server snapshot false) to avoid a
+  // hydration mismatch.
+  const [introDismissed, setIntroDismissed] = useState(false);
+  const needsIntro = useSyncExternalStore(
+    subscribeNothing,
+    () => {
+      const pos = lesson
+        ? LESSON_SEQUENCE.indexOf(lesson.id as (typeof LESSON_SEQUENCE)[number])
+        : -1;
+      return pos === 0 && (isPreviewActive() || !introSeen());
+    },
+    () => false
+  );
+
   if (!lesson) {
     return (
       <main className="min-h-screen bg-stone-100">
@@ -48,6 +71,15 @@ function LessonPageContent() {
   );
   const next = LESSON_SEQUENCE[position + 1];
 
+  const dismissIntro = () => {
+    if (!isPreviewActive()) markIntroSeen();
+    setIntroDismissed(true);
+  };
+
+  if (needsIntro && !introDismissed) {
+    return <InstructionIntro onContinue={dismissIntro} />;
+  }
+
   const handleComplete = () => {
     // Preview must never write study state or advance a participant's progress.
     if (preview) return;
@@ -58,13 +90,29 @@ function LessonPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-stone-100">
+    <main className="min-h-screen bg-gray-100">
       <AppHeader />
-      <div className="mx-auto max-w-4xl overflow-y-auto p-3 py-6 sm:px-6">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wide text-stone-400">
-          Lesson {position + 1} of {LESSON_SEQUENCE.length}
-        </p>
+      {/* LearnVia-style breadcrumb chrome. The source unit is deliberately not
+          shown (see lib/condition.ts) — only the neutral course/topic. */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-6 py-3 text-sm text-gray-600">
+          <nav className="flex flex-wrap items-center gap-1">
+            <span>CMU Calculus Study</span>
+            <span aria-hidden>/</span>
+            <span className="font-medium text-gray-900">
+              Applied Optimization
+            </span>
+          </nav>
+          <span className="shrink-0 rounded bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">
+            Lesson {position + 1} of {LESSON_SEQUENCE.length}
+          </span>
+        </div>
+      </div>
+      <div className="mx-auto max-w-3xl px-6 py-8">
         <LessonRunner
+          // A fresh runner per lesson, so each lesson's timer and answers start
+          // from zero rather than carrying over from the previous lesson.
+          key={lesson.id}
           lesson={lesson}
           onComplete={handleComplete}
           completeLabel={next ? "Continue" : "Continue to the next section"}

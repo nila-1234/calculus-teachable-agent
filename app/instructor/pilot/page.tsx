@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 
@@ -42,6 +42,15 @@ const CRIT_SPECS: { item: string; label: string; crits: [string, string][] }[] =
     ],
   },
   {
+    item: "2.1",
+    label: "Q2.1 — revenue model (choice + explanation)",
+    crits: [
+      ["chose-c", "chose C (the function)"],
+      ["uses-examples", "uses the table's numbers"],
+      ["price-times-quantity", "revenue = price × quantity"],
+    ],
+  },
+  {
     item: "2.2",
     label: "Q2.2 — explain the concept (show work)",
     crits: [
@@ -63,9 +72,69 @@ const CRIT_SPECS: { item: string; label: string; crits: [string, string][] }[] =
   },
 ];
 
+/** item id -> its [criterionId, label] list, for per-step display. */
+const CRIT_LABELS: Record<string, [string, string][]> = Object.fromEntries(
+  CRIT_SPECS.map((s) => [s.item, s.crits])
+);
+
+/** Multiple-choice items, for the option (distractor) distribution. */
+const MC_ITEMS: { item: string; label: string; options: string[]; correct: string }[] =
+  [
+    { item: "2.1", label: "Q2.1 revenue model", options: ["A", "B", "C"], correct: "C" },
+    { item: "2.4", label: "Q2.4 interpret domain", options: ["A", "B", "C"], correct: "A" },
+    { item: "3.1", label: "Q3.1 question the AI", options: ["A", "B", "C", "D"], correct: "C" },
+  ];
+
+/**
+ * The actual option text shown to participants, per form, so the distribution
+ * chart reproduces exactly what each A/B/C/D said (what the instructor asked to
+ * see), not a paraphrase. Transcribed from lib/tests/definitions.ts. The two
+ * forms are structurally parallel — same correct letter, same role per
+ * distractor — but the numbers/context differ, so a form-specific view shows
+ * that form's exact wording. "A" = pretest, "B" = posttest.
+ */
+const MC_OPTION_TEXT: Record<"A" | "B", Record<string, Record<string, string>>> = {
+  A: {
+    "2.1": {
+      A: "R(p) = p + (200 − 10p)",
+      B: "R(p) = 200 − 10p",
+      C: "R(p) = p(200 − 10p)",
+    },
+    "2.4": {
+      A: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
+      B: "The company’s revenue must always be between $0 and $20.",
+      C: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
+    },
+    "3.1": {
+      A: "Accept the AI’s recommendation and use 25 chairs as the final answer.",
+      B: "Ask the AI to explain its calculations in more detail before deciding.",
+      C: "Question the AI’s recommendation before accepting it.",
+      D: "Start the problem over and solve it independently without the AI.",
+    },
+  },
+  B: {
+    "2.1": {
+      A: "R(p) = p + (120 − 2p)",
+      B: "R(p) = 120 − 2p",
+      C: "R(p) = p(120 − 2p)",
+    },
+    "2.4": {
+      A: "A price above $60 would make the model predict a negative number of units sold.",
+      B: "The company’s revenue must always be between $0 and $60.",
+      C: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
+    },
+    "3.1": {
+      A: "Accept the AI’s recommendation and use 80 posters as the final answer.",
+      B: "Ask the AI to explain its calculations in more detail before deciding.",
+      C: "Question the AI’s recommendation before accepting it.",
+      D: "Start the problem over and solve it independently without the AI.",
+    },
+  },
+};
+
 const ITEM_ANALYSIS_LABELS: [string, string][] = [
   ["1", "Q1a optimization (show work)"],
-  ["2.1", "Q2.1 revenue model (MC)"],
+  ["2.1", "Q2.1 revenue model (choice + explanation)"],
   ["2.2", "Q2.2 explain concept (show work)"],
   ["2.3", "Q2.3 matching"],
   ["2.4", "Q2.4 interpret domain (MC)"],
@@ -74,21 +143,34 @@ const ITEM_ANALYSIS_LABELS: [string, string][] = [
 ];
 
 /**
+ * The four short numeric Q1 items (1b–1e). Graded right/wrong by numeric match
+ * (lib/pilot/tests.ts), so they live on each row's `q1`, NOT in the rubric
+ * grades — they must be folded into the item analyses separately. Topic is the
+ * same across forms; only the within-range / on-the-edge variant swaps.
+ */
+const NUMERIC_Q1_LABELS: [string, string][] = [
+  ["1b", "Q1b particle motion (numeric)"],
+  ["1c", "Q1c profit (numeric)"],
+  ["1d", "Q1d fencing (numeric)"],
+  ["1e", "Q1e rectangle (numeric)"],
+];
+
+/**
  * AI rubric grades (gradeTest + answer key, LiteLLM/claude-sonnet) computed
  * 2026-10-06 and hard-coded so the view shows them without a live model call.
  * Any newer grades from /api/pilot-grade override these by subject.
  */
 const STATIC_GRADES: Record<string, GradeInfo> = {
-  "58adfc6e7cf56d0001f931a2": {"total":4,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":1,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
-  "697cd118af4b9f1235c8a580": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
-  "698ce4ba931f89581ecc6d7d": {"total":11,"max":20,"complete":true,"items":{"1":{"points":4,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"not_met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
-  "699f99838bc35ad313ab9f51": {"total":0,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
-  "69dae6f92db929c858644edc": {"total":2,"max":20,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":1,"kind":"choice"},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
-  "69fb90ec1ec66537d620e491": {"total":15,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
-  "6a178e2e2b82ec7429f2353c": {"total":14,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
-  "6a1c4ff5565b7f7ae832d10e": {"total":11,"max":20,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
-  "6a9f047c09a7a822e7058fb8": {"total":15,"max":20,"complete":true,"items":{"1":{"points":1,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
-  "6aaf04a43b9d955ca2188eb7": {"total":17,"max":20,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":1,"max":1,"kind":"choice"},"2.2":{"points":4,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"met","verify":"met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "58adfc6e7cf56d0001f931a2": {"total":4,"max":22,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":3,"kind":"open","criteria":{"chose-c":"not_met","uses-examples":"not_met","price-times-quantity":"not_met"}},"2.2":{"points":1,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "697cd118af4b9f1235c8a580": {"total":0,"max":22,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":3,"kind":"open","criteria":{"chose-c":"not_met","uses-examples":"not_met","price-times-quantity":"not_met"}},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "698ce4ba931f89581ecc6d7d": {"total":12,"max":22,"complete":true,"items":{"1":{"points":4,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"not_met","quantities":"met"}},"2.1":{"points":2,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"not_met","price-times-quantity":"met"}},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "699f99838bc35ad313ab9f51": {"total":0,"max":22,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":3,"kind":"open","criteria":{"chose-c":"not_met","uses-examples":"not_met","price-times-quantity":"not_met"}},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":0,"max":4,"kind":"matching"},"2.4":{"points":0,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "69dae6f92db929c858644edc": {"total":2,"max":22,"complete":true,"items":{"1":{"points":0,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":0,"max":3,"kind":"open","criteria":{"chose-c":"not_met","uses-examples":"not_met","price-times-quantity":"not_met"}},"2.2":{"points":0,"max":5,"kind":"open","criteria":{"derivative":"not_met","critical-point":"not_met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":0,"max":3,"kind":"open","criteria":{"names-constraint":"not_met","identifies-conflict":"not_met","prompts-revision":"not_met"}}}},
+  "69fb90ec1ec66537d620e491": {"total":17,"max":22,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":3,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"met","price-times-quantity":"met"}},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a178e2e2b82ec7429f2353c": {"total":16,"max":22,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":3,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"met","price-times-quantity":"met"}},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":1,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a1c4ff5565b7f7ae832d10e": {"total":12,"max":22,"complete":true,"items":{"1":{"points":2,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"not_met","extremum":"not_met","quantities":"not_met"}},"2.1":{"points":2,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"not_met","price-times-quantity":"met"}},"2.2":{"points":2,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"not_met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":0,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6a9f047c09a7a822e7058fb8": {"total":16,"max":22,"complete":true,"items":{"1":{"points":1,"max":5,"kind":"open","criteria":{"model":"not_met","one-variable":"not_met","derivative":"not_met","extremum":"not_met","quantities":"met"}},"2.1":{"points":3,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"met","price-times-quantity":"met"}},"2.2":{"points":3,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"not_met","candidate-only":"not_met","verify":"met"}},"2.3":{"points":4,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
+  "6aaf04a43b9d955ca2188eb7": {"total":18,"max":22,"complete":true,"items":{"1":{"points":5,"max":5,"kind":"open","criteria":{"model":"met","one-variable":"met","derivative":"met","extremum":"met","quantities":"met"}},"2.1":{"points":2,"max":3,"kind":"open","criteria":{"chose-c":"met","uses-examples":"not_met","price-times-quantity":"met"}},"2.2":{"points":4,"max":5,"kind":"open","criteria":{"derivative":"met","critical-point":"met","definition":"met","candidate-only":"not_met","verify":"met"}},"2.3":{"points":2,"max":4,"kind":"matching"},"2.4":{"points":1,"max":1,"kind":"choice"},"3.1":{"points":1,"max":1,"kind":"choice"},"3.2":{"points":3,"max":3,"kind":"open","criteria":{"names-constraint":"met","identifies-conflict":"met","prompts-revision":"met"}}}},
 };
 
 type Answer = {
@@ -177,16 +259,118 @@ function Tick({ ok }: { ok: boolean }) {
   );
 }
 
+/**
+ * Q2.1 is one test question but two graded parts: the multiple-choice pick
+ * (1 pt) and the written explanation (2 pts). Showing them on separate lines,
+ * each with its own sub-score, keeps a wrong choice from looking like a failed
+ * explanation (and vice versa) — the two are judged independently.
+ */
+function Q21Breakdown({ verdicts }: { verdicts: Record<string, string> }) {
+  const choice = verdicts["chose-c"] === "met" ? 1 : 0;
+  const expl =
+    (verdicts["uses-examples"] === "met" ? 1 : 0) +
+    (verdicts["price-times-quantity"] === "met" ? 1 : 0);
+  return (
+    <>
+      <div>
+        <span className="font-semibold text-stone-500">Choice {choice}/1:</span>{" "}
+        <Tick ok={verdicts["chose-c"] === "met"} /> chose C
+      </div>
+      <div>
+        <span className="font-semibold text-stone-500">
+          Explanation {expl}/2:
+        </span>{" "}
+        <Tick ok={verdicts["uses-examples"] === "met"} /> uses the table&apos;s
+        numbers <Tick ok={verdicts["price-times-quantity"] === "met"} /> revenue =
+        price × quantity
+      </div>
+    </>
+  );
+}
+
+/** A labelled horizontal bar for the distribution charts. */
+function BarRow({
+  label,
+  count,
+  max,
+  suffix,
+  highlight,
+}: {
+  label: string;
+  count: number;
+  max: number;
+  suffix?: string;
+  highlight?: "good" | "warn";
+}) {
+  const color =
+    highlight === "good"
+      ? "bg-lime-500"
+      : highlight === "warn"
+        ? "bg-amber-500"
+        : "bg-stone-400";
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <span className="w-24 shrink-0 truncate text-right text-stone-500">
+        {label}
+      </span>
+      <div className="h-3 flex-1 rounded bg-stone-100">
+        <div
+          className={`h-3 rounded ${color}`}
+          style={{ width: `${max ? Math.min(100, (count / max) * 100) : 0}%` }}
+        />
+      </div>
+      <span className="w-14 shrink-0 text-stone-600">{suffix ?? count}</span>
+    </div>
+  );
+}
+
+/**
+ * Segmented control for which assessment form the analysis covers. The forms
+ * are parallel but not identical, so A and B are read separately; "Both" pools.
+ */
+function FormSelect({
+  value,
+  onChange,
+  counts,
+}: {
+  value: "A" | "B";
+  onChange: (v: "A" | "B") => void;
+  counts: { A: number; B: number };
+}) {
+  const opts: ["A" | "B", string][] = [
+    ["A", `A · pretest (${counts.A})`],
+    ["B", `B · posttest (${counts.B})`],
+  ];
+  return (
+    <div className="flex items-center gap-1 text-xs text-stone-600">
+      <span className="text-stone-500">Form</span>
+      <div className="inline-flex overflow-hidden rounded border border-stone-200">
+        {opts.map(([v, label]) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => onChange(v)}
+            className={`px-2 py-0.5 ${
+              value === v
+                ? "bg-lime-600 text-white"
+                : "bg-white text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** The real study's screen-out rule (lib/surveys/eligibility.ts), applied here. */
+// The math-courses and calc-history questions were removed from screening, so
+// they no longer disqualify anyone — including the previously collected data,
+// which is re-evaluated against the current rule below.
 const INELIGIBLE: Record<string, string[]> = {
-  highest_math: [
-    "Calculus III or higher",
-    "Other college-level mathematics (e.g., linear algebra, differential equations)",
-    "I am not sure",
-  ],
-  calculus_courses: ["3 or more", "I am not sure"],
-  math_courses: ["3 or more"],
-  calc_history: ["I am currently enrolled in a calculus course"],
+  highest_math: ["Calculus II", "Calculus III or higher"],
+  calculus_courses: ["3 or more"],
 };
 
 function screenOut(r: Row): { out: boolean; reasons: string[] } {
@@ -195,13 +379,467 @@ function screenOut(r: Row): { out: boolean; reasons: string[] } {
     reasons.push(`highest math: ${r.highest_math}`);
   if (INELIGIBLE.calculus_courses.includes(String(r.calculus_courses)))
     reasons.push(`${r.calculus_courses} calculus courses`);
-  if (INELIGIBLE.math_courses.includes(String(r.math_courses)))
-    reasons.push(`${r.math_courses} math courses`);
-  if (INELIGIBLE.calc_history.includes(String(r.calc_history)))
-    reasons.push("currently enrolled in calculus");
   if (!r.screening_algebra_correct) reasons.push("algebra check failed");
   if (!r.screening_power_rule_correct) reasons.push("power-rule check failed");
   return { out: reasons.length > 0, reasons };
+}
+
+type ScreenGroup = "low" | "eligible" | "high" | "both";
+
+/**
+ * Which screening group a participant is in, by WHY the real study's rule
+ * would screen them out: too low a level (failed the algebra or power-rule
+ * check) or too high (Calculus II or higher, or 3+ calculus courses). Anyone
+ * who trips both is kept in a group of their own so no one is counted twice.
+ */
+function screenGroup(r: Row): ScreenGroup {
+  const high =
+    INELIGIBLE.highest_math.includes(String(r.highest_math)) ||
+    INELIGIBLE.calculus_courses.includes(String(r.calculus_courses));
+  const low = !r.screening_algebra_correct || !r.screening_power_rule_correct;
+  return high && low ? "both" : high ? "high" : low ? "low" : "eligible";
+}
+
+const GROUP_LABELS: [ScreenGroup, string][] = [
+  ["low", "Screened out — low level"],
+  ["eligible", "Eligible"],
+  ["high", "Screened out — high level"],
+  ["both", "Failed a check AND high level"],
+];
+
+/**
+ * Test performance of the three screening groups, per form. Each pilot
+ * participant took one form, so Form A and Form B are averaged over different
+ * people; the scoring-sheet average pools both forms.
+ */
+function ScreeningGroupsCard({
+  rows,
+  grades,
+}: {
+  rows: Row[];
+  grades: Record<string, GradeInfo>;
+}) {
+  // Every scored item, plus the new-Q1 and scoring-sheet totals.
+  const cols = scoreColumns(grades);
+  const avgOf = (col: ScoreColumn, list: Row[]) =>
+    describe(list.map(col.score).filter((v): v is number => v != null));
+  const fmtAvg = (col: ScoreColumn, list: Row[]) => {
+    const d = avgOf(col, list);
+    if (d.mean == null) return null;
+    return {
+      mean: d.mean,
+      pct: col.max ? Math.round((100 * d.mean) / col.max) : null,
+      n: d.n,
+    };
+  };
+
+  const groupOf = (key: string, label: string, members: Row[]) => ({
+    key,
+    label,
+    members,
+    a: members.filter((r) => r.form === "A"),
+    b: members.filter((r) => r.form === "B"),
+  });
+  const groups = [
+    ...GROUP_LABELS.map(([key, label]) =>
+      groupOf(key, label, rows.filter((r) => screenGroup(r) === key))
+    ).filter((g) => g.key !== "both" || g.members.length > 0),
+    groupOf("all", "All participants", rows),
+  ];
+
+  // Overall spread of every score, per form and pooled.
+  const forms: [string, Row[]][] = [
+    ["Form A", rows.filter((r) => r.form === "A")],
+    ["Form B", rows.filter((r) => r.form === "B")],
+    ["Both forms", rows],
+  ];
+  const fmtStat = (v: number | null, digits = 2) =>
+    v == null ? "—" : Number.isInteger(v) ? String(v) : v.toFixed(digits);
+
+  return (
+    <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+      <h2 className="text-base font-bold text-stone-800">
+        Performance — overall and by screening group
+      </h2>
+      <p className="mt-1 text-xs text-stone-400">
+        Low level = failed the algebra or power-rule check. High level = Calculus
+        II or higher, or 3+ calculus courses. Each participant took one form.
+        Each cell is the mean score on that item (max in the header), with the %
+        of the maximum underneath. New Q1 items: 1 = correct. Scoring sheet = the
+        AI-graded answer-key total.
+      </p>
+      <table className="mt-3 w-full border-collapse text-xs">
+        <thead>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold">Group</th>
+            <th className="py-1 pr-2 font-semibold">Form</th>
+            <th className="py-1 pr-2 text-right font-semibold">n</th>
+            {cols.map((c) => (
+              <th
+                key={c.key}
+                className={`py-1 pr-2 text-right font-semibold whitespace-nowrap ${
+                  c.key.endsWith("total") ? "text-stone-600" : ""
+                }`}
+              >
+                {c.label}
+                {c.max != null && <span className="font-normal"> /{c.max}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) =>
+            (
+              [
+                ["Form A", g.a],
+                ["Form B", g.b],
+                ["Both forms", g.members],
+              ] as [string, Row[]][]
+            ).map(([form, list], i) => (
+              <tr
+                key={`${g.key}-${form}`}
+                className={`${
+                  i === 0
+                    ? g.key === "all"
+                      ? "border-t-2 border-stone-400"
+                      : "border-t-2 border-stone-200"
+                    : "border-t border-stone-100"
+                } ${g.key === "all" ? "bg-stone-50" : ""} ${
+                  form === "Both forms" ? "font-semibold" : ""
+                }`}
+              >
+                {i === 0 && (
+                  <td
+                    rowSpan={3}
+                    className={`py-1 pr-2 align-top font-semibold ${
+                      g.key === "all"
+                        ? "text-stone-800"
+                        : g.key === "eligible"
+                          ? "text-lime-700"
+                          : "text-rose-700"
+                    }`}
+                  >
+                    {g.label}
+                  </td>
+                )}
+                <td className="py-1 pr-2 whitespace-nowrap text-stone-600">{form}</td>
+                <td className="py-1 pr-2 text-right text-stone-500">{list.length}</td>
+                {cols.map((c) => {
+                  const v = fmtAvg(c, list);
+                  return (
+                    <td key={c.key} className="py-1 pr-2 text-right align-top">
+                      {v == null ? (
+                        <span className="text-stone-300">—</span>
+                      ) : (
+                        <>
+                          <span className="text-stone-800">{fmtStat(v.mean)}</span>
+                          {v.pct != null && (
+                            <span className="block text-[10px] font-normal text-stone-400">
+                              {v.pct}%
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+
+      <h3 className="mt-6 text-sm font-bold text-stone-700">
+        Overall score spread — every item (all participants)
+      </h3>
+      <table className="mt-1 w-full border-collapse text-xs">
+        <thead>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold" rowSpan={2}>Item</th>
+            {forms.map(([label, list]) => (
+              <th
+                key={label}
+                colSpan={4}
+                className="border-l border-stone-100 py-1 pl-2 pr-2 font-semibold"
+              >
+                {label} <span className="font-normal">(n={list.length})</span>
+              </th>
+            ))}
+          </tr>
+          <tr className="text-left text-stone-400">
+            {forms.map(([label]) => (
+              <Fragment key={label}>
+                {["mean", "median", "SD", "min–max"].map((h, i) => (
+                  <th
+                    key={h}
+                    className={`py-1 pr-2 text-right font-normal ${
+                      i === 0 ? "border-l border-stone-100 pl-2" : ""
+                    }`}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </Fragment>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {cols.map((c) => (
+            <tr
+              key={c.key}
+              className={`border-t border-stone-100 ${
+                c.key.endsWith("total") ? "bg-stone-50 font-semibold" : ""
+              }`}
+            >
+              <td className="py-1 pr-2 whitespace-nowrap text-stone-700">
+                {c.label}
+                {c.max != null && <span className="font-normal text-stone-400"> /{c.max}</span>}
+              </td>
+              {forms.map(([label, list]) => {
+                const d = avgOf(c, list);
+                return (
+                  <Fragment key={label}>
+                    <td className="border-l border-stone-100 py-1 pl-2 pr-2 text-right text-stone-800">
+                      {fmtStat(d.mean)}
+                    </td>
+                    <td className="py-1 pr-2 text-right text-stone-700">{fmtStat(d.median)}</td>
+                    <td className="py-1 pr-2 text-right text-stone-500">{fmtStat(d.sd)}</td>
+                    <td className="py-1 pr-2 text-right whitespace-nowrap text-stone-500">
+                      {d.min == null ? "—" : `${d.min}–${d.max}`}
+                    </td>
+                  </Fragment>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** One column of the scores-only sheet. */
+type ScoreColumn = {
+  key: string;
+  label: string;
+  max: number | null;
+  score: (r: Row) => number | null;
+};
+
+/**
+ * Columns of the scores-only sheet: each new-Q1 item (0/1), the new-Q1 total,
+ * each AI-graded item's points — Q2.1 split into its choice and explanation
+ * points, as it is graded — and the scoring-sheet total. Scores only, no
+ * answers.
+ */
+function scoreColumns(grades: Record<string, GradeInfo>): ScoreColumn[] {
+  const item = (r: Row, id: string) => grades[r.subject]?.items?.[id];
+  const anyMax = (id: string) =>
+    Object.values(grades).find((g) => g.items?.[id])?.items[id].max ?? null;
+  const q21 = (r: Row, part: "choice" | "expl") => {
+    const c = item(r, "2.1")?.criteria;
+    if (!c) return null;
+    return part === "choice"
+      ? c["chose-c"] === "met"
+        ? 1
+        : 0
+      : (c["uses-examples"] === "met" ? 1 : 0) +
+          (c["price-times-quantity"] === "met" ? 1 : 0);
+  };
+  const rubric = (id: string, label: string): ScoreColumn => ({
+    key: id,
+    label,
+    max: anyMax(id),
+    score: (r) => item(r, id)?.points ?? null,
+  });
+  return [
+    ...NUMERIC_Q1_LABELS.map(([id]) => ({
+      key: id,
+      label: `Q${id}`,
+      max: 1,
+      score: (r: Row) => (r.q1?.[id] ? (r.q1[id].correct ? 1 : 0) : null),
+    })),
+    {
+      key: "q1-total",
+      label: "New Q1 total",
+      max: 4,
+      score: (r) => (r.q1_total > 0 ? r.q1_correct : null),
+    },
+    rubric("1", "Q1a"),
+    { key: "2.1-choice", label: "Q2.1 choice", max: 1, score: (r) => q21(r, "choice") },
+    { key: "2.1-expl", label: "Q2.1 explanation", max: 2, score: (r) => q21(r, "expl") },
+    rubric("2.2", "Q2.2"),
+    rubric("2.3", "Q2.3"),
+    rubric("2.4", "Q2.4"),
+    rubric("3.1", "Q3.1"),
+    rubric("3.2", "Q3.2"),
+    {
+      key: "sheet-total",
+      label: "Scoring sheet total",
+      max: Object.values(grades)[0]?.max ?? 22,
+      score: (r) => grades[r.subject]?.total ?? null,
+    },
+  ];
+}
+
+const GROUP_SHORT: Record<ScreenGroup, string> = {
+  low: "low level",
+  eligible: "eligible",
+  high: "high level",
+  both: "low + high",
+};
+
+/**
+ * Every participant's scores, with no answers — one row per participant, one
+ * column per scored item — so the distribution of scores can be read at a
+ * glance, plus a CSV of the same sheet.
+ */
+function ScoresOnlyCard({
+  rows,
+  grades,
+}: {
+  rows: Row[];
+  grades: Record<string, GradeInfo>;
+}) {
+  const cols = scoreColumns(grades);
+  const sorted = [...rows].sort(
+    (a, b) => a.form.localeCompare(b.form) || shortId(a).localeCompare(shortId(b))
+  );
+  const stat = (col: ScoreColumn, kind: "mean" | "median") => {
+    const d = describe(
+      sorted.map(col.score).filter((v): v is number => v != null)
+    );
+    return d[kind];
+  };
+
+  const downloadCsv = () => {
+    const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const header = [
+      "participant",
+      "subject_id",
+      "form",
+      "screening_group",
+      ...cols.map((c) => (c.max != null ? `${c.label} (/${c.max})` : c.label)),
+    ];
+    const lines = [header.map(q).join(",")];
+    for (const r of sorted) {
+      lines.push(
+        [
+          r.prolific_pid ?? "",
+          r.subject,
+          r.form,
+          GROUP_SHORT[screenGroup(r)],
+          ...cols.map((c) => c.score(r) ?? ""),
+        ]
+          .map(q)
+          .join(",")
+      );
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `pilot-scores-only-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-base font-bold text-stone-800">
+          Scores only (no answers)
+        </h2>
+        <Button onClick={downloadCsv}>Download scores only (CSV)</Button>
+      </div>
+      <p className="mt-1 text-xs text-stone-400">
+        One row per participant, one column per scored item (points awarded; max
+        in the header). New Q1 items are 1 = correct, 0 = wrong. Blank = not
+        answered / not graded yet.
+      </p>
+      <table className="mt-3 w-full border-collapse text-xs">
+        <thead>
+          <tr className="text-left text-stone-400">
+            <th className="py-1 pr-2 font-semibold">Participant</th>
+            <th className="py-1 pr-2 font-semibold">Form</th>
+            <th className="py-1 pr-2 font-semibold">Group</th>
+            {cols.map((c) => (
+              <th key={c.key} className="py-1 pr-2 text-right font-semibold whitespace-nowrap">
+                {c.label}
+                {c.max != null && <span className="font-normal"> /{c.max}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((r) => (
+            <tr key={r.subject} className="border-t border-stone-100">
+              <td className="py-1 pr-2 font-mono text-stone-600">{shortId(r)}…</td>
+              <td className="py-1 pr-2 text-stone-600">{r.form}</td>
+              <td className="py-1 pr-2 whitespace-nowrap text-stone-500">
+                {GROUP_SHORT[screenGroup(r)]}
+              </td>
+              {cols.map((c) => {
+                const v = c.score(r);
+                const full = v != null && c.max != null && v >= c.max;
+                return (
+                  <td
+                    key={c.key}
+                    className={`py-1 pr-2 text-right ${
+                      v == null
+                        ? "text-stone-300"
+                        : full
+                          ? "font-semibold text-lime-700"
+                          : v === 0
+                            ? "text-rose-600"
+                            : "text-stone-800"
+                    } ${c.key.endsWith("total") ? "font-semibold" : ""}`}
+                  >
+                    {v ?? ""}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+          {(["mean", "median"] as const).map((kind) => (
+            <tr
+              key={kind}
+              className={`bg-stone-50 ${kind === "mean" ? "border-t-2 border-stone-300" : "border-t border-stone-100"}`}
+            >
+              <td className="py-1 pr-2 font-semibold capitalize text-stone-700" colSpan={3}>
+                {kind} (n={sorted.length})
+              </td>
+              {cols.map((c) => {
+                const v = stat(c, kind);
+                return (
+                  <td key={c.key} className="py-1 pr-2 text-right font-semibold text-stone-700">
+                    {v == null ? "" : Number.isInteger(v) ? v : v.toFixed(2)}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** n, mean, median, sample SD, min and max of a list of scores. */
+function describe(values: number[]) {
+  const n = values.length;
+  if (!n) return { n, mean: null, median: null, sd: null, min: null, max: null };
+  const sorted = [...values].sort((a, b) => a - b);
+  const m = values.reduce((a, b) => a + b, 0) / n;
+  const mid = Math.floor(n / 2);
+  return {
+    n,
+    mean: m,
+    median: n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2,
+    sd: n > 1 ? Math.sqrt(values.reduce((a, v) => a + (v - m) ** 2, 0) / (n - 1)) : null,
+    min: sorted[0],
+    max: sorted[n - 1],
+  };
 }
 
 /**
@@ -354,7 +992,7 @@ function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
               <th className="py-1 pr-3 font-semibold">Response</th>
               <th className="py-1 pr-3 font-semibold">Time</th>
               <th className="py-1 pr-3 font-semibold">Result</th>
-              <th className="py-1 font-semibold">AI score</th>
+              <th className="py-1 font-semibold">Rubric score</th>
             </tr>
           </thead>
           <tbody>
@@ -400,10 +1038,44 @@ function ParticipantCard({ r, grade }: { r: Row; grade?: GradeInfo }) {
                         <span className="text-stone-300">—</span>
                       )}
                     </td>
-                    <td className="py-1 whitespace-nowrap text-stone-600">
-                      {grade?.items?.[id] && grade.items[id].points != null
-                        ? `${grade.items[id].points}/${grade.items[id].max}`
-                        : "—"}
+                    <td className="py-1 text-stone-600">
+                      {grade?.items?.[id] && grade.items[id].points != null ? (
+                        <>
+                          <span className="whitespace-nowrap font-semibold">
+                            {grade.items[id].points}/{grade.items[id].max}
+                          </span>
+                          {grade.items[id].kind !== "open" && (
+                            <span className="text-[10px] text-stone-400">
+                              {" "}
+                              (key)
+                            </span>
+                          )}
+                          {grade.items[id].criteria &&
+                            CRIT_LABELS[id] && (
+                              <div className="mt-0.5 space-y-0.5 text-[10px] leading-tight text-stone-500">
+                                {id === "2.1" ? (
+                                  <Q21Breakdown
+                                    verdicts={grade.items[id].criteria ?? {}}
+                                  />
+                                ) : (
+                                  CRIT_LABELS[id].map(([cid, clabel]) => (
+                                    <div key={cid}>
+                                      <Tick
+                                        ok={
+                                          grade.items[id].criteria?.[cid] ===
+                                          "met"
+                                        }
+                                      />{" "}
+                                      {clabel}
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                        </>
+                      ) : (
+                        <span className="text-stone-300">—</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -462,35 +1134,13 @@ export default function PilotAnalysisPage() {
   const [loading, setLoading] = useState(false);
   const [showTestRuns, setShowTestRuns] = useState(false);
   const [onlyEligible, setOnlyEligible] = useState(false);
-  const [ai, setAi] = useState<{ analysis: string; model: string | null } | null>(
-    null
-  );
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState("");
+  // Shared toggles for the analysis + by-question sections.
+  const [analysisEligibleOnly, setAnalysisEligibleOnly] = useState(false);
+  // Which form's participants the analysis covers. The two forms are parallel
+  // but not identical (numbers/context differ, and Q1b–Q1e are deliberately
+  // within-range vs on-the-edge variants), so they are always read separately.
+  const [analysisForm, setAnalysisForm] = useState<"A" | "B">("A");
   const [grades, setGrades] = useState<Record<string, GradeInfo>>(STATIC_GRADES);
-
-  const runAi = async (force: boolean) => {
-    setAiLoading(true);
-    setAiError("");
-    try {
-      const res = await fetch(
-        `/api/pilot-ai-analysis${force ? "?force=1" : ""}`,
-        { headers: { "x-grading-token": token } }
-      ).then((r) => r.json());
-      if (res.ok) {
-        setAi({
-          analysis: res.analysis,
-          model: res.cached ? `${res.model} (cached)` : res.model,
-        });
-      } else {
-        setAiError(res.error || "Could not run the AI analysis.");
-      }
-    } catch (e) {
-      setAiError(String(e));
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   const load = async () => {
     setLoading(true);
@@ -508,9 +1158,6 @@ export default function PilotAnalysisPage() {
       } else {
         setRows(exp.rows as Row[]);
         setSplit(asg?.ok ? (asg as Split) : null);
-        // Auto-run the AI difficulty analysis. The server only calls the model
-        // when the dataset changed, so a refresh on unchanged data is free.
-        void runAi(false);
         // AI rubric grades for the free-response items (cached server-side).
         fetch("/api/pilot-grade", { headers: { "x-grading-token": token } })
           .then((r) => r.json())
@@ -542,10 +1189,24 @@ export default function PilotAnalysisPage() {
     const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
     const lines: string[] = [];
     lines.push("ITEM-LEVEL (mean % of max; higher = did better)");
-    lines.push(["item", "label", "max", "mean_points", "pct_of_max"].map(q).join(","));
+    lines.push(
+      ["item", "label", "max", "mean_points", "pct_of_max", "score_distribution", "median_seconds"]
+        .map(q)
+        .join(",")
+    );
     for (const it of analysis.items)
       lines.push(
-        [it.id, it.label, it.max, it.meanPts.toFixed(2), `${it.pct}%`].map(q).join(",")
+        [
+          it.id,
+          it.label,
+          it.max,
+          it.meanPts.toFixed(2),
+          `${it.pct}%`,
+          it.dist.filter((d) => d.count > 0).map((d) => `${d.points}pt x${d.count}`).join(" "),
+          it.medianSec ?? "",
+        ]
+          .map(q)
+          .join(",")
       );
     lines.push("");
     lines.push("CRITERION-LEVEL (show-work items; % of participants who met each rubric point)");
@@ -612,10 +1273,20 @@ export default function PilotAnalysisPage() {
   // participants shown (preview/test runs already excluded by `view`).
   const analysis = useMemo(() => {
     if (!view) return null;
-    const subs = view.completed;
+    const subs = view.completed.filter(
+      (r) => !analysisEligibleOnly || !screenOut(r).out
+    );
     const pctOf = (a: number, b: number) => (b ? Math.round((100 * a) / b) : 0);
 
-    const items = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+    const itemSecsOf = (id: string) =>
+      subs
+        .map((r) => r.item_timings?.[id]?.seconds)
+        .filter((s): s is number => s != null);
+
+    // Rubric items (from the AI grades) and the four numeric Q1 items (0/1, from
+    // each row's `q1`) are built the same shape so the charts treat Q1b–Q1e like
+    // any other question.
+    const rubricItems = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
       const vals = subs
         .map((r) => grades[r.subject]?.items?.[id])
         .filter((x): x is NonNullable<typeof x> => Boolean(x));
@@ -623,8 +1294,54 @@ export default function PilotAnalysisPage() {
       const meanPts = vals.length
         ? vals.reduce((a, i) => a + (i.points ?? 0), 0) / vals.length
         : 0;
-      return { id, label, max, meanPts, pct: pctOf(meanPts, max), n: vals.length };
-    }).sort((a, b) => b.pct - a.pct);
+      // Score distribution: count at each point value 0..max.
+      const dist = Array.from({ length: max + 1 }, (_, p) => ({
+        points: p,
+        count: vals.filter((i) => (i.points ?? -1) === p).length,
+      }));
+      const itemSecs = itemSecsOf(id);
+      return {
+        id,
+        label,
+        max,
+        meanPts,
+        pct: pctOf(meanPts, max),
+        n: vals.length,
+        dist,
+        medianSec: median(itemSecs),
+        minSec: itemSecs.length ? Math.min(...itemSecs) : null,
+        maxSec: itemSecs.length ? Math.max(...itemSecs) : null,
+      };
+    });
+
+    const numericItems = NUMERIC_Q1_LABELS.map(([id, label]) => {
+      const vals = subs
+        .map((r) => r.q1?.[id])
+        .filter((x): x is Q1Item => Boolean(x));
+      const correct = vals.filter((v) => v.correct).length;
+      const meanPts = vals.length ? correct / vals.length : 0; // max is 1
+      const dist = [0, 1].map((p) => ({
+        points: p,
+        count: vals.filter((v) => (v.correct ? 1 : 0) === p).length,
+      }));
+      const itemSecs = itemSecsOf(id);
+      return {
+        id,
+        label,
+        max: 1,
+        meanPts,
+        pct: pctOf(correct, vals.length),
+        n: vals.length,
+        dist,
+        medianSec: median(itemSecs),
+        minSec: itemSecs.length ? Math.min(...itemSecs) : null,
+        maxSec: itemSecs.length ? Math.max(...itemSecs) : null,
+      };
+    });
+
+    const items = [...rubricItems, ...numericItems].sort(
+      (a, b) => b.pct - a.pct
+    );
 
     const crit = CRIT_SPECS.flatMap((spec) =>
       spec.crits.map(([cid, clabel]) => {
@@ -642,8 +1359,127 @@ export default function PilotAnalysisPage() {
       })
     );
 
-    return { items, crit };
-  }, [view, grades]);
+    // Overall test-total distribution (bucketed on the /max scale).
+    const totals = subs
+      .map((r) => grades[r.subject]?.total)
+      .filter((t): t is number => t != null);
+    const totalMax =
+      subs.map((r) => grades[r.subject]?.max).find((m) => m != null) ?? 22;
+    const step = Math.max(1, Math.ceil((totalMax + 1) / 6));
+    const totalDist: { label: string; count: number }[] = [];
+    for (let lo = 0; lo <= totalMax; lo += step) {
+      const hi = Math.min(lo + step - 1, totalMax);
+      totalDist.push({
+        label: lo === hi ? `${lo}` : `${lo}–${hi}`,
+        count: totals.filter((t) => t >= lo && t <= hi).length,
+      });
+    }
+
+    // Option (distractor) distribution for the MC items — scoped to the single
+    // selected form, since the forms' options differ in numbers/context and
+    // pooling by letter would mix two different questions.
+    const optionSubs = subs.filter((r) => r.form === analysisForm);
+    const optionDist = MC_ITEMS.map((spec) => {
+      const counts: Record<string, number> = {};
+      for (const r of optionSubs) {
+        const c = r.test_answers?.[spec.item]?.choiceId;
+        if (c) counts[c] = (counts[c] ?? 0) + 1;
+      }
+      const options = spec.options.map((id) => ({
+        id,
+        count: counts[id] ?? 0,
+        isCorrect: id === spec.correct,
+      }));
+      const maxWrong = Math.max(
+        0,
+        ...options.filter((o) => !o.isCorrect).map((o) => o.count)
+      );
+      return {
+        item: spec.item,
+        label: spec.label,
+        correct: spec.correct,
+        options,
+        mainDistractor:
+          maxWrong > 0
+            ? options.find((o) => !o.isCorrect && o.count === maxWrong)?.id ??
+              null
+            : null,
+      };
+    });
+
+    // Item discrimination: mean TEST TOTAL of those who got the item (>= half
+    // its max) vs those who did not. A positive gap = the item separates
+    // stronger from weaker students.
+    const totalOf = (r: Row) => grades[r.subject]?.total ?? null;
+    const meanTotal = (list: Row[]) => {
+      const v = list.map(totalOf).filter((t): t is number => t != null);
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    };
+    const discrimRow = (
+      id: string,
+      label: string,
+      got: Row[],
+      notGot: Row[]
+    ) => {
+      const mg = meanTotal(got);
+      const mn = meanTotal(notGot);
+      return {
+        id,
+        label,
+        meanGot: mg,
+        meanNot: mn,
+        nGot: got.length,
+        nNot: notGot.length,
+        gap: mg != null && mn != null ? mg - mn : null,
+      };
+    };
+    const rubricDiscrim = ITEM_ANALYSIS_LABELS.map(([id, label]) => {
+      const withItem = subs.filter((r) => grades[r.subject]?.items?.[id]);
+      const max = grades[withItem[0]?.subject]?.items?.[id]?.max ?? 0;
+      return discrimRow(
+        id,
+        label,
+        withItem.filter((r) => (grades[r.subject].items[id].points ?? 0) >= max / 2),
+        withItem.filter((r) => (grades[r.subject].items[id].points ?? 0) < max / 2)
+      );
+    });
+    // Numeric Q1 items split strong/weak against the SAME rubric total (which
+    // excludes them), so the gap is a genuine discrimination, not part-whole.
+    const numericDiscrim = NUMERIC_Q1_LABELS.map(([id, label]) => {
+      const withItem = subs.filter((r) => r.q1?.[id]);
+      return discrimRow(
+        id,
+        label,
+        withItem.filter((r) => r.q1[id].correct),
+        withItem.filter((r) => !r.q1[id].correct)
+      );
+    });
+    const discrimination = [...rubricDiscrim, ...numericDiscrim].sort(
+      (a, b) => (b.gap ?? -99) - (a.gap ?? -99)
+    );
+
+    // Screen-out reasons across the shown participants.
+    const reasonCounts: Record<string, number> = {};
+    for (const r of subs)
+      for (const reason of screenOut(r).reasons)
+        reasonCounts[reason] = (reasonCounts[reason] ?? 0) + 1;
+    const screenReasons = Object.entries(reasonCounts)
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count);
+    const eligibleCount = subs.filter((r) => !screenOut(r).out).length;
+
+    return {
+      items,
+      crit,
+      n: subs.length,
+      totalMax,
+      totalDist,
+      optionDist,
+      discrimination,
+      screenReasons,
+      eligibleCount,
+    };
+  }, [view, grades, analysisEligibleOnly, analysisForm]);
 
   return (
     <main className="min-h-screen bg-stone-100">
@@ -713,42 +1549,6 @@ export default function PilotAnalysisPage() {
               time: {fmtSec(view.medianAssessment)} (completed participants).
             </p>
 
-            <div className="rounded-xl border-2 border-lime-300 bg-lime-50/50 p-5">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h2 className="text-base font-bold text-stone-800">
-                  AI difficulty analysis — are the pre- and post-test equally
-                  hard?
-                </h2>
-                <Button
-                  onClick={() => runAi(true)}
-                  disabled={aiLoading || !token}
-                >
-                  {aiLoading ? "Analyzing…" : "Re-run"}
-                </Button>
-              </div>
-              {aiError && (
-                <p className="mt-2 text-sm text-amber-800">{aiError}</p>
-              )}
-              {ai ? (
-                <>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-stone-700">
-                    {ai.analysis}
-                  </p>
-                  {ai.model && (
-                    <p className="mt-2 text-xs text-stone-400">
-                      Model: {ai.model}. Regenerated only when the dataset
-                      changes.
-                    </p>
-                  )}
-                </>
-              ) : (
-                !aiError && (
-                  <p className="mt-2 text-sm text-stone-500">
-                    {aiLoading ? "Analyzing the dataset…" : "Preparing…"}
-                  </p>
-                )
-              )}
-            </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
@@ -791,7 +1591,8 @@ export default function PilotAnalysisPage() {
                   <tr className="text-left text-xs text-stone-400">
                     <th className="py-1 pr-3 font-semibold">Participant</th>
                     <th className="py-1 pr-3 font-semibold">Form</th>
-                    <th className="py-1 pr-3 font-semibold">Q1</th>
+                    <th className="py-1 pr-3 font-semibold">New Q1</th>
+                    <th className="py-1 pr-3 font-semibold">Rubric /20</th>
                     <th className="py-1 pr-3 font-semibold">Screen-out?</th>
                     <th className="py-1 pr-3 font-semibold">Reason / AI flag</th>
                   </tr>
@@ -811,6 +1612,11 @@ export default function PilotAnalysisPage() {
                         <td className="py-1 pr-3 text-stone-600">{r.form}</td>
                         <td className="py-1 pr-3 text-stone-800">
                           {r.q1_correct}/{r.q1_total}
+                        </td>
+                        <td className="py-1 pr-3 text-stone-800">
+                          {grades[r.subject]
+                            ? `${grades[r.subject].total}/${grades[r.subject].max}`
+                            : "—"}
                         </td>
                         <td className="py-1 pr-3">
                           {so.out ? (
@@ -846,18 +1652,36 @@ export default function PilotAnalysisPage() {
               </p>
             </div>
 
+            <ScreeningGroupsCard rows={view.completed} grades={grades} />
+
+            <ScoresOnlyCard rows={view.completed} grades={grades} />
+
             {analysis && (
               <div className="overflow-x-auto rounded-xl border-2 border-stone-200 bg-white p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <h2 className="text-base font-bold text-stone-800">
                     Answer-key analysis (AI rubric)
                   </h2>
-                  <Button onClick={downloadAnalysisCsv}>
-                    Download analysis (CSV)
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs text-stone-600">
+                      <input
+                        type="checkbox"
+                        checked={analysisEligibleOnly}
+                        onChange={(e) =>
+                          setAnalysisEligibleOnly(e.target.checked)
+                        }
+                        className="h-4 w-4 accent-lime-600"
+                      />
+                      Only not-screened-out
+                    </label>
+                    <Button onClick={downloadAnalysisCsv}>
+                      Download analysis (CSV)
+                    </Button>
+                  </div>
                 </div>
                 <p className="mt-1 text-xs text-stone-400">
-                  Across {view.completed.length} completed participants. Higher =
+                  Across {analysis.n} {analysisEligibleOnly ? "eligible" : "completed"}{" "}
+                  participant{analysis.n === 1 ? "" : "s"} (both forms). Higher =
                   students did better against the answer-key rubric.
                 </p>
 
@@ -869,7 +1693,11 @@ export default function PilotAnalysisPage() {
                     <tr className="text-left text-xs text-stone-400">
                       <th className="py-1 pr-3 font-semibold">Question</th>
                       <th className="py-1 pr-3 font-semibold">Mean</th>
-                      <th className="py-1 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">
+                        Score distribution
+                      </th>
+                      <th className="py-1 font-semibold">Median time</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -879,16 +1707,338 @@ export default function PilotAnalysisPage() {
                         <td className="py-1 pr-3 text-stone-600">
                           {it.meanPts.toFixed(2)}/{it.max}
                         </td>
-                        <td className="py-1 font-semibold text-stone-800">
+                        <td className="py-1 pr-3 font-semibold text-stone-800">
                           {it.pct}%
+                        </td>
+                        <td className="py-1 pr-3 text-xs text-stone-500">
+                          {it.dist
+                            .filter((d) => d.count > 0)
+                            .map((d) => `${d.points}pt×${d.count}`)
+                            .join("  ")}
+                        </td>
+                        <td className="py-1 whitespace-nowrap text-stone-500">
+                          {fmtSec(it.medianSec)}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                <h3 className="mt-4 text-sm font-bold text-stone-700">
-                  Show-work rubric — % who met each point
+                {/* ---- Conclusions: item difficulty / discrimination ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Conclusions — which items are too easy / too hard
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Difficulty = mean % of max. Discrimination = test-total gap
+                  between those who got the item and those who didn&apos;t
+                  (bigger = separates strong from weak better). Small sample
+                  ({analysis.n}) — read as signal, not proof.
+                </p>
+                <table className="mt-1 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Question</th>
+                      <th className="py-1 pr-3 font-semibold">% of max</th>
+                      <th className="py-1 pr-3 font-semibold">Discrim.</th>
+                      <th className="py-1 font-semibold">Read</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analysis.items.map((it) => {
+                      const d = analysis.discrimination.find(
+                        (x) => x.id === it.id
+                      );
+                      const gap = d?.gap ?? null;
+                      const verdict =
+                        it.pct >= 75
+                          ? { t: "Too easy — near ceiling", c: "text-amber-600" }
+                          : gap != null && gap < 2
+                            ? { t: "Weak discriminator", c: "text-amber-600" }
+                            : it.pct <= 30
+                              ? { t: "Hard — floor-leaning", c: "text-stone-600" }
+                              : { t: "Good spread", c: "text-lime-700" };
+                      return (
+                        <tr key={it.id} className="border-t border-stone-100">
+                          <td className="py-1 pr-3 text-stone-700">
+                            {it.label}
+                          </td>
+                          <td className="py-1 pr-3 font-semibold text-stone-800">
+                            {it.pct}%
+                          </td>
+                          <td className="py-1 pr-3 text-stone-500">
+                            {gap == null ? "—" : `+${gap.toFixed(1)}`}
+                          </td>
+                          <td className={`py-1 font-medium ${verdict.c}`}>
+                            {verdict.t}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <p className="mt-1 text-xs text-stone-400">
+                  Takeaway: the pretest mostly captures what we want — the
+                  show-your-work items separate strong from weak. Watch the
+                  near-ceiling MC (Q2.4) and the single guessable MC (Q3.1) as
+                  candidates to harden.
+                </p>
+
+                {/* ---- Score distribution ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Score distribution
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-stone-500">
+                  Overall test (/{analysis.totalMax}) — participants per band
+                </p>
+                <div className="mt-1 space-y-1">
+                  {(() => {
+                    const mc = Math.max(
+                      1,
+                      ...analysis.totalDist.map((b) => b.count)
+                    );
+                    return analysis.totalDist.map((b) => (
+                      <BarRow
+                        key={b.label}
+                        label={b.label}
+                        count={b.count}
+                        max={mc}
+                        highlight="good"
+                      />
+                    ));
+                  })()}
+                </div>
+                <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+                  {analysis.items.map((it) => {
+                    const mc = Math.max(1, ...it.dist.map((d) => d.count));
+                    return (
+                      <div key={it.id}>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {it.label} (/{it.max})
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          {it.dist.map((d) => (
+                            <BarRow
+                              key={d.points}
+                              label={`${d.points} pt`}
+                              count={d.count}
+                              max={mc}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Option / distractor distribution ---- */}
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold text-stone-700">
+                    Option distribution (multiple choice)
+                  </h3>
+                  <FormSelect
+                    value={analysisForm}
+                    onChange={setAnalysisForm}
+                    counts={{ A: view.formA, B: view.formB }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-stone-400">
+                  ✓ = correct option; the most-chosen wrong option is the main
+                  distractor. Shown per form (the forms&apos; options differ, so
+                  pooling would mix two questions) — these are Form {analysisForm}
+                  .
+                </p>
+                <div className="mt-1 space-y-4">
+                  {analysis.optionDist.map((q) => {
+                    const mc = Math.max(1, ...q.options.map((o) => o.count));
+                    const textForm = analysisForm;
+                    return (
+                      <div key={q.item}>
+                        <p className="text-[11px] font-semibold text-stone-500">
+                          {q.label} (correct {q.correct})
+                        </p>
+                        <div className="mt-0.5 space-y-0.5">
+                          {q.options.map((o) => {
+                            const color = o.isCorrect
+                              ? "bg-lime-500"
+                              : o.id === q.mainDistractor
+                                ? "bg-amber-500"
+                                : "bg-stone-400";
+                            const mark = o.isCorrect
+                              ? " ✓"
+                              : o.id === q.mainDistractor
+                                ? " ◆"
+                                : "";
+                            return (
+                              <div
+                                key={o.id}
+                                className="flex items-start gap-2 text-xs"
+                              >
+                                <span className="w-8 shrink-0 pt-0.5 text-right font-medium text-stone-600">
+                                  {o.id}
+                                  {mark}
+                                </span>
+                                <div className="mt-0.5 h-3 w-28 shrink-0 rounded bg-stone-100">
+                                  <div
+                                    className={`h-3 rounded ${color}`}
+                                    style={{
+                                      width: `${mc ? Math.min(100, (o.count / mc) * 100) : 0}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="w-6 shrink-0 pt-0.5 text-stone-600">
+                                  {o.count}
+                                </span>
+                                <span className="flex-1 pt-0.5 text-stone-500">
+                                  {MC_OPTION_TEXT[textForm][q.item]?.[o.id] ?? ""}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* ---- Item discrimination ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Item discrimination
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Mean test total of those who got the item (≥ half marks) minus
+                  those who didn&apos;t. A bigger positive gap = the item better
+                  separates strong from weak students.
+                </p>
+                <div className="mt-1 space-y-1">
+                  {analysis.discrimination.map((d) => (
+                    <BarRow
+                      key={d.id}
+                      label={d.label.replace(/ \(.*\)/, "")}
+                      count={Math.max(0, d.gap ?? 0)}
+                      max={analysis.totalMax}
+                      highlight={(d.gap ?? 0) > 0 ? "good" : "warn"}
+                      suffix={
+                        d.gap == null
+                          ? "—"
+                          : `+${d.gap.toFixed(1)} (${d.meanGot?.toFixed(0) ?? "–"} vs ${d.meanNot?.toFixed(0) ?? "–"})`
+                      }
+                    />
+                  ))}
+                </div>
+
+                {/* ---- Time per question ---- */}
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Time per question (spread)
+                </h3>
+                <p className="mt-1 text-xs text-stone-400">
+                  Each bar spans the fastest to slowest completer; the dot marks
+                  the median. Longer bars = more spread in how long people took.
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {(() => {
+                    const gmax = Math.max(
+                      1,
+                      ...analysis.items.map((it) => it.maxSec ?? 0)
+                    );
+                    return [...analysis.items]
+                      .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
+                      .map((it) => {
+                        const lo = it.minSec ?? 0;
+                        const hi = it.maxSec ?? 0;
+                        const med = it.medianSec ?? lo;
+                        return (
+                          <div
+                            key={it.id}
+                            className="flex items-center gap-2 text-xs"
+                          >
+                            <span className="w-24 shrink-0 truncate text-right text-stone-500">
+                              {it.label.replace(/ \(.*\)/, "")}
+                            </span>
+                            <div className="relative h-3 flex-1 rounded bg-stone-100">
+                              <div
+                                className="absolute h-3 rounded bg-sky-200"
+                                style={{
+                                  left: `${(lo / gmax) * 100}%`,
+                                  width: `${((hi - lo) / gmax) * 100}%`,
+                                }}
+                              />
+                              <div
+                                className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-600"
+                                style={{ left: `${(med / gmax) * 100}%` }}
+                                title={`median ${fmtSec(med)}`}
+                              />
+                            </div>
+                            <span className="w-28 shrink-0 text-stone-500">
+                              {fmtSec(it.minSec)}–{fmtSec(it.maxSec)}
+                            </span>
+                          </div>
+                        );
+                      });
+                  })()}
+                </div>
+                <table className="mt-3 w-full border-collapse text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-stone-400">
+                      <th className="py-1 pr-3 font-semibold">Question</th>
+                      <th className="py-1 pr-3 font-semibold">Min</th>
+                      <th className="py-1 pr-3 font-semibold">Median</th>
+                      <th className="py-1 font-semibold">Max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...analysis.items]
+                      .sort((a, b) => (b.medianSec ?? 0) - (a.medianSec ?? 0))
+                      .map((it) => (
+                        <tr key={it.id} className="border-t border-stone-100">
+                          <td className="py-1 pr-3 text-stone-700">
+                            {it.label}
+                          </td>
+                          <td className="py-1 pr-3 text-stone-500">
+                            {fmtSec(it.minSec)}
+                          </td>
+                          <td className="py-1 pr-3 font-semibold text-stone-800">
+                            {fmtSec(it.medianSec)}
+                          </td>
+                          <td className="py-1 text-stone-500">
+                            {fmtSec(it.maxSec)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+
+                {/* ---- Screen-out reasons ---- */}
+                {analysis.screenReasons.length > 0 && (
+                  <>
+                    <h3 className="mt-5 text-sm font-bold text-stone-700">
+                      Screen-out reasons
+                    </h3>
+                    <p className="mt-1 text-xs text-stone-400">
+                      How many of the {analysis.n} completers each rule would
+                      exclude ({analysis.eligibleCount} would be kept).
+                    </p>
+                    <div className="mt-1 space-y-1">
+                      {(() => {
+                        const mc = Math.max(
+                          1,
+                          ...analysis.screenReasons.map((s) => s.count)
+                        );
+                        return analysis.screenReasons.map((s) => (
+                          <BarRow
+                            key={s.reason}
+                            label={s.reason}
+                            count={s.count}
+                            max={mc}
+                            highlight="warn"
+                          />
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
+
+                <h3 className="mt-5 text-sm font-bold text-stone-700">
+                  Rubric distribution — % who met each criterion
                 </h3>
                 <table className="mt-1 w-full border-collapse text-sm">
                   <thead>
@@ -915,6 +2065,94 @@ export default function PilotAnalysisPage() {
                 </table>
               </div>
             )}
+
+            <div className="rounded-xl border-2 border-stone-200 bg-white p-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-base font-bold text-stone-800">
+                  By question — all responses
+                </h2>
+                <label className="flex items-center gap-2 text-xs text-stone-600">
+                  <input
+                    type="checkbox"
+                    checked={analysisEligibleOnly}
+                    onChange={(e) => setAnalysisEligibleOnly(e.target.checked)}
+                    className="h-4 w-4 accent-lime-600"
+                  />
+                  Only not-screened-out
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-stone-400">
+                Every completed participant&apos;s answer to one question, with
+                its score and time. Click a question to expand.
+              </p>
+              {ALL_ITEMS.map((id) => {
+                const answered = view.completed.filter(
+                  (r) =>
+                    (!analysisEligibleOnly || !screenOut(r).out) &&
+                    (r.test_answers?.[id] || r.q1?.[id])
+                );
+                if (!answered.length) return null;
+                return (
+                  <details
+                    key={id}
+                    className="mt-2 rounded-lg border border-stone-200"
+                  >
+                    <summary className="cursor-pointer p-2 text-sm font-semibold text-stone-700">
+                      {ITEM_LABELS[id] ?? id}{" "}
+                      <span className="font-normal text-stone-400">
+                        ({answered.length})
+                      </span>
+                    </summary>
+                    <div className="space-y-2 p-3 pt-0">
+                      {answered.map((r) => {
+                        const g = grades[r.subject]?.items?.[id];
+                        const q1g = r.q1?.[id];
+                        return (
+                          <div
+                            key={r.subject}
+                            className="rounded bg-stone-50 p-2 text-sm"
+                          >
+                            <div className="flex flex-wrap justify-between gap-2 text-xs text-stone-500">
+                              <span className="font-mono">
+                                {shortId(r)} ({r.form})
+                              </span>
+                              <span>
+                                {g
+                                  ? `${g.points}/${g.max}`
+                                  : q1g
+                                    ? q1g.correct
+                                      ? "correct"
+                                      : `wrong (exp ${q1g.expected})`
+                                    : "—"}
+                                {" · "}
+                                {fmtSec(r.item_timings?.[id]?.seconds)}
+                              </span>
+                            </div>
+                            <p className="mt-1 whitespace-pre-wrap text-stone-800">
+                              {renderAnswer(r.test_answers?.[id])}
+                            </p>
+                            {g?.criteria && CRIT_LABELS[id] && (
+                              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-stone-500">
+                                {id === "2.1" ? (
+                                  <Q21Breakdown verdicts={g.criteria ?? {}} />
+                                ) : (
+                                  CRIT_LABELS[id].map(([cid, clabel]) => (
+                                    <span key={cid}>
+                                      <Tick ok={g.criteria?.[cid] === "met"} />{" "}
+                                      {clabel}
+                                    </span>
+                                  ))
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
 
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2">

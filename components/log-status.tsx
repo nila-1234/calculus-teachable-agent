@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
+  beaconLogQueue,
   flushLogQueue,
   getLogState,
   getServerLogState,
@@ -61,8 +62,22 @@ export default function LogStatus() {
     void flushLogQueue();
 
     const onOnline = () => void flushLogQueue();
+    // Leaving or hiding the page: hand whatever is still queued to the browser
+    // so it is delivered even if the tab closes before the next upload.
+    // Deferred one tick so events logged by other pagehide handlers (e.g. the
+    // step timer's exit) are included.
+    const onLeave = () => queueMicrotask(beaconLogQueue);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") onLeave();
+    };
     window.addEventListener("online", onOnline);
-    return () => window.removeEventListener("online", onOnline);
+    window.addEventListener("pagehide", onLeave);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("pagehide", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   useEffect(() => {

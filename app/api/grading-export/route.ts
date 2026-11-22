@@ -12,11 +12,13 @@ import {
   type LogDoc,
 } from "@/lib/tests/report";
 import { buildInsights } from "@/lib/tests/insights";
+import { buildFlowSummary } from "@/lib/tests/flow";
 import {
   buildAnswerSheet,
   buildEventSheet,
   buildSubjectSheet,
 } from "@/lib/tests/export";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Instructor-only grading export.
@@ -52,7 +54,7 @@ export async function GET(req: NextRequest) {
     query = query.orderBy("timestamp", "asc");
 
     const snapshot = await query.get();
-    const docs = snapshot.docs.map((doc) => doc.data() as LogDoc);
+    const docs = snapshot.docs.map((doc) => rehydrateLog(doc.data()) as LogDoc);
 
     const submissions = collectSubmissions(docs);
 
@@ -89,6 +91,28 @@ export async function GET(req: NextRequest) {
       pairs: { report: buildPairReport(graded), name: `pre-post-${stamp}.csv` },
     };
 
+    // Per-arm views so lesson (control) and agent can be analysed separately.
+    const armBySubject = new Map<string, string>();
+    for (const d of docs) {
+      if (d.event === "condition_assigned") {
+        const c = (d.data as Record<string, unknown> | undefined)?.condition;
+        if (typeof c === "string" && d.subject_id) {
+          armBySubject.set(d.subject_id, c);
+        }
+      }
+    }
+    const viewForArm = (arm: string) => {
+      const subs = new Set(
+        [...armBySubject]
+          .filter(([, c]) => c === arm)
+          .map(([s]) => s)
+      );
+      const d = docs.filter((x) => x.subject_id && subs.has(x.subject_id));
+      const g = graded.filter((x) => subs.has(x.submission.subjectId));
+      return { insights: buildInsights(d, g), flow: buildFlowSummary(d) };
+    };
+    const armViews = { lesson: viewForArm("lesson"), agent: viewForArm("agent") };
+
     // JSON shape of the same sheets, so the instructor analysis view can render
     // a table without parsing CSV on the client.
     if (format === "summary") {
@@ -110,6 +134,8 @@ export async function GET(req: NextRequest) {
           subjects: buildSubjectSheet(docs, graded),
           pairs: buildPairReport(graded),
           insights: buildInsights(docs, graded),
+          flow: buildFlowSummary(docs),
+          armViews,
         },
         { headers: { "Cache-Control": "no-store" } }
       );

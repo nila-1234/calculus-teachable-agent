@@ -30,6 +30,61 @@ export const FLOW_PHASES: Phase[] = [
 const SURVEY_EVENTS = new Set(["survey_completed"]);
 const TEST_EVENTS = new Set(["test_started", "test_item_answered", "test_completed"]);
 
+/**
+ * Subjects who completed the WHOLE flow — every step, not just the final
+ * post-survey. A participant must have finished screening, the pre-survey, the
+ * pre-test, their assigned instruction (both LearnVia lessons for the lesson
+ * arm, or the whole agent scenario), the post-test, and the post-survey.
+ *
+ * This is stricter than "submitted the post-survey": it drops anyone who
+ * skipped a step, and it naturally excludes instructor preview / dev runs,
+ * which never produce the full event set. Every analysis is scoped to this set.
+ */
+export function fullFlowSubjects(docs: LogDoc[]): Set<string> {
+  const bySubject = new Map<string, LogDoc[]>();
+  for (const d of docs) {
+    if (!d.subject_id) continue;
+    bySubject.set(d.subject_id, [...(bySubject.get(d.subject_id) ?? []), d]);
+  }
+
+  const out = new Set<string>();
+  for (const [subject, list] of bySubject) {
+    const has = (event: string, scenario?: string) =>
+      list.some(
+        (d) =>
+          d.event === event &&
+          (scenario === undefined || d.scenario_id === scenario)
+      );
+
+    const assigned = [...list]
+      .reverse()
+      .find((d) => d.event === "condition_assigned");
+    const arm =
+      typeof assigned?.data?.condition === "string"
+        ? (assigned.data.condition as string)
+        : null;
+    const instructionDone =
+      arm === "lesson"
+        ? has("lesson_completed")
+        : arm === "agent"
+          ? has("grade_lines_completed")
+          : false;
+
+    if (
+      has("screening_completed") &&
+      has("survey_completed", "pre") &&
+      has("test_completed", "pretest") &&
+      arm != null &&
+      instructionDone &&
+      has("test_completed", "posttest") &&
+      has("survey_completed", "post")
+    ) {
+      out.add(subject);
+    }
+  }
+  return out;
+}
+
 /** Scenario ids are numeric for the instruction phase, named elsewhere. */
 function phaseFromScenarioId(scenarioId: string | undefined): Phase | null {
   if (!scenarioId) return null;
@@ -49,7 +104,16 @@ export function phaseFromPath(path: string | undefined): Phase {
   if (path.startsWith("/survey/post")) return "post_survey";
   if (path.startsWith("/test/pretest")) return "pretest";
   if (path.startsWith("/test/posttest")) return "posttest";
-  if (path === "/scenarios" || /^\/\d+(\/|$)/.test(path)) return "scenarios";
+  // The instruction phase ("scenarios") covers both arms: the teachable-agent
+  // scenario (/scenarios, /5/…) and the lesson arm (/lesson/1, /lesson/2).
+  // Without /lesson here, the lesson arm's instruction time fell into "other"
+  // and never counted toward active_min.
+  if (
+    path === "/scenarios" ||
+    /^\/\d+(\/|$)/.test(path) ||
+    path.startsWith("/lesson")
+  )
+    return "scenarios";
   return "other";
 }
 
@@ -76,7 +140,7 @@ export const MAX_DWELL_MS = 30 * 60 * 1000;
  * within a session. This needs no exit event, so an abruptly closed tab costs
  * at most the final step rather than the whole session's timings.
  */
-function minutesPerPhase(docs: LogDoc[]): Record<Phase, number> {
+export function minutesPerPhase(docs: LogDoc[]): Record<Phase, number> {
   const ms: Record<string, number> = {};
 
   const bySession = new Map<string, LogDoc[]>();

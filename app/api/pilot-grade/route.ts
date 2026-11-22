@@ -4,6 +4,7 @@ import getFirestore from "@/lib/firestore";
 import { authorizeInstructor } from "@/lib/instructor-auth";
 import { gradeTest } from "@/lib/tests/grade";
 import type { TestAnswers, TestId } from "@/lib/tests/types";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Instructor-only AI grading of the pilot's free-response items.
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
   try {
     const db = getFirestore();
     const snap = await db.collection("pilot_logs").get();
-    const events = snap.docs.map((d) => d.data() as Ev);
+    const events = snap.docs.map((d) => rehydrateLog(d.data()) as Ev);
 
     const bySubject = new Map<string, Ev[]>();
     for (const e of events) {

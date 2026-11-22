@@ -72,6 +72,12 @@ export function isInstructorRoute(): boolean {
   return window.location.pathname.startsWith("/instructor");
 }
 
+/** The internal-testing sandbox (/internal_test) — team only, never study data. */
+export function isInternalTestRoute(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.location.pathname.startsWith("/internal_test");
+}
+
 /**
  * True wherever events must not be recorded: instructor preview, and the
  * instructor tooling pages themselves. The preview hub has no ?preview flag of
@@ -79,7 +85,7 @@ export function isInstructorRoute(): boolean {
  * subject "unknown".
  */
 export function isNonParticipantContext(): boolean {
-  return isPreviewActive() || isInstructorRoute();
+  return isPreviewActive() || isInstructorRoute() || isInternalTestRoute();
 }
 
 /** Adds the preview flag to a path, preserving any existing query string. */

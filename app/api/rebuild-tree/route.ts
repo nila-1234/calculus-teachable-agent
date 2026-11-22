@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import getFirestore from "@/lib/firestore";
 import { authorizeInstructor } from "@/lib/instructor-auth";
 import { mirrorEvents, type LogEntry } from "@/lib/tree";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Rebuilds the browsable `subjects/` tree from the `logs` collection.
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (subject) query = query.where("subject_id", "==", subject);
 
     const snapshot = await query.get();
-    const entries = snapshot.docs.map((doc) => doc.data() as LogEntry);
+    const entries = snapshot.docs.map((doc) => rehydrateLog(doc.data()) as LogEntry);
 
     const writes = await mirrorEvents(entries);
 

@@ -73,7 +73,21 @@ export default function StepTimer() {
 
     const onPageHide = () => logExit("page_hidden");
     const onVisibility = () => {
-      if (document.visibilityState === "hidden") logExit("tab_backgrounded");
+      if (document.visibilityState === "hidden") {
+        logExit("tab_backgrounded");
+        return;
+      }
+      // Back on the tab: resume timing the same step. Without this the step's
+      // clock stopped for good at the first tab switch, so any later time on
+      // it (often most of it) was never counted.
+      if (isNonParticipantContext()) return;
+      if (!currentPath.current || !exitLogged.current) return;
+      enteredAt.current = Date.now();
+      exitLogged.current = false;
+      void logEvent("step_entered", scenarioIdFor(currentPath.current), {
+        path: currentPath.current,
+        resumed: true,
+      });
     };
 
     window.addEventListener("pagehide", onPageHide);

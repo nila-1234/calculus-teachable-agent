@@ -3,6 +3,7 @@ import getFirestore from "@/lib/firestore";
 import { authorizeInstructor } from "@/lib/instructor-auth";
 import { PILOT_Q1_ANSWERS } from "@/lib/pilot/tests";
 import { SKILL_CHECK_ANSWERS } from "@/lib/surveys/eligibility";
+import { rehydrateLog } from "@/lib/log-rehydrate";
 
 /**
  * Instructor-only export of the pilot's data.
@@ -87,7 +88,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const snap = await getFirestore().collection("pilot_logs").get();
-    const events = snap.docs.map((d) => d.data() as Ev);
+    const events = snap.docs.map((d) => rehydrateLog(d.data()) as Ev);
 
     const bySubject = new Map<string, Ev[]>();
     for (const e of events) {

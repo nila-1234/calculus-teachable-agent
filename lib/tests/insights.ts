@@ -1,4 +1,5 @@
 import { getTest } from "./definitions";
+import { fullFlowSubjects } from "./export";
 import { findItem, formatAnswer } from "./format";
 import type { GradedSubmission, LogDoc } from "./report";
 import type { TestId } from "./types";
@@ -38,6 +39,25 @@ export function goalForItem(itemId: string): Goal {
   return "communication";
 }
 
+/** Friendly per-item labels, matching the pilot analysis. */
+export const ITEM_LABELS: Record<string, string> = {
+  "1": "Q1a optimization (show work)",
+  "1b": "Q1b particle motion (numeric)",
+  "1c": "Q1c profit (numeric)",
+  "1d": "Q1d fencing (numeric)",
+  "1e": "Q1e rectangle (numeric)",
+  "2.1": "Q2.1 revenue model (choice + explanation)",
+  "2.2": "Q2.2 explain concept (show work)",
+  "2.3": "Q2.3 matching",
+  "2.4": "Q2.4 interpret domain (MC)",
+  "3.1": "Q3.1 question the AI (MC)",
+  "3.2": "Q3.2 rebut the AI (show work)",
+};
+
+export function labelForItem(itemId: string): string {
+  return ITEM_LABELS[itemId] ?? `Q${itemId}`;
+}
+
 /** How often each rubric criterion was met — why an open item is missed. */
 export type CriterionStat = {
   id: string;
@@ -61,6 +81,8 @@ export type ItemResponse = {
   points: number | null;
   maxPoints: number;
   answer: string;
+  /** Seconds this participant spent on this item, or null if not measurable. */
+  seconds: number | null;
   verdicts: { id: string; verdict: string; comment: string }[];
 };
 
@@ -73,16 +95,36 @@ export type ItemDetail = {
 
 export type ItemStat = {
   itemId: string;
+  label: string;
   goal: Goal;
+  /** Count of submissions at each point value, 0..maxPoints (pooled pre+post). */
+  dist: { points: number; count: number }[];
+  minSeconds: number | null;
+  maxSeconds: number | null;
   /** Mean proportion of available points, 0–1. */
   accuracy: number;
   meanPoints: number;
   maxPoints: number;
   /** How many graded submissions this is averaged over. */
   n: number;
+  /** Per-test accuracy (proportion of marks), split pre vs post. */
+  preAccuracy: number | null;
+  postAccuracy: number | null;
+  preN: number;
+  postN: number;
   /** Median seconds spent, or null when it could not be measured. */
   medianSeconds: number | null;
   timedN: number;
+  /**
+   * Discrimination: mean TEST TOTAL of those who got the item (≥ half its marks)
+   * minus those who did not, pooled across pre and post. A bigger positive gap =
+   * the item separates stronger from weaker participants. null if not computable.
+   */
+  discriminationGap: number | null;
+  discMeanGot: number | null;
+  discMeanNot: number | null;
+  discNGot: number;
+  discNNot: number;
   /** Everything needed to answer "why is this one missed?" */
   detail: ItemDetail;
 };
@@ -104,6 +146,10 @@ export type Insights = {
   slowest: ItemStat[];
   hardest: ItemStat[];
   goals: GoalStat[];
+  /** Overall test-total distribution across completers, bucketed into bands. */
+  totalMax: number;
+  scorePre: { label: string; count: number }[];
+  scorePost: { label: string; count: number }[];
   /** True when the sample is too small to read anything into. */
   underpowered: boolean;
 };
@@ -165,6 +211,45 @@ function secondsPerItem(docs: LogDoc[]): Map<string, number[]> {
   return perItem;
 }
 
+/**
+ * Seconds per (subject, test, item) — the same gap measure as secondsPerItem,
+ * but kept per participant so each person's card can show how long they spent
+ * on each question. Keyed `${subject}::${testId}::${itemId}`.
+ */
+function secondsBySubjectItem(docs: LogDoc[]): Map<string, number> {
+  const out = new Map<string, number>();
+
+  const bySession = new Map<string, LogDoc[]>();
+  for (const doc of docs) {
+    if (doc.event !== "test_item_answered" && doc.event !== "test_started") continue;
+    const key = `${doc.subject_id ?? ""}::${doc.scenario_id ?? ""}`;
+    bySession.set(key, [...(bySession.get(key) ?? []), doc]);
+  }
+
+  for (const [sessionKey, list] of bySession) {
+    const ordered = [...list].sort((a, b) =>
+      (a.timestamp ?? "").localeCompare(b.timestamp ?? "")
+    );
+    let previous: string | null =
+      ordered.find((d) => d.event === "test_started")?.timestamp ?? null;
+
+    for (const doc of ordered) {
+      if (doc.event !== "test_item_answered") continue;
+      const itemId = doc.data?.item_id as string | undefined;
+      if (!itemId || !doc.timestamp) continue;
+      if (previous) {
+        const seconds = (Date.parse(doc.timestamp) - Date.parse(previous)) / 1000;
+        if (seconds > 0 && seconds <= MAX_ITEM_SECONDS) {
+          out.set(`${sessionKey}::${itemId}`, seconds);
+        }
+      }
+      previous = doc.timestamp;
+    }
+  }
+
+  return out;
+}
+
 function accuracyByItem(graded: GradedSubmission[], testId?: TestId) {
   const points = new Map<string, { total: number; max: number; n: number }>();
 
@@ -185,6 +270,22 @@ function accuracyByItem(graded: GradedSubmission[], testId?: TestId) {
   return points;
 }
 
+/** Per-item point values across graded submissions, with the item's max. */
+function pointValuesByItem(graded: GradedSubmission[]) {
+  const out = new Map<string, { values: number[]; max: number }>();
+  for (const { result } of graded) {
+    if (!result.complete) continue;
+    for (const item of result.items) {
+      if (item.points === null) continue;
+      const e = out.get(item.itemId) ?? { values: [], max: item.maxPoints };
+      e.values.push(item.points);
+      e.max = Math.max(e.max, item.maxPoints);
+      out.set(item.itemId, e);
+    }
+  }
+  return out;
+}
+
 /**
  * Everything behind a single item: what was asked, how each criterion fared,
  * which options people picked, and every individual answer.
@@ -201,7 +302,8 @@ const MAX_ANSWER_CHARS = 2000;
 
 function buildItemDetail(
   itemId: string,
-  graded: GradedSubmission[]
+  graded: GradedSubmission[],
+  secondsByKey: Map<string, number>
 ): ItemDetail {
   const prompts: Partial<Record<TestId, string>> = {};
   for (const testId of ["pretest", "posttest"] as TestId[]) {
@@ -252,6 +354,10 @@ function buildItemDetail(
         ? formatAnswer(found.item, submission.answers[itemId])
         : JSON.stringify(submission.answers[itemId] ?? null)
       ).slice(0, MAX_ANSWER_CHARS),
+      seconds:
+        secondsByKey.get(
+          `${submission.subjectId}::${submission.testId}::${itemId}`
+        ) ?? null,
       verdicts:
         open?.criteria.map((c) => ({
           id: c.id,
@@ -288,32 +394,129 @@ function buildItemDetail(
   return { prompts, criteria, choices, responses };
 }
 
+/** Bucket a set of test totals into ~6 bands for a distribution chart. */
+function scoreBands(
+  totals: number[],
+  max: number
+): { label: string; count: number }[] {
+  const step = Math.max(1, Math.ceil((max + 1) / 6));
+  const bands: { label: string; count: number }[] = [];
+  for (let lo = 0; lo <= max; lo += step) {
+    const hi = Math.min(lo + step - 1, max);
+    bands.push({
+      label: lo === hi ? `${lo}` : `${lo}–${hi}`,
+      count: totals.filter((t) => t >= lo && t <= hi).length,
+    });
+  }
+  return bands;
+}
+
+const mean = (xs: number[]): number | null =>
+  xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null;
+
+/**
+ * Per-item discrimination, pooled across pre and post: for each item, split the
+ * graded submissions into those that got it (≥ half marks) and those that did
+ * not, and compare the mean TEST TOTAL of each group.
+ */
+function discriminationByItem(graded: GradedSubmission[]) {
+  const buckets = new Map<string, { got: number[]; not: number[] }>();
+  for (const { result } of graded) {
+    if (!result.complete) continue;
+    for (const item of result.items) {
+      if (item.points === null) continue;
+      const b = buckets.get(item.itemId) ?? { got: [], not: [] };
+      (item.points >= item.maxPoints / 2 ? b.got : b.not).push(
+        result.totalPoints
+      );
+      buckets.set(item.itemId, b);
+    }
+  }
+  const out = new Map<
+    string,
+    {
+      gap: number | null;
+      meanGot: number | null;
+      meanNot: number | null;
+      nGot: number;
+      nNot: number;
+    }
+  >();
+  for (const [id, b] of buckets) {
+    const mg = mean(b.got);
+    const mn = mean(b.not);
+    out.set(id, {
+      gap: mg != null && mn != null ? mg - mn : null,
+      meanGot: mg,
+      meanNot: mn,
+      nGot: b.got.length,
+      nNot: b.not.length,
+    });
+  }
+  return out;
+}
+
 export function buildInsights(
   docs: LogDoc[],
-  graded: GradedSubmission[]
+  gradedAll: GradedSubmission[]
 ): Insights {
-  const timing = secondsPerItem(docs);
+  // Only participants who finished EVERY step of the flow are analysed —
+  // partial drop-offs would skew every item, timing, and goal stat, and this
+  // also excludes instructor preview / dev runs (see fullFlowSubjects).
+  const flowComplete = fullFlowSubjects(docs);
+  const graded = gradedAll.filter((g) =>
+    flowComplete.has(g.submission.subjectId)
+  );
+  const completeDocs = docs.filter(
+    (d) => !!d.subject_id && flowComplete.has(d.subject_id)
+  );
+
+  const timing = secondsPerItem(completeDocs);
+  const timingByKey = secondsBySubjectItem(completeDocs);
   const overall = accuracyByItem(graded);
+  const discrimination = discriminationByItem(graded);
+  const pointValues = pointValuesByItem(graded);
+  const pre = accuracyByItem(graded, "pretest");
+  const post = accuracyByItem(graded, "posttest");
 
   const items: ItemStat[] = [...overall.entries()]
     .map(([itemId, { total, max, n }]) => {
       const seconds = timing.get(itemId) ?? [];
+      const disc = discrimination.get(itemId);
+      const p = pre.get(itemId);
+      const q = post.get(itemId);
+      const pv = pointValues.get(itemId);
+      const itemMax = pv?.max ?? 0;
+      const dist = Array.from({ length: itemMax + 1 }, (_, points) => ({
+        points,
+        count: (pv?.values ?? []).filter((v) => v === points).length,
+      }));
       return {
         itemId,
+        label: labelForItem(itemId),
         goal: goalForItem(itemId),
+        dist,
+        minSeconds: seconds.length ? Math.min(...seconds) : null,
+        maxSeconds: seconds.length ? Math.max(...seconds) : null,
         accuracy: max > 0 ? total / max : 0,
         meanPoints: n > 0 ? total / n : 0,
         maxPoints: n > 0 ? max / n : 0,
         n,
+        preAccuracy: p && p.max > 0 ? p.total / p.max : null,
+        postAccuracy: q && q.max > 0 ? q.total / q.max : null,
+        preN: p?.n ?? 0,
+        postN: q?.n ?? 0,
         medianSeconds: median(seconds),
         timedN: seconds.length,
-        detail: buildItemDetail(itemId, graded),
+        discriminationGap: disc?.gap ?? null,
+        discMeanGot: disc?.meanGot ?? null,
+        discMeanNot: disc?.meanNot ?? null,
+        discNGot: disc?.nGot ?? 0,
+        discNNot: disc?.nNot ?? 0,
+        detail: buildItemDetail(itemId, graded, timingByKey),
       };
     })
     .sort((a, b) => a.itemId.localeCompare(b.itemId, undefined, { numeric: true }));
-
-  const pre = accuracyByItem(graded, "pretest");
-  const post = accuracyByItem(graded, "posttest");
 
   const subjects = new Map<string, Set<TestId>>();
   for (const { submission, result } of graded) {
@@ -358,6 +561,13 @@ export function buildInsights(
 
   const timed = items.filter((i) => i.medianSeconds !== null);
 
+  const totalMax =
+    graded.find((g) => g.result.complete)?.result.totalMaxPoints ?? 22;
+  const totalsFor = (testId: TestId) =>
+    graded
+      .filter((g) => g.submission.testId === testId && g.result.complete)
+      .map((g) => g.result.totalPoints);
+
   return {
     participants: subjects.size,
     pairedParticipants,
@@ -367,6 +577,9 @@ export function buildInsights(
       .slice(0, 3),
     hardest: [...items].sort((a, b) => a.accuracy - b.accuracy).slice(0, 3),
     goals,
+    totalMax,
+    scorePre: scoreBands(totalsFor("pretest"), totalMax),
+    scorePost: scoreBands(totalsFor("posttest"), totalMax),
     // Below this, per-item figures are one or two people's answers and any
     // ordering between them is noise.
     underpowered: pairedParticipants < 5,

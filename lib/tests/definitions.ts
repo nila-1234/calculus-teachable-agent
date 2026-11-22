@@ -25,6 +25,7 @@ const PRE_TEST: TestDefinition = {
           prompt:
             "A gardener wants to enclose a rectangular garden along a straight river. The side along the river does not require fencing, so the gardener will fence only the two sides perpendicular to the river and the one side parallel to it. The gardener has 60 meters of fencing.\n\nUse calculus to determine the dimensions of the garden that maximize its enclosed area and state the maximum area. Show your work.",
           placeholder: "Show your work here…",
+          mathInput: true,
           reference:
             "Let x be each side perpendicular to the river and y the side parallel to it, so 2x + y = 60 and A(x) = x(60 − 2x) = 60x − 2x². A′(x) = 60 − 4x = 0 gives x = 15; A is a downward parabola so this is the maximum. y = 30, maximum area 450 m². Rubric (5 pts, consequential grading): Model, Derivative, Critical value, Extremum justification, Resulting quantities.",
         },
@@ -44,7 +45,8 @@ const PRE_TEST: TestDefinition = {
         rows: [
           ["$2", "180", "$360"],
           ["$4", "160", "$640"],
-          ["\\(p\\) dollars", "\\(200 - 10p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(200 - 10p\\)", "?"],
         ],
       },
       tableNote:
@@ -70,8 +72,8 @@ const PRE_TEST: TestDefinition = {
           id: "2.2",
           kind: "free-response",
           prompt:
-            "The company’s daily revenue is modeled by \\(R(p) = p(200 - 10p)\\), where \\(p\\) is the price of one lunch box.\n\nWhat calculus concept could be used to determine the price that maximizes the company’s daily revenue? Identify the important mathematical concept the company should find and explain why it is relevant. You do not need to calculate the price.",
-          placeholder: "Identify the calculus concept and explain why it is relevant…",
+            "The company’s daily revenue is modeled by \\(R(p) = p(200 - 10p)\\), where \\(p\\) is the price of one lunch box.\n\nWhat are the key concepts needed to determine the price that maximizes the company’s daily revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price.",
+          placeholder: "Identify the key concepts and explain why they are relevant…",
           reference:
             "The company should use the derivative of the revenue function to find a critical point. A critical point occurs where the derivative equals zero or is undefined. It is relevant because it is a point where revenue could reach a maximum or minimum, but the point must be checked to confirm that it is a maximum. Do not require the student to calculate p.",
         },
@@ -95,7 +97,7 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -20\\)\nSince \\(R''(p)\\) is negative, the shape of the graph is a downward-opening parabola. So \\(p = 10\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 200p - 10p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 10\\) produces a maximum.",
             },
           ],
           choices: [
@@ -106,7 +108,7 @@ const PRE_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; R″(p) = −20 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(200 − 10p) and R(p) = 200p − 10p² → 3. Formulate the objective function; R′(p) = 200 − 20p → 5. Find the derivative; 200 − 20p = 0 and p = 10 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
@@ -116,7 +118,7 @@ const PRE_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $20 would make the model predict a negative number of lunch boxes sold.",
+              text: "A price above $20 would make the model predict a negative number of lunch boxes sold.",
             },
             {
               id: "B",
@@ -124,11 +126,11 @@ const PRE_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $20.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $20, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
           reference:
-            "A. The price cannot be less than $0. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
+            "A. If the price is more than $20, then 200 − 10p would give a negative number of lunch boxes sold, which is not meaningful in this situation.",
         },
       ],
     },
@@ -197,6 +199,7 @@ const POST_TEST: TestDefinition = {
           prompt:
             "A community center wants to enclose a rectangular outdoor activity area next to a long building. The side along the building does not require fencing, so fencing is needed only for the two sides perpendicular to the building and the one side parallel to it. The center has 80 meters of fencing.\n\nUse calculus to determine the dimensions of the activity area that maximize its enclosed area and state the maximum area. Show your work.",
           placeholder: "Show your work here…",
+          mathInput: true,
           reference:
             "Let x be each side perpendicular to the building and y the side parallel to it, so 2x + y = 80 and A(x) = x(80 − 2x) = 80x − 2x². A′(x) = 80 − 4x = 0 gives x = 20; A is a downward parabola so this is the maximum. y = 40, maximum area 800 m². Rubric (5 pts, consequential grading): Model, Derivative, Critical value, Extremum justification, Resulting quantities.",
         },
@@ -216,7 +219,8 @@ const POST_TEST: TestDefinition = {
         rows: [
           ["$10", "100", "$1000"],
           ["$20", "80", "$1600"],
-          ["\\(p\\) dollars", "\\(120 - 2p\\)", "?"],
+          ["⋮", "⋮", "⋮"],
+          ["\\(\\$p\\)", "\\(120 - 2p\\)", "?"],
         ],
       },
       tableNote:
@@ -242,8 +246,8 @@ const POST_TEST: TestDefinition = {
           id: "2.2",
           kind: "free-response",
           prompt:
-            "The company's weekly revenue is modeled by \\(R(p) = p(120 - 2p)\\), where \\(p\\) is the price of one unit.\n\nWhat calculus concept could be used to determine the price that maximizes the company's weekly revenue? Identify the important mathematical concept the company should find and explain why it is relevant. You do not need to calculate the price.",
-          placeholder: "Identify the calculus concept and explain why it is relevant…",
+            "The company's weekly revenue is modeled by \\(R(p) = p(120 - 2p)\\), where \\(p\\) is the price of one unit.\n\nWhat are the key concepts needed to determine the price that maximizes the company's weekly revenue? Identify the important mathematical concepts the company should find and explain why they are relevant. You do not need to calculate the price.",
+          placeholder: "Identify the key concepts and explain why they are relevant…",
           reference:
             "The company should use the derivative of the revenue function to find a critical point. A critical point occurs where the derivative equals zero or is undefined. It is relevant because it is a point where revenue could reach a maximum or minimum, but the point must be checked to confirm that it is a maximum. Do not require the student to calculate p.",
         },
@@ -267,7 +271,7 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "maximum",
-              text: "\\(R''(p) = -4\\)\nSince \\(R''(p)\\) is negative, the revenue function is concave down, so \\(p = 30\\) produces a maximum.",
+              text: "The coefficient of \\(p^2\\) in \\(R(p) = 120p - 2p^2\\) is negative, so the graph is a downward-opening parabola (an inverted U). So \\(p = 30\\) produces a maximum.",
             },
           ],
           choices: [
@@ -278,7 +282,7 @@ const POST_TEST: TestDefinition = {
             { id: "5", text: "Find the derivative." },
           ],
           reference:
-            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; R″(p) = −4 and the concavity explanation → 4. Confirm that the critical point is a maximum.",
+            "Correct matches: R(p) = p(120 − 2p) and R(p) = 120p − 2p² → 3. Formulate the objective function; R′(p) = 120 − 4p → 5. Find the derivative; 120 − 4p = 0 and p = 30 → 1. Find the critical point; the negative leading coefficient (downward parabola) → 4. Confirm that the critical point is a maximum.",
         },
         {
           id: "2.4",
@@ -288,7 +292,7 @@ const POST_TEST: TestDefinition = {
           choices: [
             {
               id: "A",
-              text: "A price cannot be negative, and a price above $60 would make the model predict a negative number of units sold.",
+              text: "A price above $60 would make the model predict a negative number of units sold.",
             },
             {
               id: "B",
@@ -296,13 +300,11 @@ const POST_TEST: TestDefinition = {
             },
             {
               id: "C",
-              text: "The derivative of the revenue function can only be calculated between $0 and $60.",
+              text: "The derivative of the revenue function can only be calculated for prices between $0 and $60, because outside that interval the revenue formula no longer applies and its slope cannot be found.",
             },
           ],
-          explanationPrompt: "Briefly explain your choice.",
-          placeholder: "Briefly explain your choice…",
           reference:
-            "A. The price cannot be less than $0. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
+            "A. If the price is more than $60, then 120 − 2p would give a negative number of units sold, which is not meaningful in this situation.",
         },
       ],
     },

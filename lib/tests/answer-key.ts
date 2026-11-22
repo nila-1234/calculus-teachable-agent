@@ -51,23 +51,20 @@ const q1Criteria: CriterionSpec[] = [
 ];
 
 /**
- * Q2.2 is graded on the PRE-TEST rubric on both forms, by decision.
- *
- * The pre-test doc lists these five gradeable bullets; the post-test PDF states
- * four requirements that are a subset of them. Rather than grade the two forms
- * against different rubrics — which would make pre/post scores incomparable —
- * the pre-test rubric is authoritative and the post-test is matched to it.
+ * Q2.2 asks for the key concepts in a general plan for finding the maximum, and
+ * a full answer is expected to cover ALL of the following (assessment doc,
+ * revised 10/12). Graded the same way on both forms so pre/post stay comparable.
  */
 const q22Criteria: CriterionSpec[] = [
   { id: "derivative", description: "Identifies the derivative as the relevant calculus concept." },
-  { id: "critical-point", description: "Identifies a critical point as the quantity to find." },
-  { id: "definition", description: "Explains that a critical point occurs where the derivative is zero or undefined." },
-  { id: "candidate-only", description: "States that a critical point is only a candidate, not automatically a maximum." },
-  { id: "verify", description: "States that the candidate must be checked or confirmed to be a maximum." },
+  { id: "critical-point", description: "Explains that you need to find a critical point — that is, where the derivative is zero or undefined." },
+  { id: "candidate-only", description: "States that an identified critical point is only a possible maximum, not automatically a maximum." },
+  { id: "verify", description: "States that the point must be checked or confirmed to be a maximum." },
+  { id: "endpoints", description: "Mentions checking whether the endpoints of the allowed range could give the maximum." },
 ];
 
 const q22ScoringNote =
-  "Do not require the student to calculate the price. A zero derivative alone does not prove a maximum.";
+  "A complete answer covers all five criteria. Do not require the student to calculate the price, and a zero derivative alone does not prove a maximum.";
 
 /** Q2.3 uses the same purpose options and the same 3, 5, 1, 4 key on both forms. */
 const q23Matches = {
@@ -89,6 +86,22 @@ function q32Criteria(range: string, aiValue: string): CriterionSpec[] {
 const q32ScoringNote =
   "The student need not compute the feasible optimum in the message. Vague skepticism (\"Are you sure?\") earns the third point only if the constraint is named explicitly.";
 
+/**
+ * Q2.1 is scored as a whole (3 pts): the multiple choice plus its explanation.
+ * The chosen option is included in the formatted answer the grader sees, so the
+ * "chose-c" criterion is judged from it alongside the written explanation.
+ */
+function q21Criteria(func: string): CriterionSpec[] {
+  return [
+    { id: "chose-c", description: `Selects option C: daily revenue R(p) = p(${func}).` },
+    { id: "uses-examples", description: "Uses the table's numerical examples (price times the number sold, e.g., 2 × 180 = 360) to support the choice." },
+    { id: "price-times-quantity", description: "States that daily revenue is the price multiplied by the number of units sold." },
+  ];
+}
+
+const q21ScoringNote =
+  "Score the two parts independently. The choice part (criterion chose-c, 1 pt) is judged only from the selected option, shown in the answer as \"Selected: ...\". The explanation part (criteria uses-examples and price-times-quantity, 2 pts) is judged ONLY on the written reasoning: award each explanation criterion it satisfies even when the student selected the wrong option, and withhold it when the reasoning is absent even if the student selected C.";
+
 export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
   pretest: {
     "1": {
@@ -98,7 +111,14 @@ export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
       modelAnswer:
         "2x + y = 60, A(x) = x(60 − 2x) = 60x − 2x². A′(x) = 60 − 4x = 0 gives x = 15, y = 30. Maximum area 450 m².",
     },
-    "2.1": { kind: "choice", maxPoints: 1, correctChoiceId: "C" },
+    "2.1": {
+      kind: "open",
+      maxPoints: 3,
+      criteria: q21Criteria("200 − 10p"),
+      scoringNote: q21ScoringNote,
+      modelAnswer:
+        "C. R(p) = p(200 − 10p). At $2: 2 × 180 = 360; at $4: 4 × 160 = 640. Daily revenue is price × number of lunch boxes sold.",
+    },
     "2.2": {
       kind: "open",
       maxPoints: 5,
@@ -126,7 +146,14 @@ export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
       modelAnswer:
         "2x + y = 80, A(x) = x(80 − 2x) = 80x − 2x². A′(x) = 80 − 4x = 0 gives x = 20, y = 40. Maximum area 800 m².",
     },
-    "2.1": { kind: "choice", maxPoints: 1, correctChoiceId: "C" },
+    "2.1": {
+      kind: "open",
+      maxPoints: 3,
+      criteria: q21Criteria("120 − 2p"),
+      scoringNote: q21ScoringNote,
+      modelAnswer:
+        "C. R(p) = p(120 − 2p). At $10: 10 × 100 = 1000; at $20: 20 × 80 = 1600. Daily revenue is price × number of units sold.",
+    },
     "2.2": {
       kind: "open",
       maxPoints: 5,

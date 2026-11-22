@@ -25,6 +25,13 @@ export const dynamic = "force-dynamic";
 const CONDITIONS = ["agent", "lesson"] as const;
 type Condition = (typeof CONDITIONS)[number];
 
+/**
+ * TEMPORARY OVERRIDE — force every new assignment onto one arm.
+ * "lesson"/"agent" collects that arm only; set back to null to restore the
+ * balanced split. (A matching override exists in lib/condition.ts — flip both.)
+ */
+const FORCE_CONDITION: Condition | null = "lesson";
+
 const ASSIGNMENTS = "assignments";
 const COUNTS_DOC = "assignment_counts/global";
 
@@ -63,7 +70,9 @@ export async function POST(req: NextRequest) {
       ) as Record<Condition, number>;
 
       let chosen: Condition;
-      if (preferred) {
+      if (FORCE_CONDITION) {
+        chosen = FORCE_CONDITION;
+      } else if (preferred) {
         chosen = preferred;
       } else {
         const fewest = Math.min(...CONDITIONS.map((c) => tally[c]));
@@ -78,7 +87,7 @@ export async function POST(req: NextRequest) {
         condition: chosen,
         // Recorded so a fallback assignment is visible as one when the split is
         // audited — it bypassed the balancing.
-        via: preferred ? "client-fallback" : "balanced",
+        via: FORCE_CONDITION ? "forced" : preferred ? "client-fallback" : "balanced",
         assigned_at: FieldValue.serverTimestamp(),
       });
       tx.set(

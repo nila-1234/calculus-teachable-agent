@@ -38,16 +38,16 @@ function WelcomePageContent() {
           they will.
         */}
         <p className="mt-2 max-w-3xl text-base leading-6 text-stone-500">
-          Thank you for your interest in this study. You&apos;ll begin with a few
-          short questions about your background in mathematics, which take about
-          a minute and tell us whether this study is a fit for you. If you are
-          eligible, you&apos;ll then be asked to review and sign a consent form
-          before anything else.
+          This study looks at how people apply calculus to real-world
+          optimization problems and work through them with an AI. If you take
+          part, you&apos;ll practice setting up and evaluating these problems and
+          play through a few short decision-making scenarios with an AI.
         </p>
         <p className="mt-3 max-w-3xl text-base leading-6 text-stone-500">
-          The study itself takes about 90 minutes: a pre-survey and a pre-test on
-          optimization, then the instruction, and finally a second assessment and
-          a brief post-survey.
+          It takes about 90 minutes. You&apos;ll start with a few short
+          background questions (about a minute) to see whether the study is a fit
+          for you; if you&apos;re eligible, you&apos;ll review and sign a consent
+          form before anything else.
         </p>
 
         <div className="mt-8">
