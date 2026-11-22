@@ -28,7 +28,52 @@ export type SurveyItem = {
   placeholder?: string;
   choices?: SurveyChoice[];
   likert?: SurveyLikert;
+  /**
+   * Open items only: record how the answer was entered (pasted / dropped text,
+   * keystrokes, timing, tab switches) under `${id}${TYPING_SUFFIX}`. Used by
+   * the screening AI-use check.
+   */
+  trackTyping?: boolean;
 };
+
+/** Answers key suffix under which an item's typing signals are stored. */
+export const TYPING_SUFFIX = "::typing";
+
+/** How an open answer was entered. Times are epoch ms; counts are totals. */
+export type TypingSignals = {
+  pastedChars: number;
+  pasteCount: number;
+  droppedChars: number;
+  keystrokes: number;
+  backspaces: number;
+  firstFocusAt: number | null;
+  firstKeyAt: number | null;
+  lastInputAt: number | null;
+  tabAwayCount: number;
+  tabAwayMs: number;
+};
+
+export const EMPTY_TYPING: TypingSignals = {
+  pastedChars: 0,
+  pasteCount: 0,
+  droppedChars: 0,
+  keystrokes: 0,
+  backspaces: 0,
+  firstFocusAt: null,
+  firstKeyAt: null,
+  lastInputAt: null,
+  tabAwayCount: 0,
+  tabAwayMs: 0,
+};
+
+export function parseTyping(raw: string | undefined): TypingSignals {
+  if (!raw) return { ...EMPTY_TYPING };
+  try {
+    return { ...EMPTY_TYPING, ...(JSON.parse(raw) as Partial<TypingSignals>) };
+  } catch {
+    return { ...EMPTY_TYPING };
+  }
+}
 
 export type SurveySection = {
   id: string;

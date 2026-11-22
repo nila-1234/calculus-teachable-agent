@@ -1,12 +1,16 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import OptionRow, { OptionRowState } from "@/components/option-row";
 import {
   parseMulti,
+  parseTyping,
   serializeMulti,
+  TYPING_SUFFIX,
   type SurveyAnswers,
   type SurveyDefinition,
   type SurveyItem,
+  type TypingSignals,
 } from "@/lib/surveys/types";
 
 type SurveyPanelProps = {
@@ -78,17 +82,108 @@ function LikertScale({
   );
 }
 
+/**
+ * Records how an open answer is entered — pasted / dropped text, keystrokes,
+ * timing, and switching away from the tab — for the screening AI-use check.
+ * Signals are kept across reloads by persisting them with the answers.
+ */
+function useTypingSignals(
+  enabled: boolean,
+  initialRaw: string | undefined,
+  onTyping: ((json: string) => void) | undefined
+) {
+  const signals = useRef<TypingSignals>(parseTyping(initialRaw));
+  const hiddenAt = useRef<number | null>(null);
+  // Saved answers are restored after the first render, so the signals saved
+  // before a reload may only arrive later. Pick them up before counting
+  // anything new — otherwise reloading the page would erase a paste.
+  const latestRaw = useRef(initialRaw);
+  useEffect(() => {
+    latestRaw.current = initialRaw;
+  });
+  const resume = () => {
+    if (signals.current.firstFocusAt == null && latestRaw.current) {
+      const saved = parseTyping(latestRaw.current);
+      if (saved.firstFocusAt != null) signals.current = saved;
+    }
+  };
+
+  const save = () => onTyping?.(JSON.stringify(signals.current));
+  const update = (patch: (s: TypingSignals) => void) => {
+    if (!enabled) return;
+    resume();
+    patch(signals.current);
+    save();
+  };
+
+  useEffect(() => {
+    if (!enabled) return;
+    const onVisibility = () => {
+      // Only once they've started on the question.
+      if (signals.current.firstFocusAt == null) return;
+      if (document.visibilityState === "hidden") {
+        hiddenAt.current = Date.now();
+      } else if (hiddenAt.current != null) {
+        signals.current.tabAwayCount += 1;
+        signals.current.tabAwayMs += Date.now() - hiddenAt.current;
+        hiddenAt.current = null;
+        onTyping?.(JSON.stringify(signals.current));
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [enabled, onTyping]);
+
+  if (!enabled) return {};
+  return {
+    onFocus: () =>
+      update((s) => {
+        if (s.firstFocusAt == null) s.firstFocusAt = Date.now();
+      }),
+    onKeyDown: (event: React.KeyboardEvent) =>
+      update((s) => {
+        if (event.key.length !== 1 && !["Backspace", "Delete", "Enter"].includes(event.key))
+          return;
+        s.keystrokes += 1;
+        if (event.key === "Backspace" || event.key === "Delete") s.backspaces += 1;
+        if (s.firstKeyAt == null) s.firstKeyAt = Date.now();
+      }),
+    onPaste: (event: React.ClipboardEvent) =>
+      update((s) => {
+        s.pasteCount += 1;
+        s.pastedChars += event.clipboardData.getData("text").length;
+      }),
+    onDrop: (event: React.DragEvent) =>
+      update((s) => {
+        s.droppedChars += event.dataTransfer.getData("text").length;
+      }),
+    onInput: () =>
+      update((s) => {
+        s.lastInputAt = Date.now();
+      }),
+  };
+}
+
 function SurveyItemCard({
   item,
   value,
   onChange,
   readOnly,
+  typingRaw,
+  onTyping,
 }: {
   item: SurveyItem;
   value: string;
   onChange: (next: string) => void;
   readOnly: boolean;
+  typingRaw?: string;
+  onTyping?: (json: string) => void;
 }) {
+  const typingHandlers = useTypingSignals(
+    Boolean(item.trackTyping && item.kind === "open" && !readOnly),
+    typingRaw,
+    onTyping
+  );
   const label =
     item.id === "subject-id" ? "Subject ID" : `Question ${item.id}`;
 
@@ -190,6 +285,7 @@ function SurveyItemCard({
             onChange={(event) => onChange(event.target.value)}
             rows={5}
             className={TEXTAREA_CLASS}
+            {...typingHandlers}
           />
         )}
       </div>
@@ -221,6 +317,14 @@ export default function SurveyPanel({
                 value={answers[item.id] || ""}
                 onChange={(next) => onAnswerChange(item.id, next)}
                 readOnly={readOnly}
+                typingRaw={
+                  item.trackTyping ? answers[`${item.id}${TYPING_SUFFIX}`] : undefined
+                }
+                onTyping={
+                  item.trackTyping
+                    ? (json) => onAnswerChange(`${item.id}${TYPING_SUFFIX}`, json)
+                    : undefined
+                }
               />
             ))}
           </div>

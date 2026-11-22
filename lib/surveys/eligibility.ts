@@ -1,4 +1,9 @@
-import { parseMulti, type SurveyAnswers } from "./types";
+import {
+  parseMulti,
+  parseTyping,
+  TYPING_SUFFIX,
+  type SurveyAnswers,
+} from "./types";
 
 /**
  * Screening rules: who is filtered out before the study begins.
@@ -52,6 +57,20 @@ export const SKILL_CHECK_ANSWERS: Record<string, string> = {
  * Choosing any of these answers makes a participant ineligible. Keys are item
  * ids; values are option ids, which are the option labels themselves.
  */
+/**
+ * The written screening answer used as an AI-use check. Pasting is allowed in
+ * screening (and blocked later, in the instruction), so someone who pastes an
+ * answer — typically from an AI tool — shows it here and is screened out.
+ */
+export const AI_CHECK_ITEM = "derivative-explain";
+
+/**
+ * Pasted or dropped characters in that answer at or above which a participant
+ * is screened out. Small enough to catch any pasted sentence, large enough to
+ * ignore pasting a single word or symbol.
+ */
+export const PASTE_SCREEN_OUT_CHARS = 20;
+
 export const INELIGIBLE_OPTIONS: Record<string, string[]> = {
   // Ceiling: Calculus II or beyond is past the applied-optimization material
   // this study teaches (0929, Ken).
@@ -96,6 +115,16 @@ export function evaluateEligibility(answers: SurveyAnswers): EligibilityResult {
     if (raw !== correct) {
       failedItems.push(itemId);
       reasons.push(`${itemId}: ${raw ? "incorrect" : "unanswered"}`);
+    }
+  }
+
+  // AI-use check: written answer pasted or dropped in rather than typed.
+  if (answers[AI_CHECK_ITEM] !== undefined) {
+    const typing = parseTyping(answers[`${AI_CHECK_ITEM}${TYPING_SUFFIX}`]);
+    const inserted = typing.pastedChars + typing.droppedChars;
+    if (inserted >= PASTE_SCREEN_OUT_CHARS) {
+      failedItems.push(AI_CHECK_ITEM);
+      reasons.push(`${AI_CHECK_ITEM}: ${inserted} characters pasted in (possible AI use)`);
     }
   }
 

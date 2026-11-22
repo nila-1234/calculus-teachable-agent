@@ -218,9 +218,12 @@ function SurveyItemView({ item }: { item: SurveyItemSummary }) {
     <div className="mt-3 border-t border-stone-100 pt-3 first:border-t-0 first:pt-0">
       <p className="text-xs font-semibold text-stone-600">
         {item.prompt}{" "}
-        <span className="font-normal text-stone-400">(n={item.n})</span>
+        <span className="font-normal text-stone-400">
+          (n={item.n}
+          {item.kind === "multi" ? "; select all that apply — counts can add up to more than n" : ""})
+        </span>
       </p>
-      {item.kind === "choice" && item.choices && (
+      {(item.kind === "choice" || item.kind === "multi") && item.choices && (
         <div className="mt-1 space-y-1">
           {(() => {
             const mc = Math.max(1, ...item.choices.map((c) => c.count));
