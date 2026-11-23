@@ -1,5 +1,5 @@
 import type { LogDoc } from "./report";
-import { fullFlowSubjects, minutesPerPhase, type Phase } from "./export";
+import { fullFlowSubjects, minutesPerPhase, phaseFromPath, type Phase } from "./export";
 import { getSurvey } from "@/lib/surveys/definitions";
 import {
   parseMulti,
@@ -40,13 +40,16 @@ export type SurveyItemSummary = {
   n: number;
   /** For choice items: how many picked each option. */
   choices?: ChoiceCount[];
-  /** For likert items: mean and the 1..max distribution. */
+  /** For likert items: mean, median and the 1..max distribution. */
   likertMean?: number | null;
+  likertMedian?: number | null;
   likertMax?: number;
   likertCounts?: ChoiceCount[];
   /** For open items: how many answered, plus a few sample responses. */
   answered?: number;
   samples?: string[];
+  /** For open items: each non-blank answer with when the survey was submitted. */
+  responses?: { text: string; at: string }[];
 };
 
 export type FunnelStep = { step: string; reached: number };
@@ -214,6 +217,8 @@ export type InstructionDetail = {
 export type ParticipantDetail = {
   subjectId: string;
   arm: string | null;
+  /** Total time, entering the pre-survey -> submitting the post-survey. */
+  totalMin: number | null;
   screening: AnswerLine[];
   preSurvey: AnswerLine[];
   preTest: AnswerLine[];
@@ -238,6 +243,12 @@ export type FlowSummary = {
   screeningOutcomes: ScreeningOutcomes;
   /** How many completers took Version A / B as their pre-test. */
   forms: { A: number; B: number; unknown: number };
+  /**
+   * Median total time over completers: wall clock from entering the pre-survey
+   * to submitting the post-survey (screening and consent not included).
+   */
+  totalMedianMin: number | null;
+  totalN: number;
 };
 
 function median(values: number[]): number | null {
@@ -276,9 +287,31 @@ function answersOf(doc: LogDoc | null): Record<string, unknown> {
 }
 
 /** Aggregate one survey's items over a set of (subject -> answers) records. */
+/**
+ * One participant's total time: wall clock from entering the pre-survey to
+ * submitting the post-survey (screening and consent not included).
+ */
+function totalMinOf(l: LogDoc[]): number | null {
+  const start = l
+    .filter(
+      (d) =>
+        d.event === "step_entered" &&
+        phaseFromPath(d.data?.path as string | undefined) === "pre_survey"
+    )
+    .map((d) => d.timestamp ?? "")
+    .filter(Boolean)
+    .sort()[0];
+  const end = latest(l, "survey_completed", "post")?.timestamp;
+  if (!start || !end) return null;
+  const min = (Date.parse(end) - Date.parse(start)) / 60000;
+  return Number.isFinite(min) && min > 0 ? min : null;
+}
+
 function summariseSurvey(
   surveyId: string,
-  perSubjectAnswers: Record<string, unknown>[]
+  perSubjectAnswers: Record<string, unknown>[],
+  /** When each subject's survey was submitted, in the same order (optional). */
+  submittedAt: string[] = []
 ): SurveyItemSummary[] {
   const survey = getSurvey(surveyId);
   if (!survey) return [];
@@ -318,6 +351,7 @@ function summariseSurvey(
         kind: item.kind,
         n: nums.length,
         likertMean: nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null,
+        likertMedian: median(nums),
         likertMax: max,
         likertCounts: counts,
       };
@@ -326,6 +360,9 @@ function summariseSurvey(
     // open — show every response in full; these are instructor-only and the
     // whole sentence is the point (no truncation, no "…").
     const texts = raw.map((v) => String(v)).filter((t) => t.trim());
+    const responses = perSubjectAnswers
+      .map((a, i) => ({ text: String(a[item.id] ?? ""), at: submittedAt[i] ?? "" }))
+      .filter((r) => r.text.trim());
     return {
       id: item.id,
       prompt: item.prompt,
@@ -333,6 +370,7 @@ function summariseSurvey(
       n: texts.length,
       answered: texts.length,
       samples: texts,
+      responses,
     };
   });
 }
@@ -1735,6 +1773,12 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     { key: "post_survey", label: "Post-survey", ...medPhase("post_survey") },
   ];
 
+  // Total time per completer: entering the pre-survey -> submitting the
+  // post-survey, wall clock.
+  const totalsMin = completerLists
+    .map(totalMinOf)
+    .filter((v): v is number => v != null);
+
   // Survey response distributions, completers only.
   const screening = summariseSurvey(
     "screening",
@@ -1746,7 +1790,8 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   );
   const postSurvey = summariseSurvey(
     "post",
-    completerLists.map((l) => answersOf(latest(l, "survey_completed", "post")))
+    completerLists.map((l) => answersOf(latest(l, "survey_completed", "post"))),
+    completerLists.map((l) => latest(l, "survey_completed", "post")?.timestamp ?? "")
   );
 
   // Instruction summary, completers only.
@@ -1826,6 +1871,7 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     ([subjectId, list]) => ({
       subjectId,
       arm: armOf(list),
+      totalMin: totalMinOf(list),
       screening: surveyAnswerLines(
         "screening",
         answersOf(latest(list, "screening_completed"))
@@ -1881,6 +1927,8 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     aiCheck: buildAiCheck(docs),
     screeningOutcomes: buildScreeningOutcomes(docs),
     forms,
+    totalMedianMin: median(totalsMin),
+    totalN: totalsMin.length,
     totalParticipants: subjects.length,
     completers: completerLists.length,
     funnel,

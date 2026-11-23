@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import getFirestore from "@/lib/firestore";
 import { authorizeInstructor } from "@/lib/instructor-auth";
 import {
-  buildGradeReport,
   buildPairReport,
   collectSubmissions,
   toCsv,
@@ -10,16 +9,16 @@ import {
 } from "@/lib/tests/report";
 import { buildInsights } from "@/lib/tests/insights";
 import { buildFlowSummary } from "@/lib/tests/flow";
+import { buildEventSheet, fullFlowSubjects } from "@/lib/tests/export";
 import {
-  buildAnswerSheet,
-  buildEventSheet,
-  buildSubjectSheet,
-  fullFlowSubjects,
-} from "@/lib/tests/export";
+  buildAnswersSheet,
+  buildParticipantsSheet,
+  buildScreeningSheet,
+} from "@/lib/tests/study-export";
 import { rehydrateLog } from "@/lib/log-rehydrate";
 import { dropTestRuns, filterTeamTests, isCohort, studyStart } from "@/lib/tests/cohort";
 import { gradeSubmissions, loadStudyCohort } from "@/lib/tests/study-data";
-import { splitScreeningQ1a, type ScreeningQ1aGrade } from "@/lib/tests/screening-q1a";
+import { splitScreeningQ1a } from "@/lib/tests/screening-q1a";
 
 /**
  * Instructor-only grading export.
@@ -135,16 +134,8 @@ export async function GET(req: NextRequest) {
     const { comparable: graded, screeningQ1a } = splitScreeningQ1a(fullGrades);
 
     const stamp = new Date().toISOString().slice(0, 10);
-
-    const sheets: Record<string, { report: { rows: Record<string, unknown>[]; columns: string[] }; name: string }> = {
-      subjects: { report: buildSubjectSheet(docs, graded), name: `subjects-${stamp}.csv` },
-      answers: { report: buildAnswerSheet(docs, graded), name: `answers-${stamp}.csv` },
-      events: { report: buildEventSheet(docs), name: `events-${stamp}.csv` },
-      grades: { report: buildGradeReport(graded), name: `grades-${stamp}.csv` },
-      csv: { report: buildGradeReport(graded), name: `grades-${stamp}.csv` },
-      pairs: { report: buildPairReport(graded), name: `pre-post-${stamp}.csv` },
-      q1a: { report: screeningQ1aSheet(screeningQ1a), name: `screening-q1a-${stamp}.csv` },
-    };
+    const flow = buildFlowSummary(docs);
+    const insights = buildInsights(docs, graded);
 
     // Per-arm views so lesson (control) and agent can be analysed separately.
     const armBySubject = new Map<string, string>();
@@ -191,10 +182,9 @@ export async function GET(req: NextRequest) {
             ungraded: result.ungraded,
             error: result.gradingError,
           })),
-          subjects: buildSubjectSheet(docs, graded),
           pairs: buildPairReport(graded),
-          insights: buildInsights(docs, graded),
-          flow: buildFlowSummary(docs),
+          insights,
+          flow,
           armViews,
           screeningQ1a: screeningQ1aWithArm,
         },
@@ -202,13 +192,46 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (sheets[format]) {
-      const { report, name: filename } = sheets[format];
+    // The study's exports: participants.csv, answers.csv, screening.csv, plus
+    // the raw event log. Each is built only when asked for.
+    const sheet = (() => {
+      switch (format) {
+        case "participants":
+          return { report: buildParticipantsSheet(docs, graded, flow), name: `participants-${stamp}.csv` };
+        case "answers": {
+          // Response seconds, from the per-item insights.
+          const seconds = new Map<string, number>();
+          for (const item of insights.items)
+            for (const r of item.detail.responses)
+              if (r.seconds != null) seconds.set(`${r.subjectId}::${r.testId}::${item.itemId}`, r.seconds);
+          const report = buildAnswersSheet(docs, graded, fullGrades, collectSubmissions(docs), flow, seconds);
+          // ?flagged=1: flagged answers of eligible participants only — the same
+          // rule as the dashboard's AI-use flags list.
+          if (req.nextUrl.searchParams.get("flagged") === "1") {
+            const eligible = new Set(
+              flow.screeningOutcomes.people.filter((p) => p.outcome === "eligible").map((p) => p.subjectId)
+            );
+            report.rows = report.rows.filter(
+              (r) => r.flagged === "yes" && eligible.has(String(r.participant_id))
+            );
+            return { report, name: `flagged-answers-${stamp}.csv` };
+          }
+          return { report, name: `answers-${stamp}.csv` };
+        }
+        case "screening":
+          return { report: buildScreeningSheet(flow.screeningOutcomes, fullGrades), name: `screening-${stamp}.csv` };
+        case "events":
+          return { report: buildEventSheet(docs), name: `events-${stamp}.csv` };
+        default:
+          return null;
+      }
+    })();
 
-      return new NextResponse(toCsv(report.rows, report.columns), {
+    if (sheet) {
+      return new NextResponse(toCsv(sheet.report.rows, sheet.report.columns), {
         headers: {
           "Content-Type": "text/csv; charset=utf-8",
-          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Content-Disposition": `attachment; filename="${sheet.name}"`,
           "Cache-Control": "no-store",
         },
       });
@@ -242,21 +265,4 @@ export async function GET(req: NextRequest) {
     console.error("Grading export failed:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
-}
-
-/** One row per participant: their screening Q1a grade, outside the pre/post totals. */
-function screeningQ1aSheet(rows: ScreeningQ1aGrade[]) {
-  return {
-    columns: ["subject_id", "form", "points", "max_points", "graded", "needs_review", "criteria", "answer"],
-    rows: rows.map((q) => ({
-      subject_id: q.subjectId,
-      form: q.form ?? "",
-      points: q.points ?? "",
-      max_points: q.maxPoints,
-      graded: q.graded,
-      needs_review: q.needsReview,
-      criteria: q.criteria.map((c) => `${c.id}:${c.verdict}`).join(" "),
-      answer: q.answer,
-    })),
-  };
 }

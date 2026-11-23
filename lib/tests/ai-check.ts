@@ -50,7 +50,12 @@ export type AiCheck = {
 
 const MAX_TEXT = 1500;
 
-export function buildAiCheck(docs: LogDoc[]): AiCheck {
+/**
+ * Every logged answer with its keystroke counts and flags (latest log per
+ * participant and answer). buildAiCheck keeps only the flagged ones; the
+ * answers export needs them all.
+ */
+export function keystrokeAnswers(docs: LogDoc[]): KeystrokeAnswer[] {
   // Latest log per participant and answer (a log is re-sent as typing goes on).
   const latest = new Map<string, LogDoc>();
   for (const d of docs) {
@@ -85,6 +90,11 @@ export function buildAiCheck(docs: LogDoc[]): AiCheck {
     };
   });
 
+  return answers;
+}
+
+export function buildAiCheck(docs: LogDoc[]): AiCheck {
+  const answers = keystrokeAnswers(docs);
   const bySubject = new Map<string, KeystrokeAnswer[]>();
   for (const a of answers) {
     bySubject.set(a.subjectId, [...(bySubject.get(a.subjectId) ?? []), a]);

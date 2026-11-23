@@ -21,7 +21,9 @@ export const SCREEN_REASONS: Record<string, { label: string; group: ScreenGroup 
   "calculus-courses": { label: "Too advanced: 3 or more calculus courses", group: "high" },
   algebra_check: { label: "Algebra check wrong", group: "low" },
   power_rule_check: { label: "Power-rule check wrong", group: "low" },
-  [AI_CHECK_ITEM]: { label: "Pasted the Q5 answer (possible AI use)", group: "ai" },
+  // Screening Q5 (item q1a): the worked optimization problem — the Q1a of the
+  // participant's pre-test version.
+  [AI_CHECK_ITEM]: { label: "Pasted the worked-problem answer (screening Q5)", group: "ai" },
 };
 
 export const SCREEN_GROUP_LABELS: Record<ScreenGroup, string> = {
@@ -48,7 +50,14 @@ export type ScreeningPerson = {
   /** Screening Q5 (the pre-test version's Q1a). */
   q5Chars: number;
   q5PastedChars: number;
+  /** Keys pressed while answering Q5. */
+  q5Keystrokes: number;
   q5Text: string;
+  /**
+   * The instruction arm, once assigned. Arms are assigned when instruction
+   * starts (after the pre-test), so anyone who stopped earlier has none.
+   */
+  arm: string | null;
   pretestForm: string | null;
   /** The furthest step reached in the whole flow. */
   furthest: string;
@@ -125,8 +134,14 @@ export function buildScreeningOutcomes(docs: LogDoc[]): ScreeningOutcomes {
       powerRuleCorrect: check("power_rule_check"),
       q5Chars: q5Text.length,
       q5PastedChars: typing.pastedChars + typing.droppedChars,
+      q5Keystrokes: typing.keystrokes,
       q5Text: q5Text.slice(0, 1500),
       pretestForm: typeof form === "string" ? form : null,
+      arm: (() => {
+        const c = [...sorted].reverse().find((d) => d.event === "condition_assigned")?.data
+          ?.condition;
+        return typeof c === "string" ? c : null;
+      })(),
       furthest: FURTHEST.find(([, reached]) => reached(sorted))![0],
     };
   });
