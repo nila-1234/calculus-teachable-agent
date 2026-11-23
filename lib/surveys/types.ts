@@ -34,6 +34,13 @@ export type SurveyItem = {
    * the screening AI-use check.
    */
   trackTyping?: boolean;
+  /** Open items only: answer with the math keypad (components/math-input-field). */
+  mathInput?: boolean;
+  /**
+   * The prompt is the Q1a of the participant's pre-test version, filled in
+   * when the survey is shown (it depends on their counterbalanced version).
+   */
+  pretestQ1a?: boolean;
 };
 
 /** Answers key suffix under which an item's typing signals are stored. */

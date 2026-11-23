@@ -63,6 +63,7 @@ export default function DiscussionPanel({
 }: DiscussionPanelProps) {
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const hasReplied = messages.some((message) => message.role === "user");
   const canClose = closable ?? (!forceReply || hasReplied);
   const shownQuickReplies = quickReplies ?? (hasReplied ? [] : QUICK_REPLIES);
@@ -80,6 +81,11 @@ export default function DiscussionPanel({
     e.preventDefault();
     const text = draft.trim();
     if (!text || inputDisabled) return;
+    // Each sent message is its own answer for keystroke tracking; announce it
+    // before the box is cleared (components/keystroke-tracker).
+    inputRef.current?.dispatchEvent(
+      new CustomEvent("answer-submitted", { bubbles: true, detail: { text } })
+    );
     onSend(text);
     setDraft("");
   };
@@ -190,6 +196,8 @@ export default function DiscussionPanel({
           className={`flex items-end gap-2 p-3 ${shownQuickReplies.length > 0 ? "" : "border-t border-stone-200"}`}
         >
           <textarea
+            ref={inputRef}
+            data-qid={`discussion:${counterpartLabel}:${criterionLabel}`}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {

@@ -1,5 +1,6 @@
-import { ANSWER_KEY, itemKey, type ItemKey } from "./answer-key";
-import type { TestAnswers, TestId, TestItemAnswer } from "./types";
+import { itemKey, keysFor, type ItemKey } from "./answer-key";
+import { formulaMatches, valueMatches } from "./math-answer";
+import type { FormId, TestAnswers, TestId, TestItemAnswer } from "./types";
 
 export type ItemScore = {
   itemId: string;
@@ -34,8 +35,12 @@ export type TestScore = {
  * Deterministic items are never sent to a model — a matching key is a lookup,
  * and routing it through an LLM would only add variance to a study measure.
  */
-export function scoreTest(testId: TestId, answers: TestAnswers): TestScore {
-  const keys = ANSWER_KEY[testId] ?? {};
+export function scoreTest(
+  testId: TestId,
+  answers: TestAnswers,
+  options: { form?: FormId; items?: string[] } = {}
+): TestScore {
+  const keys = keysFor(testId, options.form, options.items);
   const items: ItemScore[] = [];
 
   for (const [itemId, key] of Object.entries(keys)) {
@@ -73,6 +78,23 @@ function scoreItem(
       maxPoints: key.maxPoints,
       given: given ?? undefined,
       expected: key.correctChoiceId,
+      needsGrading: false,
+    };
+  }
+
+  if (key.kind === "value" || key.kind === "expression") {
+    const given = (answer?.text ?? "").trim();
+    const correct =
+      key.kind === "value"
+        ? valueMatches(given, key.expected)
+        : formulaMatches(given, key.expected, key.variable);
+    return {
+      itemId,
+      kind: key.kind,
+      points: correct ? key.maxPoints : 0,
+      maxPoints: key.maxPoints,
+      given: given || undefined,
+      expected: String(key.expected),
       needsGrading: false,
     };
   }

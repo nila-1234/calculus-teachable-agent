@@ -8,8 +8,13 @@ import StepIntro from "@/components/step-intro";
 import TestProgress from "@/components/test-progress";
 import TestQuestionPanel from "@/components/test-question-panel";
 import Button from "@/components/button";
-import { getTest } from "@/lib/tests/definitions";
-import { TestAnswers, TestItemAnswer } from "@/lib/tests/types";
+import { getPhaseTest } from "@/lib/tests/definitions";
+import { formForPhase, seededShuffle } from "@/lib/tests/forms";
+import { getSubjectId } from "@/lib/subject";
+import type { FormId, TestAnswers, TestId, TestItemAnswer } from "@/lib/tests/types";
+
+/** Marks test events from the counterbalanced design (version + Q1b–Q1f). */
+const TEST_DESIGN_VERSION = 2;
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
 
@@ -21,18 +26,46 @@ function TestPageContent() {
   // Derived, not stored: no effect needed and it stays correct across navigation.
   const preview = searchParams.has(PREVIEW_PARAM);
   const testId = typeof params.testId === "string" ? params.testId : "";
-  const test = getTest(testId);
+  const isPhase = testId === "pretest" || testId === "posttest";
+
+  // The participant's version for this phase. Read after mount: it lives in
+  // localStorage, so the server can't know it. Preview may pick one with ?form=.
+  const [form, setForm] = useState<FormId | null>(null);
+  const formParam = searchParams.get("form");
+  useEffect(() => {
+    if (!isPhase) return;
+    const chosen: FormId =
+      preview && (formParam === "A" || formParam === "B")
+        ? formParam
+        : formForPhase(testId as TestId);
+    queueMicrotask(() => setForm(chosen));
+  }, [isPhase, preview, formParam, testId]);
+
+  const test = useMemo(
+    () => (isPhase && form ? getPhaseTest(testId as TestId, form) : null),
+    [isPhase, form, testId]
+  );
 
   // -1 = intro screen, 0..n-1 = question screens, n = complete screen
   const [screenIndex, setScreenIndex] = useState(-1);
   const [answers, setAnswers] = useState<TestAnswers>({});
 
+  // Q1b–Q1f come in a per-participant random order, stable across reloads.
   const items = useMemo(
     () =>
       test
-        ? test.sections.flatMap((section) =>
-            section.items.map((item) => ({ section, item }))
-          )
+        ? test.sections.flatMap((section) => {
+            const list = section.shuffle
+              ? seededShuffle(section.items, `${getSubjectId()}:${test.id}:${section.id}`)
+              : section.items;
+            return list.map((item, index) => ({
+              section,
+              item,
+              label: section.shuffle
+                ? `${section.title} · Part ${index + 1} of ${list.length}`
+                : undefined,
+            }));
+          })
         : [],
     [test]
   );
@@ -72,9 +105,10 @@ function TestPageContent() {
     });
   }, [test, query, router]);
 
-  if (!test) {
+  if (!isPhase) {
     return <main className="p-6">Test not found.</main>;
   }
+  if (!test) return null; // version still loading (one frame)
 
   const isComplete = screenIndex >= items.length;
   const current = screenIndex >= 0 && !isComplete ? items[screenIndex] : null;
@@ -131,7 +165,11 @@ function TestPageContent() {
   };
 
   const handleStart = () => {
-    logEvent("test_started", test.id, {});
+    logEvent("test_started", test.id, {
+      form,
+      version: TEST_DESIGN_VERSION,
+      order: items.map((entry) => entry.item.id),
+    });
     advanceTo(0);
   };
 
@@ -143,11 +181,20 @@ function TestPageContent() {
     logEvent("test_item_answered", test.id, {
       item_id: item.id,
       answer: answers[item.id],
+      form,
+      version: TEST_DESIGN_VERSION,
+      position: screenIndex + 1,
     });
 
     if (screenIndex === items.length - 1 && !preview) {
       sessionStorage.setItem(`test:${test.id}:completed`, "true");
-      logEvent("test_completed", test.id, { answers });
+      logEvent("test_completed", test.id, {
+        answers,
+        form,
+        version: TEST_DESIGN_VERSION,
+        // Exactly what this participant was given, in order: scored against these.
+        items: items.map((entry) => entry.item.id),
+      });
     }
 
     advanceTo(screenIndex + 1);
@@ -191,6 +238,8 @@ function TestPageContent() {
             <TestQuestionPanel
               section={current.section}
               item={current.item}
+              label={current.label}
+              qidPrefix={test.id}
               answer={answers[current.item.id] || {}}
               onAnswerChange={(next: TestItemAnswer) =>
                 saveAnswers({ ...answers, [current.item.id]: next })

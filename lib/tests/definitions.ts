@@ -1,4 +1,4 @@
-import { TestDefinition, TestId } from "./types";
+import type { FormId, TestDefinition, TestId, TestItem } from "./types";
 
 const ASSESSMENT_GOALS = [
   "Procedural computation skills that conventional instruction focuses on.",
@@ -358,7 +358,181 @@ const TESTS: Record<TestId, TestDefinition> = {
   posttest: POST_TEST,
 };
 
+/**
+ * The original fixed tests (pre = Version A, post = Version B, each with only
+ * Q1a in Question 1). Still used by the pilot and to read data collected
+ * before counterbalancing; the main study now uses getPhaseTest().
+ */
 export function getTest(id: string): TestDefinition | null {
   if (id === "pretest" || id === "posttest") return TESTS[id];
   return null;
+}
+
+/* ===================================================== counterbalanced forms */
+
+/**
+ * Question 1's short items, Q1b–Q1f, per version. Four of them are the
+ * original LearnVia Self-Quiz 10.2.8 items, word for word (two in each
+ * version); the matching item in the other version is an isomorphic copy —
+ * same wording, different numbers. In each version b and c fall within the
+ * allowed range and d and e at its edge (or the reverse); f asks for the
+ * objective function itself. Answers are verified: A 324, 45, 400, 96,
+ * −x² + 25x; B 16, 25, 1800, 81, −x² + 35x.
+ */
+const Q1_SHORT: Record<FormId, TestItem[]> = {
+  A: [
+    {
+      id: "1b",
+      kind: "short-answer",
+      prompt:
+        "A particle moves along a straight line at varying speed in both directions. The distance traveled at time \\(t\\) seconds is \\(d(t) = t^3 - 21t^2 + 144t\\) cm. The maximum distance in the time interval \\(0 \\le t \\le 8\\) is ______ cm.",
+      placeholder: "Your answer…",
+      reference:
+        "LearnVia original (Self-Quiz 10.2.8, particle motion) — within range. 324 cm, at t = 6 (interior critical point; t = 8 gives 320).",
+    },
+    {
+      id: "1c",
+      kind: "short-answer",
+      prompt:
+        "A manufacturer builds widgets at a cost of $5 each. The consumer demand fits the equation \\(d(x) = 170 - 2x\\), where \\(d\\) is the quantity sold (demand) and \\(x\\) is the price the consumer pays for a widget. The manufacturer's total profit (total revenue minus total cost) is \\(P(x) = d(x)(x - 5)\\). Maximum profit occurs at price \\(x =\\) ______.",
+      placeholder: "Your answer…",
+      reference:
+        "LearnVia original (Self-Quiz 10.2.8, profit) — within range. x = 45 (P(x) = −2x² + 180x − 850).",
+    },
+    {
+      id: "1d",
+      kind: "short-answer",
+      prompt:
+        "A farmer builds a rectangular pen against a straight wall, fencing only the three sides not along the wall, using 60 m of fencing. With \\(x\\) the length of each side perpendicular to the wall, the area is \\(A(x) = x(60 - 2x)\\). Each perpendicular side must satisfy \\(20 \\le x \\le 30\\). What is the maximum possible area, in square meters?",
+      placeholder: "Your answer…",
+      reference:
+        "Fencing — on the edge. 400 m², at x = 20 (the critical point x = 15 is outside [20, 30]).",
+    },
+    {
+      id: "1e",
+      kind: "short-answer",
+      prompt:
+        "A rectangular garden with perimeter 40 feet has one side of length \\(x\\) feet, and a design requirement forces \\(12 \\le x \\le 18\\). The maximum possible area is \\(A =\\) ______ ft².",
+      placeholder: "Your answer…",
+      reference:
+        "Isomorphic to the LearnVia garden item (Version B Q1e) — on the edge. 96 ft², at x = 12 (the critical point x = 10 is outside [12, 18]).",
+    },
+    {
+      id: "1f",
+      kind: "short-answer",
+      prompt:
+        "A rectangle of length \\(x\\) and width \\(y\\) inches has perimeter 50 inches. For a maximum area with the given perimeter, the objective function to maximize is area \\(A(x)\\). Written in terms of \\(x\\) only, \\(A(x) =\\) ______.",
+      placeholder: "Your answer…",
+      reference:
+        "Isomorphic to the LearnVia objective-function item (Version B Q1f). A(x) = −x² + 25x (2x + 2y = 50, so y = 25 − x).",
+    },
+  ],
+  B: [
+    {
+      id: "1b",
+      kind: "short-answer",
+      prompt:
+        "A particle moves along a straight line at varying speed in both directions. The distance traveled at time \\(t\\) seconds is \\(d(t) = t^3 - 9t^2 + 24t\\) cm. The maximum distance in the time interval \\(0 \\le t \\le 1\\) is ______ cm.",
+      placeholder: "Your answer…",
+      reference:
+        "Isomorphic to the LearnVia particle item (Version A Q1b) — on the edge. 16 cm, at t = 1 (the critical points t = 2 and t = 4 are outside [0, 1]).",
+    },
+    {
+      id: "1c",
+      kind: "short-answer",
+      prompt:
+        "A manufacturer builds widgets at a cost of $10 each. The consumer demand fits the equation \\(d(x) = 120 - 2x\\), where \\(d\\) is the quantity sold (demand) and \\(x\\) is the price the consumer pays for a widget. The manufacturer's total profit (total revenue minus total cost) is \\(P(x) = d(x)(x - 10)\\). A price regulation requires \\(10 \\le x \\le 25\\). Maximum profit within that range occurs at price \\(x =\\) ______.",
+      placeholder: "Your answer…",
+      reference:
+        "Isomorphic to the LearnVia profit item (Version A Q1c) — on the edge. x = 25 (the unconstrained best, x = 35, is outside [10, 25]).",
+    },
+    {
+      id: "1d",
+      kind: "short-answer",
+      prompt:
+        "A farmer builds a rectangular pen against a straight wall, fencing only the three sides not along the wall, using 120 m of fencing. With \\(x\\) the length of each side perpendicular to the wall, the area is \\(A(x) = x(120 - 2x)\\), with \\(0 \\le x \\le 60\\). What is the maximum possible area, in square meters?",
+      placeholder: "Your answer…",
+      // 120 m, not 80 m: Version B's Q1a is the 80 m problem (answer 800 m²),
+      // and a participant whose pre-test is B answers that Q1a in screening.
+      reference: "Fencing — within range. 1800 m² (interior critical point, x = 30; A′(x) = 120 − 4x).",
+    },
+    {
+      id: "1e",
+      kind: "short-answer",
+      prompt:
+        "A rectangular garden with perimeter 36 feet has maximum possible area \\(A =\\) ______ ft².",
+      placeholder: "Your answer…",
+      reference:
+        "LearnVia original (Self-Quiz 10.2.8, garden area) — within range. 81 ft² (a 9 × 9 square).",
+    },
+    {
+      id: "1f",
+      kind: "short-answer",
+      prompt:
+        "A rectangle of length \\(x\\) and width \\(y\\) inches has perimeter 70 inches. For a maximum area with the given perimeter, the objective function to maximize is area \\(A(x)\\). Written in terms of \\(x\\) only, \\(A(x) =\\) ______.",
+      placeholder: "Your answer…",
+      reference:
+        "LearnVia original (Self-Quiz 10.2.8, objective function). A(x) = −x² + 35x (2x + 2y = 70, so y = 35 − x).",
+    },
+  ],
+};
+
+/** Each version's Q1a (the worked problem). Asked in screening, not the test. */
+export const Q1A_ITEM: Record<FormId, TestItem> = {
+  A: PRE_TEST.sections[0].items[0],
+  B: POST_TEST.sections[0].items[0],
+};
+
+/** The legacy test that carries a version's Question 2 and Question 3. */
+const FORM_BASE: Record<FormId, TestDefinition> = { A: PRE_TEST, B: POST_TEST };
+
+/**
+ * Everything in one version: Q1a, Q1b–Q1f, Question 2, Question 3. Used to
+ * grade and to look up any item's wording, whichever phase it was taken in.
+ */
+export function getFormTest(form: FormId): TestDefinition {
+  const base = FORM_BASE[form];
+  const [q1, ...rest] = base.sections;
+  return {
+    ...base,
+    form,
+    sections: [{ ...q1, items: [Q1A_ITEM[form], ...Q1_SHORT[form]] }, ...rest],
+  };
+}
+
+const PHASE_TITLES: Record<TestId, string> = {
+  pretest: "Assessment — Optimization (Pre-Test)",
+  posttest: "Assessment — Optimization (Post-Test)",
+};
+
+const PHASE_INTROS: Record<TestId, string[]> = {
+  pretest: [
+    "This assessment has three questions: five short calculus problems, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
+    "Use the math keypad under each answer box to enter symbols such as powers and square roots.",
+    "Answer each question in order. Once you continue past a question you cannot go back and change your answer.",
+  ],
+  posttest: [
+    "This assessment has three questions: five short calculus problems, a multi-part modeling and evaluation exercise, and a real-world problem you analyze together with an AI.",
+    "For questions involving an AI response, evaluate the response using both the mathematics and the real-world information in the problem. Use the math keypad under each answer box to enter symbols such as powers and square roots.",
+    "Answer each question in order. Once you continue past a question you cannot go back and change your answer.",
+  ],
+};
+
+/**
+ * The test a participant takes in a phase, from their assigned version: Q1a
+ * is left out (it was asked in screening), and Q1b–Q1f appear in random order.
+ */
+export function getPhaseTest(testId: TestId, form: FormId): TestDefinition {
+  const full = getFormTest(form);
+  const [q1, ...rest] = full.sections;
+  return {
+    ...full,
+    id: testId,
+    title: PHASE_TITLES[testId],
+    intro: PHASE_INTROS[testId],
+    sections: [
+      { ...q1, items: q1.items.filter((item) => item.id !== "1"), shuffle: true },
+      ...rest,
+    ],
+  };
 }

@@ -16,6 +16,13 @@ const instructorTools = [
     icon: BarChartIcon,
   },
   {
+    href: "/instructor/full-pilot",
+    title: "Full pilot results",
+    description:
+      "The same analysis, limited to runs on the counterbalanced design (Versions A/B, Q1b–Q1f, screening Q5) — earlier runs left out.",
+    icon: BarChartIcon,
+  },
+  {
     href: "/instructor/pilot",
     title: "Pilot results",
     description:

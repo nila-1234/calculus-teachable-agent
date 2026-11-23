@@ -1,8 +1,8 @@
-import { getTest } from "./definitions";
+import { getFormTest, getTest } from "./definitions";
 import { fullFlowSubjects } from "./export";
 import { findItem, formatAnswer } from "./format";
 import type { GradedSubmission, LogDoc } from "./report";
-import type { TestId } from "./types";
+import type { FormId, TestId } from "./types";
 
 /**
  * Interpretation on top of the raw results: where time goes, which items are
@@ -34,7 +34,8 @@ export const GOAL_DESCRIPTIONS: Record<Goal, string> = {
  * human-AI collaboration."
  */
 export function goalForItem(itemId: string): Goal {
-  if (itemId === "1") return "procedural";
+  // Question 1 — Q1a and the short items Q1b–Q1f — is procedural.
+  if (/^1[a-z]?$/.test(itemId)) return "procedural";
   if (itemId.startsWith("3.")) return "collaboration";
   return "communication";
 }
@@ -42,10 +43,11 @@ export function goalForItem(itemId: string): Goal {
 /** Friendly per-item labels, matching the pilot analysis. */
 export const ITEM_LABELS: Record<string, string> = {
   "1": "Q1a optimization (show work)",
-  "1b": "Q1b particle motion (numeric)",
-  "1c": "Q1c profit (numeric)",
-  "1d": "Q1d fencing (numeric)",
-  "1e": "Q1e rectangle (numeric)",
+  "1b": "Q1b particle motion (short answer)",
+  "1c": "Q1c profit (short answer)",
+  "1d": "Q1d fencing (short answer)",
+  "1e": "Q1e garden area (short answer)",
+  "1f": "Q1f objective function (formula)",
   "2.1": "Q2.1 revenue model (choice + explanation)",
   "2.2": "Q2.2 explain concept (show work)",
   "2.3": "Q2.3 matching",
@@ -87,7 +89,8 @@ export type ItemResponse = {
 };
 
 export type ItemDetail = {
-  prompts: Partial<Record<TestId, string>>;
+  /** Question wording, keyed "Version A" / "Version B". */
+  prompts: Record<string, string>;
   criteria: CriterionStat[];
   choices: ChoiceStat[];
   responses: ItemResponse[];
@@ -305,11 +308,12 @@ function buildItemDetail(
   graded: GradedSubmission[],
   secondsByKey: Map<string, number>
 ): ItemDetail {
-  const prompts: Partial<Record<TestId, string>> = {};
-  for (const testId of ["pretest", "posttest"] as TestId[]) {
-    const test = getTest(testId);
-    const found = test ? findItem(test, itemId) : null;
-    if (found) prompts[testId] = found.item.prompt;
+  // Wording per version: pre and post are counterbalanced, so the version —
+  // not the phase — determines the wording.
+  const prompts: Record<string, string> = {};
+  for (const form of ["A", "B"] as FormId[]) {
+    const found = findItem(getFormTest(form), itemId);
+    if (found) prompts[`Version ${form}`] = found.item.prompt;
   }
 
   const criterionTally = new Map<
@@ -342,7 +346,9 @@ function buildItemDetail(
       choiceTally.set(scored.given, entry);
     }
 
-    const test = getTest(submission.testId);
+    const test = submission.form
+      ? getFormTest(submission.form)
+      : getTest(submission.testId);
     const found = test ? findItem(test, itemId) : null;
 
     responses.push({
@@ -383,8 +389,7 @@ function buildItemDetail(
   const choices: ChoiceStat[] = [...choiceTally.entries()]
     .map(([choiceId, t]) => {
       // Show the option text rather than a bare letter.
-      const test = getTest("pretest");
-      const found = test ? findItem(test, itemId) : null;
+      const found = findItem(getFormTest("A"), itemId);
       const label =
         found?.item.choices?.find((c) => c.id === choiceId)?.text ?? choiceId;
       return { choiceId, label, count: t.count, correct: t.correct };

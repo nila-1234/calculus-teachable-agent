@@ -271,6 +271,7 @@ function QuestionCard({
       ) : (
         <input
           type="text"
+          data-qid={`lesson:${question.id}`}
           value={state.response}
           disabled={locked}
           onChange={(e) => onChange(e.target.value)}

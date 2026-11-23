@@ -1,4 +1,4 @@
-import type { TestId } from "./types";
+import type { FormId, TestId } from "./types";
 
 /**
  * Machine-readable answer key and grading rubrics for the pre/post tests.
@@ -22,6 +22,10 @@ export type CriterionSpec = {
 
 export type ItemKey =
   | { kind: "choice"; maxPoints: number; correctChoiceId: string }
+  /** Short answer: correct if the expected number appears in the answer. */
+  | { kind: "value"; maxPoints: number; expected: number }
+  /** Short answer: correct if it is the same formula in `variable`, in any form. */
+  | { kind: "expression"; maxPoints: number; expected: string; variable: string }
   | {
       kind: "matching";
       maxPoints: number;
@@ -174,8 +178,57 @@ export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
   },
 };
 
-export function itemKey(testId: TestId, itemId: string): ItemKey | null {
-  return ANSWER_KEY[testId]?.[itemId] ?? null;
+/* ===================================================== counterbalanced forms */
+
+/**
+ * The key for each version: its original key (Q1a, Question 2, Question 3) plus
+ * Q1b–Q1f, one point each. Version A is the original pre-test content and
+ * Version B the original post-test content, whichever phase they're taken in.
+ */
+export const FORM_KEY: Record<FormId, Record<string, ItemKey>> = {
+  A: {
+    ...ANSWER_KEY.pretest,
+    "1b": { kind: "value", maxPoints: 1, expected: 324 },
+    "1c": { kind: "value", maxPoints: 1, expected: 45 },
+    "1d": { kind: "value", maxPoints: 1, expected: 400 },
+    "1e": { kind: "value", maxPoints: 1, expected: 96 },
+    "1f": { kind: "expression", maxPoints: 1, expected: "-x^2 + 25x", variable: "x" },
+  },
+  B: {
+    ...ANSWER_KEY.posttest,
+    "1b": { kind: "value", maxPoints: 1, expected: 16 },
+    "1c": { kind: "value", maxPoints: 1, expected: 25 },
+    "1d": { kind: "value", maxPoints: 1, expected: 1800 },
+    "1e": { kind: "value", maxPoints: 1, expected: 81 },
+    "1f": { kind: "expression", maxPoints: 1, expected: "-x^2 + 35x", variable: "x" },
+  },
+};
+
+/**
+ * The key items a submission is scored on. With a version, that version's key
+ * limited to the items the participant was given (`items`); without one, the
+ * original fixed key for the phase (the pilot, and data from before
+ * counterbalancing).
+ */
+export function keysFor(
+  testId: TestId,
+  form?: FormId,
+  items?: string[]
+): Record<string, ItemKey> {
+  if (!form) return ANSWER_KEY[testId] ?? {};
+  const all = FORM_KEY[form];
+  if (!items) return all;
+  return Object.fromEntries(
+    Object.entries(all).filter(([itemId]) => items.includes(itemId))
+  );
+}
+
+export function itemKey(
+  testId: TestId,
+  itemId: string,
+  form?: FormId
+): ItemKey | null {
+  return (form ? FORM_KEY[form] : ANSWER_KEY[testId])?.[itemId] ?? null;
 }
 
 export function maxScore(testId: TestId): number {
