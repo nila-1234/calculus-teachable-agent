@@ -466,7 +466,7 @@ export default function LineRubricPanel({
           </div>
 
           <p className="mb-4 text-sm text-stone-500">
-            You are grading this AI student&apos;s work.{" "}
+            You are grading this student&apos;s work.{" "}
             <span className="font-semibold text-stone-600">Drag all</span>{" "}
             rubric items onto the steps they apply to. As soon as you place one,
             you&apos;ll see whether the placement is right; once it&apos;s placed, mark{" "}

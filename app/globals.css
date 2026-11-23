@@ -90,3 +90,11 @@ body {
   font-size: 1em;
 }
 
+
+/* Tailwind v4 dropped the pointer cursor on buttons; restore it app-wide. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}

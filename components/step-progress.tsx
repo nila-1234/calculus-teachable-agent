@@ -26,7 +26,7 @@ const STEP_PATHS: (string | null)[] = [
 const subscribeNothing = () => () => {};
 
 type StepProgressProps = {
-  currentStep: number; // 0-indexed: 0=question, 1=create-rubric, 2=apply-rubric, 3=complete
+  currentStep: number; // 0-indexed: 0=question, 1=create-rubric, 2=grade, 3=complete
   scenarioId?: string | number;
 };
 

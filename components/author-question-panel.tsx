@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Flex } from "@radix-ui/themes";
 import QuestionPartCardDeck from "@/components/question-part-card-deck";
 import ScenarioCard, { toPlotEquation } from "@/components/scenario-card";
+import { shuffleWithSeed } from "@/lib/shuffle";
 
 type Choice = {
   id: string;
@@ -59,6 +60,15 @@ export default function AuthorQuestionPanel({
   llmFeedback,
   loadingFeedback,
 }: AuthorQuestionPanelProps) {
+  const shuffledParts = useMemo(
+    () =>
+      parts.map((part) => ({
+        ...part,
+        options: shuffleWithSeed(part.options, part.id),
+      })),
+    [parts]
+  );
+
   const selectedEquation = useMemo(() => {
     const firstPart = parts[0];
     if (!firstPart) return "";
@@ -84,7 +94,7 @@ export default function AuthorQuestionPanel({
       />
 
       <QuestionPartCardDeck
-        parts={parts}
+        parts={shuffledParts}
         selectedParts={selectedParts}
         submittedParts={submittedParts}
         activeIndex={activePartIndex}
