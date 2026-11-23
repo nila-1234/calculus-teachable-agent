@@ -1,0 +1,451 @@
+{
+  "source": "Figma 'Calculus TA Chat Flow' → feedback_templates.csv → build_feedback_templates.py. Do not edit by hand.",
+  "criteria": {
+    "derivative": {
+      "criterion": "computes the derivative",
+      "criterion_action": "computed the derivative"
+    },
+    "critical-value": {
+      "criterion": "finds the critical value",
+      "criterion_action": "found the critical value"
+    },
+    "maximum-justification": {
+      "criterion": "justifies the maximum",
+      "criterion_action": "justified the maximum"
+    },
+    "dimensions-area": {
+      "criterion": "computes the dimensions and area",
+      "criterion_action": "calculated the dimensions and area"
+    },
+    "requirement-check": {
+      "criterion": "evaluates the area requirement",
+      "criterion_action": "evaluated the area requirement"
+    }
+  },
+  "scenarios": {
+    "1a": {
+      "sample_rate": 0.1,
+      "then": "move_on"
+    },
+    "1b": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    },
+    "1c": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    },
+    "2a": {
+      "sample_rate": 0.1,
+      "then": "move_on"
+    },
+    "2b": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    },
+    "2c": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    },
+    "3a": {
+      "sample_rate": 0.5,
+      "then": "move_on"
+    },
+    "3b": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    },
+    "3c": {
+      "sample_rate": 1.0,
+      "then": "try_again"
+    }
+  },
+  "mermaid_nodes": {
+    "PA": [
+      "a",
+      "probe"
+    ],
+    "SA": [
+      "a",
+      "sufficient"
+    ],
+    "IA": [
+      "a",
+      "insufficient"
+    ],
+    "PB": [
+      "b",
+      "probe"
+    ],
+    "SB": [
+      "b",
+      "sufficient"
+    ],
+    "IB": [
+      "b",
+      "insufficient"
+    ],
+    "C": [
+      "c",
+      "insufficient_2nd"
+    ]
+  },
+  "templates": {
+    "1a": {
+      "probe": {
+        "speaker": "professor",
+        "template": "What about step [selected step] makes you think this is where the student [criterion]?",
+        "placeholders": [
+          "selected step",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "What about step 2 makes you think this is where the student computes the derivative?",
+          "critical-value": "What about step 3 makes you think this is where the student finds the critical value?",
+          "dimensions-area": "What about step 5 makes you think this is where the student computes the dimensions and area?",
+          "maximum-justification": "What about step 4 makes you think this is where the student justifies the maximum?",
+          "requirement-check": "What about step 6 makes you think this is where the student evaluates the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "professor",
+        "template": "Exactly. [Evidence from the student's work] demonstrates that [criterion] is met.",
+        "placeholders": [
+          "Evidence from the student's work",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "Exactly. Step 2 correctly applies the power rule to both terms, demonstrating that the derivative is computed.",
+          "critical-value": "Exactly. Step 3 sets the derivative equal to zero and solves for x, demonstrating where the critical value is found.",
+          "dimensions-area": "Exactly. Step 5 calculates the remaining dimension and multiplies the dimensions, demonstrating how the dimensions and area are computed.",
+          "maximum-justification": "Exactly. Step 4 explains that the area function is a downward-opening parabola, demonstrating that the critical point is a maximum.",
+          "requirement-check": "Exactly. Step 6 compares the maximum possible area with the required area, demonstrating whether the area requirement can be met."
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "Your placement is correct. [If the TA expressed a specific misconception, address it.] Step [Y] demonstrates [criterion] because [correct mathematical reasoning].",
+        "placeholders": [
+          "If the TA expressed a specific misconception, address it.",
+          "Y",
+          "criterion",
+          "correct mathematical reasoning"
+        ],
+        "examples": {
+          "derivative": "Your placement is correct. Step 2 computes the derivative by correctly applying the power rule to both terms.",
+          "critical-value": "Your placement is correct. Step 3 finds the critical value by setting the derivative equal to zero and solving for x.",
+          "dimensions-area": "Your placement is correct. Step 5 computes the dimensions and area by finding the remaining dimension and multiplying both dimensions.",
+          "maximum-justification": "Your placement is correct. Step 4 justifies the maximum by explaining that the area function opens downward, so its critical point is a maximum.",
+          "requirement-check": "Your placement is correct. Step 6 evaluates the area requirement by comparing the maximum possible area with the target and drawing a conclusion."
+        }
+      }
+    },
+    "1b": {
+      "probe": {
+        "speaker": "professor",
+        "template": "What about step [selected step] makes you think this is where the student [criterion]?",
+        "placeholders": [
+          "selected step",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "What about step 1 makes you think this is where the student computes the derivative?",
+          "critical-value": "What about step 2 makes you think this is where the student finds the critical value?",
+          "dimensions-area": "What about step 3 makes you think this is where the student computes the dimensions and area?",
+          "maximum-justification": "What about step 3 makes you think this is where the student justifies the maximum?",
+          "requirement-check": "What about step 5 makes you think this is where the student evaluates the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "professor",
+        "template": "Exactly, you've recognized why your original placement was incorrect. Step [X] [what step X does], while step [Y] [what step Y does], which is where [criterion] is demonstrated. Go ahead and move it.",
+        "placeholders": [
+          "X",
+          "what step X does",
+          "Y",
+          "what step Y does",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "Exactly, you've recognized why your original placement was incorrect. Step 1 states the original area function, while step 2 applies the power rule to compute the derivative. Go ahead and move it.",
+          "critical-value": "Exactly, you've recognized why your original placement was incorrect. Step 2 computes the derivative, while step 3 sets it equal to zero and solves for x to find the critical value. Go ahead and move it.",
+          "dimensions-area": "Exactly, you've recognized why your original placement was incorrect. Step 3 finds the critical value, while step 5 calculates the remaining dimension and the area. Go ahead and move it.",
+          "maximum-justification": "Exactly, you've recognized why your original placement was incorrect. Step 3 identifies the critical point, while step 4 shows that the downward-opening parabola makes it a maximum. Go ahead and move it.",
+          "requirement-check": "Exactly, you've recognized why your original placement was incorrect. Step 5 calculates the area, while step 6 compares it with the company's requirement and draws a conclusion. Go ahead and move it."
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "[If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.] Step [X] [what the step actually does]. Finding where [criterion] is demonstrated requires [key mathematical concept or action]. Try again.",
+        "placeholders": [
+          "If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.",
+          "X",
+          "what the step actually does",
+          "criterion",
+          "key mathematical concept or action"
+        ],
+        "examples": {
+          "derivative": "Step 1 states the original area function. Computing the derivative requires applying the differentiation rules to the area function. Try again.",
+          "critical-value": "Step 2 computes the derivative. Finding the critical value requires setting the derivative equal to zero and solving for x. Try again.",
+          "dimensions-area": "Step 3 finds the critical value. Computing the dimensions and area requires using that value to determine the remaining dimension and multiplying the dimensions to calculate the area. Try again.",
+          "maximum-justification": "Step 3 identifies the critical point. Justifying a maximum requires evidence that the critical point produces the greatest area, such as showing that the area function is a downward-opening parabola. Try again.",
+          "requirement-check": "Step 5 calculates the maximum area. Evaluating the area requirement requires comparing that maximum area with the target and determining whether the requirement can be met. Try again."
+        }
+      }
+    },
+    "1c": {
+      "insufficient_2nd": {
+        "speaker": "professor",
+        "template": "Step [X] [what the step actually does]. The correct placement is step [Y] because [what step Y does].",
+        "placeholders": [
+          "X",
+          "what the step actually does",
+          "Y",
+          "what step Y does"
+        ],
+        "examples": {
+          "derivative": "Step 1 states the original area function. The correct placement is step 2 because it applies the power rule to compute the derivative.",
+          "critical-value": "Step 2 only computes the derivative. The correct placement is step 3 because it sets the derivative equal to zero and solves for the critical value.",
+          "dimensions-area": "Step 3 finds the critical value. The correct placement is step 5 because it determines the remaining dimension and multiplies the dimensions to calculate the area.",
+          "maximum-justification": "Step 3 only identifies the critical point. The correct placement is step 4 because it explains why the downward-opening parabola makes that point a maximum.",
+          "requirement-check": "Step 5 calculates the area. The correct placement is step 6 because it compares the maximum possible area with the required area and determines whether the requirement can be met."
+        }
+      }
+    },
+    "2a": {
+      "probe": {
+        "speaker": "professor",
+        "template": "What in the student's step [Y] shows it correctly [criterion]?",
+        "placeholders": [
+          "Y",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "What in the student's step 2 shows it correctly computes the derivative?",
+          "critical-value": "What in the student's step 3 shows it correctly finds the critical value?",
+          "dimensions-area": "What in the student's step 5 shows it correctly computes the dimensions and area?",
+          "maximum-justification": "What in the student's step 4 shows it adequately justifies the maximum?",
+          "requirement-check": "What in the student's step 6 shows it correctly evaluates the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "professor",
+        "template": "Exactly. [Evidence from the student's work] demonstrates that [criterion] is met.",
+        "placeholders": [
+          "Evidence from the student's work",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "Exactly. The student correctly applies the power rule to both terms, demonstrating that the derivative was computed correctly.",
+          "critical-value": "Exactly. The student sets the derivative equal to zero and solves correctly, demonstrating that the critical value is found.",
+          "dimensions-area": "Exactly. The student correctly calculates the remaining dimension and multiplies the two dimensions, demonstrating that the area is computed correctly.",
+          "maximum-justification": "Exactly. The student explains that the parabola opens downward, demonstrating that the critical point is a maximum.",
+          "requirement-check": "Exactly. The student compares the maximum area with the required area and correctly concludes that the available fencing cannot meet the requirement."
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "You're right that this step meets the criterion. [If the TA expressed a specific misconception, address it.] The step meets the criterion because [correct mathematical reasoning].",
+        "placeholders": [
+          "If the TA expressed a specific misconception, address it.",
+          "correct mathematical reasoning"
+        ],
+        "examples": {
+          "derivative": "You're right that this step meets the criterion. Step 2 correctly applies the power rule to both terms to compute the derivative.",
+          "critical-value": "You're right that this step meets the criterion. Step 3 correctly sets the derivative equal to zero and solves for the critical value.",
+          "dimensions-area": "You're right that this step meets the criterion. Step 5 correctly determines the remaining dimension and multiplies both dimensions to calculate the area.",
+          "maximum-justification": "You're right that this step meets the criterion. Step 4 explains that the area function opens downward, which establishes that the critical point is a maximum.",
+          "requirement-check": "You're right that this step meets the criterion. Step 6 compares the maximum possible area with the required area and correctly concludes that the requirement cannot be met."
+        }
+      }
+    },
+    "2b": {
+      "probe": {
+        "speaker": "professor",
+        "template": "What in the student's step [Y] shows it correctly [criterion]?",
+        "placeholders": [
+          "Y",
+          "criterion"
+        ],
+        "examples": {
+          "derivative": "What in the student's step 2 shows it correctly computes the derivative?",
+          "critical-value": "What in the student's step 3 shows it correctly finds the critical value?",
+          "dimensions-area": "What in the student's step 5 shows it correctly computes the dimensions and area?",
+          "maximum-justification": "What in the student's step 4 shows it adequately justifies the maximum?",
+          "requirement-check": "What in the student's step 6 shows it correctly evaluates the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "professor",
+        "template": "Right, you've recognized why your original 'pass' decision was incorrect. Step [Y] [what the work actually shows], but [criterion] requires [missing mathematical evidence or correct procedure]. Go ahead and change your mark to 'fail'.",
+        "placeholders": [
+          "Y",
+          "what the work actually shows",
+          "criterion",
+          "missing mathematical evidence or correct procedure"
+        ],
+        "examples": {
+          "derivative": "Right, you've recognized why your original 'pass' decision was incorrect. Step 2 attempts to differentiate both terms, but the coefficient of the quadratic term was not multiplied by its exponent as the power rule requires. Go ahead and change your mark to 'fail'.",
+          "critical-value": "Right, you've recognized why your original 'pass' decision was incorrect. Step 3 attempts to solve for the critical value, but the proposed value doesn't make the derivative zero. The equation must be solved correctly. Go ahead and change your mark to 'fail'.",
+          "dimensions-area": "Right, you've recognized why your original 'pass' decision was incorrect. Step 5 calculates an area, but uses an incorrect relationship to find the remaining dimension. The dimensions must be determined correctly before calculating the area. Go ahead and change your mark to 'fail'.",
+          "maximum-justification": "Right, you've recognized why your original 'pass' decision was incorrect. Step 4 only shows that the derivative equals zero, but justifying a maximum requires additional mathematical evidence. Go ahead and change your mark to 'fail'.",
+          "requirement-check": "Right, you've recognized why your original 'pass' decision was incorrect. Step 6 compares the maximum area with the target, but incorrectly concludes that the requirement can be met even though the maximum falls short. The comparison must be interpreted correctly. Go ahead and change your mark to 'fail'."
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "[If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.] Step [Y] does not meet [criterion] because [what is mathematically missing or incorrect]. [Explain the criterion requirement without revealing the full correction]. Try again.",
+        "placeholders": [
+          "If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.",
+          "Y",
+          "criterion",
+          "what is mathematically missing or incorrect",
+          "Explain the criterion requirement without revealing the full correction"
+        ],
+        "examples": {
+          "derivative": "Step 2 does not correctly compute the derivative because the student failed to multiply the coefficient of the quadratic term by its exponent. The power rule must be applied correctly to each term. Try again.",
+          "critical-value": "Step 3 does not correctly find the critical value because the proposed value does not make the derivative zero. Finding the critical value requires solving the derivative equation correctly. Try again.",
+          "dimensions-area": "Step 5 does not correctly compute the dimensions and area because the student uses the wrong relationship to determine the remaining dimension. The correct dimensional relationship must be used before calculating the area. Try again.",
+          "maximum-justification": "Step 4 does not adequately justify the maximum because it only shows that the derivative is zero. A critical point is not necessarily a maximum; additional mathematical evidence is required. Try again.",
+          "requirement-check": "Step 6 does not correctly evaluate the area requirement because the maximum area is below the target, yet the student concludes that the requirement is met. Evaluating the requirement means comparing the maximum area with the target and drawing the correct conclusion. Try again."
+        }
+      }
+    },
+    "2c": {
+      "insufficient_2nd": {
+        "speaker": "professor",
+        "template": "This step should be marked 'fail' because [criterion] requires [requirement], but step [Y] [what the work incorrectly does or fails to demonstrate].",
+        "placeholders": [
+          "criterion",
+          "requirement",
+          "Y",
+          "what the work incorrectly does or fails to demonstrate"
+        ],
+        "examples": {
+          "derivative": "This step should be marked 'fail' because computing the derivative requires correctly applying the power rule, but step 2 does not multiply the coefficient of the quadratic term by its exponent.",
+          "critical-value": "This step should be marked 'fail' because finding the critical value requires correctly solving where the derivative equals zero, but the student's value in step 3 does not satisfy that equation.",
+          "dimensions-area": "This step should be marked 'fail' because computing the dimensions and area requires correctly determining both dimensions, but step 5 uses the wrong relationship and produces an incorrect area.",
+          "maximum-justification": "This step should be marked 'fail' because justifying a maximum requires mathematical evidence, such as showing that the parabola opens downward, but step 4 only shows that the derivative equals zero.",
+          "requirement-check": "This step should be marked 'fail' because evaluating the area requirement requires correctly interpreting the comparison, but step 6 concludes that the target can be met even though the maximum area falls short"
+        }
+      }
+    },
+    "3a": {
+      "probe": {
+        "speaker": "student",
+        "template": "Where did I go wrong when I [criterion action]?",
+        "placeholders": [
+          "criterion action"
+        ],
+        "examples": {
+          "derivative": "Where did I go wrong when I computed the derivative?",
+          "critical-value": "Where did I go wrong when I found the critical value?",
+          "dimensions-area": "Where did I go wrong when I calculated the dimensions and area?",
+          "maximum-justification": "Where did I go wrong when I justified the maximum?",
+          "requirement-check": "Where did I go wrong when I evaluated the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "student",
+        "template": "Oh, I see — I [specific mathematical error]. I should have [correct mathematical action or reasoning].",
+        "placeholders": [
+          "specific mathematical error",
+          "correct mathematical action or reasoning"
+        ],
+        "examples": {
+          "derivative": "Oh, I see — I forgot to multiply the coefficient by the exponent when differentiating the quadratic term. I should have applied the power rule correctly.",
+          "critical-value": "Oh, I see — I made an algebraic error when solving for the critical value. I should have solved the equation correctly and checked that the value makes the derivative zero.",
+          "dimensions-area": "Oh, I see — I subtracted the critical value only once instead of twice when calculating the remaining dimension. I should have used the correct relationship between the dimensions before calculating the area.",
+          "maximum-justification": "Oh, I see — I assumed that a zero derivative automatically means the critical point is a maximum. I should have explained that the area function is a downward-opening parabola.",
+          "requirement-check": "Oh, I see — I concluded that the requirement could be met even though the maximum area was smaller than the target. I should have concluded that the available fencing was insufficient."
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "Your 'fail' decision is correct. [If the TA expressed a specific misconception, address it.] Alex's step [Y] fails to meet [criterion] because [actual mathematical error or missing justification].",
+        "placeholders": [
+          "If the TA expressed a specific misconception, address it.",
+          "Y",
+          "criterion",
+          "actual mathematical error or missing justification"
+        ],
+        "examples": {
+          "derivative": "Your 'fail' decision is correct. Alex's step 2 does not compute the derivative correctly because he failed to multiply the coefficient of the quadratic term by its exponent.",
+          "critical-value": "Your 'fail' decision is correct. Alex's step 3 does not correctly find the critical value because his algebraic error produces a value that does not make the derivative zero.",
+          "dimensions-area": "Your 'fail' decision is correct. Alex's step 5 uses an incorrect relationship to calculate the remaining dimension, so the resulting area is incorrect.",
+          "maximum-justification": "Your 'fail' decision is correct. Alex's step 4 only identifies a critical point without establishing that it is a maximum. He needs additional mathematical justification.",
+          "requirement-check": "Your 'fail' decision is correct. Alex's step 6 incorrectly concludes that the area requirement can be met even though the maximum possible area falls short of the target."
+        }
+      }
+    },
+    "3b": {
+      "probe": {
+        "speaker": "student",
+        "template": "Where did I go wrong when I [criterion action]?",
+        "placeholders": [
+          "criterion action"
+        ],
+        "examples": {
+          "derivative": "Where did I go wrong when I computed the derivative?",
+          "critical-value": "Where did I go wrong when I found the critical value?",
+          "dimensions-area": "Where did I go wrong when I calculated the dimensions and area?",
+          "maximum-justification": "Where did I go wrong when I justified the maximum?",
+          "requirement-check": "Where did I go wrong when I evaluated the area requirement?"
+        }
+      },
+      "sufficient": {
+        "speaker": "student",
+        "template": "Oh, I see! You've recognized that my step [Y] was correct after all. [What the work does correctly] meets [criterion] because [mathematical reasoning]. Can you change my mark to 'pass'?",
+        "placeholders": [
+          "Y",
+          "What the work does correctly",
+          "criterion",
+          "mathematical reasoning"
+        ],
+        "examples": {
+          "derivative": "Oh, I see! You've recognized that my step 2 was correct after all. Applying the power rule correctly to both terms meets the criterion for computing the derivative. Can you change my mark to 'pass'?",
+          "critical-value": "Oh, I see! You've recognized that my step 3 was correct after all. Setting the derivative equal to zero and solving it correctly meets the criterion for finding the critical value. Can you change my mark to 'pass'?",
+          "dimensions-area": "Oh, I see! You've recognized that my step 5 was correct after all. Determining the remaining dimension using the correct relationship and multiplying both dimensions meets the criterion. Can you change my mark to 'pass'?",
+          "maximum-justification": "Oh, I see! You've recognized that my step 4 was correct after all. Explaining that the area function is a downward-opening parabola establishes that the critical point is a maximum. Can you change my mark to 'pass'?",
+          "requirement-check": "Oh, I see! You've recognized that my step 6 was correct after all. Comparing the maximum possible area with the target and correctly concluding that the requirement cannot be met satisfies the criterion. Can you change my mark to 'pass'?"
+        }
+      },
+      "insufficient": {
+        "speaker": "professor",
+        "template": "[If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.] Alex's step [Y] meets [criterion] because [correct mathematical evidence]. Try again.",
+        "placeholders": [
+          "If the TA expressed an identifiable misconception or incomplete reasoning, address it based on their actual response.",
+          "Y",
+          "criterion",
+          "correct mathematical evidence"
+        ],
+        "examples": {
+          "derivative": "Alex's step 2 correctly applies the power rule to both terms, which meets the criterion for computing the derivative. Try again.",
+          "critical-value": "Alex's step 3 correctly sets the derivative equal to zero and solves for the critical value, which meets the criterion. Try again.",
+          "dimensions-area": "Alex's step 5 correctly determines the remaining dimension and multiplies both dimensions to find the area, which meets the criterion. Try again.",
+          "maximum-justification": "Alex's step 4 explains that the area function opens downward, which provides sufficient justification that its critical point is a maximum. Try again.",
+          "requirement-check": "Alex's step 6 correctly compares the maximum possible area with the required area and concludes that the available fencing cannot meet the target, which satisfies the criterion. Try again."
+        }
+      }
+    },
+    "3c": {
+      "insufficient_2nd": {
+        "speaker": "professor",
+        "template": "This step should be marked 'pass' because [criterion] requires [requirement], and Alex's step [Y] [what the step does correctly].",
+        "placeholders": [
+          "criterion",
+          "requirement",
+          "Y",
+          "what the step does correctly"
+        ],
+        "examples": {
+          "derivative": "This step should be marked 'pass' because computing the derivative requires correctly applying the power rule, and Alex's step 2 applies it correctly to both terms.",
+          "critical-value": "This step should be marked 'pass' because finding the critical value requires solving where the derivative equals zero, and Alex's step 3 does that correctly.",
+          "dimensions-area": "This step should be marked 'pass' because computing the dimensions and area requires correctly determining the dimensions and multiplying them, and Alex's step 5 does both.",
+          "maximum-justification": "This step should be marked 'pass' because justifying the maximum requires mathematical evidence, and Alex's step 4 provides it by explaining that the area function opens downward.",
+          "requirement-check": "This step should be marked 'pass' because evaluating the area requirement requires comparing the maximum possible area with the target and interpreting the result, and Alex's step 6 does both correctly"
+        }
+      }
+    }
+  }
+}
