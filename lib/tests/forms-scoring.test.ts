@@ -5,7 +5,9 @@ import { scoreTest } from "./score";
 import { collectSubmissions, type LogDoc } from "./report";
 import { buildAiCheck } from "./ai-check";
 import { seededShuffle } from "./forms";
-import { filterCohort, isCohort } from "./cohort";
+import { dropTestRuns, filterCohort, isCohort } from "./cohort";
+import { buildScreeningOutcomes } from "./screening-outcomes";
+import { SKILL_CHECK_ANSWERS } from "@/lib/surveys/eligibility";
 
 const ids = (t: ReturnType<typeof getFormTest>) =>
   t.sections.flatMap((s) => s.items.map((i) => i.id));
@@ -126,6 +128,40 @@ test("the full-pilot cohort keeps every event of A/B participants and nobody els
   ]);
   assert.ok(isCohort("full-pilot"));
   assert.ok(!isCohort("everyone"));
+});
+
+test("Claude's test runs are dropped; real participants are kept", () => {
+  const ev = (subject_id: string) =>
+    ({ event: "form_assigned", subject_id, scenario_id: "screening", timestamp: "t", data: {} }) as LogDoc;
+  const kept = dropTestRuns([ev("claude-test-1"), ev("Claude-Test-2"), ev("5f1a2b3c4d5e6f7a8b9c0d1e")]);
+  assert.deepEqual(kept.map((d) => d.subject_id), ["5f1a2b3c4d5e6f7a8b9c0d1e"]);
+});
+
+test("screening outcomes: who was screened out and why, plus non-finishers", () => {
+  const ev = (subject_id: string, event: string, data: Record<string, unknown>, ts: string) =>
+    ({ event, subject_id, scenario_id: "screening", timestamp: ts, data }) as LogDoc;
+  const ok = { "highest-math": "Calculus I", "calculus-courses": "1", algebra_check: SKILL_CHECK_ANSWERS.algebra_check, power_rule_check: SKILL_CHECK_ANSWERS.power_rule_check, q1a: "x = 20" };
+  const s = buildScreeningOutcomes([
+    ev("E", "screening_completed", { answers: ok, eligible: true, failed_items: [], reasons: [] }, "2026-11-23T10:00:00Z"),
+    ev("E", "consent_given", {}, "2026-11-23T10:01:00Z"),
+    ev("H", "screening_completed", { answers: { ...ok, "highest-math": "Calculus II" }, eligible: false, failed_items: ["highest-math"], reasons: ["Calculus II"] }, "2026-11-23T10:02:00Z"),
+    ev("L", "screening_completed", { answers: { ...ok, algebra_check: "wrong" }, eligible: false, failed_items: ["algebra_check", "q1a"], reasons: ["algebra_check: incorrect", "q1a: 300 characters pasted in (possible AI use)"] }, "2026-11-23T10:03:00Z"),
+    ev("L", "screening_completed", { answers: ok, eligible: true, failed_items: [], reasons: [] }, "2026-11-23T10:04:00Z"),
+    ev("N", "form_assigned", { pretest_form: "A" }, "2026-11-23T10:05:00Z"),
+  ]);
+  assert.deepEqual(
+    [s.started, s.finished, s.eligible, s.screenedOut, s.notFinished],
+    [4, 3, 2, 1, 1]
+  );
+  const by = Object.fromEntries(s.people.map((p) => [p.subjectId, p]));
+  assert.equal(by.E.furthest, "Consented");
+  assert.deepEqual(by.H.groups, ["high"]);
+  assert.equal(s.byReason.find((r) => r.item === "highest-math")!.n, 1);
+  // L retried and passed: the latest attempt decides, and the retry is visible.
+  assert.equal(by.L.outcome, "eligible");
+  assert.equal(by.L.attempts, 2);
+  assert.equal(by.N.outcome, "not-finished");
+  assert.equal(by.N.pretestForm, "A");
 });
 
 test("the Q1 shuffle is a stable permutation per participant", () => {

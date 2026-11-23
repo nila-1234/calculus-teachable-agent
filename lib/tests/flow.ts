@@ -9,6 +9,7 @@ import {
 } from "@/lib/surveys/types";
 import { getLesson } from "@/lib/lessons/definitions";
 import { buildAiCheck, type AiCheck } from "./ai-check";
+import { buildScreeningOutcomes, type ScreeningOutcomes } from "./screening-outcomes";
 import { getScenario } from "@/lib/scenarios/registry";
 import type { LessonQuestion } from "@/lib/lessons/types";
 import {
@@ -231,8 +232,10 @@ export type FlowSummary = {
   postSurvey: SurveyItemSummary[];
   instruction: InstructionSummary;
   participants: ParticipantDetail[];
-  /** Keystroke-tracker AI-use check over the completers' text answers. */
+  /** Keystroke-tracker AI-use check over EVERY participant's text answers. */
   aiCheck: AiCheck;
+  /** Everyone who opened screening: eligible / screened out (and why) / not finished. */
+  screeningOutcomes: ScreeningOutcomes;
   /** How many completers took Version A / B as their pre-test. */
   forms: { A: number; B: number; unknown: number };
 };
@@ -1875,7 +1878,8 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
   }
 
   return {
-    aiCheck: buildAiCheck(completerLists.flat()),
+    aiCheck: buildAiCheck(docs),
+    screeningOutcomes: buildScreeningOutcomes(docs),
     forms,
     totalParticipants: subjects.length,
     completers: completerLists.length,

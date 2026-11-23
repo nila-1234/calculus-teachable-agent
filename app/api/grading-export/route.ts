@@ -19,7 +19,7 @@ import {
   buildSubjectSheet,
 } from "@/lib/tests/export";
 import { rehydrateLog } from "@/lib/log-rehydrate";
-import { filterCohort, isCohort } from "@/lib/tests/cohort";
+import { dropTestRuns, filterCohort, isCohort } from "@/lib/tests/cohort";
 
 /**
  * Instructor-only grading export.
@@ -55,7 +55,10 @@ export async function GET(req: NextRequest) {
     query = query.orderBy("timestamp", "asc");
 
     const snapshot = await query.get();
-    const all = snapshot.docs.map((doc) => rehydrateLog(doc.data()) as LogDoc);
+    // Claude's test runs (pid claude-test-…) are fake data: never in the results.
+    const all = dropTestRuns(
+      snapshot.docs.map((doc) => rehydrateLog(doc.data()) as LogDoc)
+    );
     // ?cohort=full-pilot: only participants on the counterbalanced A/B design.
     const cohort = req.nextUrl.searchParams.get("cohort");
     const docs = isCohort(cohort) ? filterCohort(all, cohort) : all;

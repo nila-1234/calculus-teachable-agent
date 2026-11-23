@@ -12,6 +12,10 @@ import {
 } from "@/lib/tests/insights";
 import type { AiCheck } from "@/lib/tests/ai-check";
 import type {
+  ScreeningOutcomes,
+  ScreeningPerson,
+} from "@/lib/tests/screening-outcomes";
+import type {
   ConvTurn,
   FlowSummary,
   SurveyItemSummary,
@@ -1169,6 +1173,151 @@ function AiCheckSection({ check }: { check: AiCheck }) {
   );
 }
 
+const OUTCOME_STYLE: Record<ScreeningPerson["outcome"], [string, string]> = {
+  eligible: ["eligible", "bg-lime-100 text-lime-800"],
+  "screened-out": ["screened out", "bg-red-100 text-red-800"],
+  "not-finished": ["did not finish", "bg-stone-100 text-stone-600"],
+};
+
+const yesNo = (v: boolean | null) => (v == null ? "—" : v ? "✓" : "✗");
+
+/** Everyone who opened screening, with why each screened-out person was turned away. */
+function ScreeningSection({ s }: { s: ScreeningOutcomes }) {
+  const downloadCsv = () => {
+    const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const header = [
+      "subject_id", "at", "outcome", "attempts", "groups", "failed_items", "reasons",
+      "highest_math", "calculus_courses", "algebra_correct", "power_rule_correct",
+      "q5_chars", "q5_pasted_chars", "pretest_form", "furthest_step", "q5_text",
+    ];
+    const lines = [header.map(q).join(",")];
+    for (const p of s.people) {
+      lines.push(
+        [
+          p.subjectId, p.at, p.outcome, p.attempts, p.groups.join("|"),
+          p.failedItems.join("|"), p.reasons.join(" | "), p.highestMath,
+          p.calculusCourses, p.algebraCorrect ?? "", p.powerRuleCorrect ?? "",
+          p.q5Chars, p.q5PastedChars, p.pretestForm ?? "", p.furthest, p.q5Text,
+        ].map(q).join(",")
+      );
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "screening_outcomes.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <>
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold text-stone-800">Screening outcomes</h2>
+        {s.people.length > 0 && (
+          <button
+            type="button"
+            onClick={downloadCsv}
+            className="rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 hover:border-lime-600"
+          >
+            Download screening_outcomes.csv
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-sm leading-6 text-stone-500">
+        Everyone who opened screening — not just completers. Reasons are as
+        decided at the time of screening.
+      </p>
+      <p className="mt-3 text-sm text-stone-700">
+        <span className="font-semibold">{s.started}</span> opened ·{" "}
+        <span className="font-semibold">{s.finished}</span> finished ·{" "}
+        <span className="font-semibold text-lime-700">{s.eligible}</span> eligible ·{" "}
+        <span className="font-semibold text-red-700">{s.screenedOut}</span> screened
+        out · {s.notFinished} did not finish
+      </p>
+
+      {s.screenedOut > 0 && (
+        <table className="mt-3 w-full border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-xs text-stone-400">
+              <th className="py-1 pr-3 font-semibold">Why screened out</th>
+              <th className="py-1 pr-3 font-semibold">Group</th>
+              <th className="py-1 font-semibold">People</th>
+            </tr>
+          </thead>
+          <tbody>
+            {s.byReason.map((r) => (
+              <tr key={r.item} className="border-t border-stone-100">
+                <td className="py-1 pr-3 text-stone-700">{r.label}</td>
+                <td className="py-1 pr-3 text-stone-500">
+                  {s.byGroup.find((g) => g.group === r.group)?.label}
+                </td>
+                <td className="py-1 font-semibold text-stone-800">{r.n}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {s.screenedOut > 0 && (
+        <p className="mt-1 text-xs text-stone-400">
+          By group: {s.byGroup.map((g) => `${g.label} ${g.n}`).join(" · ")}. One
+          person can fail several checks, so these can add up to more than{" "}
+          {s.screenedOut}.
+        </p>
+      )}
+
+      {s.people.length > 0 && (
+        <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+          <table className="w-full border-collapse text-left text-xs">
+            <thead className="bg-stone-50 text-stone-500">
+              <tr>
+                {["participant", "outcome", "why", "highest math", "calc courses", "algebra", "power rule", "Q5 chars (pasted)", "version", "furthest step"].map((h) => (
+                  <th key={h} className="border-b border-stone-200 px-2 py-2 font-semibold">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {s.people.map((p) => {
+                const [label, style] = OUTCOME_STYLE[p.outcome];
+                return (
+                  <tr key={p.subjectId} className="border-b border-stone-100 align-top last:border-b-0">
+                    <td className="px-2 py-1.5 font-mono text-stone-700">
+                      {p.subjectId}
+                      {p.attempts > 1 && (
+                        <span className="ml-1 font-sans font-semibold text-amber-700">
+                          ×{p.attempts} tries
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span className={`rounded-full px-2 py-0.5 font-bold ${style}`}>{label}</span>
+                    </td>
+                    <td className="px-2 py-1.5 text-stone-700">
+                      {p.reasons.length ? p.reasons.join("; ") : "—"}
+                    </td>
+                    <td className="px-2 py-1.5 text-stone-600">{p.highestMath || "—"}</td>
+                    <td className="px-2 py-1.5 text-stone-600">{p.calculusCourses || "—"}</td>
+                    <td className="px-2 py-1.5 text-stone-600">{yesNo(p.algebraCorrect)}</td>
+                    <td className="px-2 py-1.5 text-stone-600">{yesNo(p.powerRuleCorrect)}</td>
+                    <td className="px-2 py-1.5 text-stone-600">
+                      {p.q5Chars}
+                      {p.q5PastedChars ? ` (${p.q5PastedChars})` : ""}
+                    </td>
+                    <td className="px-2 py-1.5 text-stone-600">{p.pretestForm ?? "—"}</td>
+                    <td className="px-2 py-1.5 text-stone-600">{p.furthest}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 export type StudyResultsProps = {
   title: string;
   intro: string;
@@ -1966,6 +2115,11 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
                 }
                 onClose={() => setOpenItem(null)}
               />
+            )}
+
+            {/* Screened-out people have no arm, so this is always over everyone. */}
+            {summary.flow?.screeningOutcomes && (
+              <ScreeningSection s={summary.flow.screeningOutcomes} />
             )}
 
             {view.flow?.aiCheck && <AiCheckSection check={view.flow.aiCheck} />}
