@@ -5,6 +5,7 @@ import { scoreTest } from "./score";
 import { collectSubmissions, type LogDoc } from "./report";
 import { buildAiCheck } from "./ai-check";
 import { seededShuffle } from "./forms";
+import { filterCohort, isCohort } from "./cohort";
 
 const ids = (t: ReturnType<typeof getFormTest>) =>
   t.sections.flatMap((s) => s.items.map((i) => i.id));
@@ -105,6 +106,26 @@ test("AI-use check flags, following the keystroke-tracker rules", () => {
   assert.equal(check.people[0].nWithPastes, 1);
   assert.equal(check.people[0].nTooShort, 1);
   assert.equal(check.people[0].flagged, true);
+});
+
+test("the full-pilot cohort keeps every event of A/B participants and nobody else", () => {
+  const ev = (subject_id: string, event: string) =>
+    ({ event, subject_id, scenario_id: "x", timestamp: "2026-11-23T10:00:00Z", data: {} }) as LogDoc;
+  const docs = [
+    ev("OLD", "screening_completed"),
+    ev("OLD", "test_completed"),
+    ev("NEW", "step_entered"),
+    ev("NEW", "form_assigned"),
+    ev("NEW", "test_completed"),
+  ];
+  const kept = filterCohort(docs, "full-pilot");
+  assert.deepEqual(kept.map((d) => `${d.subject_id}:${d.event}`), [
+    "NEW:step_entered",
+    "NEW:form_assigned",
+    "NEW:test_completed",
+  ]);
+  assert.ok(isCohort("full-pilot"));
+  assert.ok(!isCohort("everyone"));
 });
 
 test("the Q1 shuffle is a stable permutation per participant", () => {
