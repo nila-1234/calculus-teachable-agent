@@ -1,8 +1,16 @@
 export type TestItemKind =
   | "free-response"
+  /** A short answer (a number or an expression), typed with the math keypad. */
+  | "short-answer"
   | "multiple-choice"
   | "matching"
   | "link";
+
+/**
+ * The two parallel test versions. Which one a participant takes as the
+ * pre-test is randomized (lib/tests/forms.ts); the post-test is the other.
+ */
+export type FormId = "A" | "B";
 
 export type TestChoice = {
   id: string;
@@ -50,12 +58,16 @@ export type TestSection = {
   table?: TestTable;
   tableNote?: string;
   items: TestItem[];
+  /** Show this section's items in a per-participant random order. */
+  shuffle?: boolean;
 };
 
 export type TestId = "pretest" | "posttest";
 
 export type TestDefinition = {
   id: TestId;
+  /** Which version's content this is (unset for the legacy fixed A/B tests). */
+  form?: FormId;
   title: string;
   intro: string[];
   goals: string[];

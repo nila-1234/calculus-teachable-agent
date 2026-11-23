@@ -60,7 +60,12 @@ export default function TestReviewPanel({ tests }: TestReviewPanelProps) {
       >
         {tests.map((test, index) => {
           const isActive = test.id === activeId;
-          const label = test.id === "pretest" ? "Pre-Test" : "Post-Test";
+          // Counterbalanced versions carry their own title ("Version A").
+          const label = test.form
+            ? test.title
+            : test.id === "pretest"
+              ? "Pre-Test"
+              : "Post-Test";
 
           return (
             <button

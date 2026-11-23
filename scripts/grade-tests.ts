@@ -65,7 +65,10 @@ async function main() {
   const results: GradedSubmission[] = [];
   for (const submission of submissions) {
     process.stdout.write(`Grading ${submission.subjectId} / ${submission.testId}... `);
-    const result = await gradeTest(submission.testId, submission.answers);
+    const result = await gradeTest(submission.testId, submission.answers, {
+      form: submission.form,
+      items: submission.items,
+    });
     results.push({ submission, result });
     console.log(
       result.complete

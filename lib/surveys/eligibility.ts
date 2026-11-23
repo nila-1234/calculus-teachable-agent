@@ -58,11 +58,11 @@ export const SKILL_CHECK_ANSWERS: Record<string, string> = {
  * ids; values are option ids, which are the option labels themselves.
  */
 /**
- * The written screening answer used as an AI-use check. Pasting is allowed in
- * screening (and blocked later, in the instruction), so someone who pastes an
- * answer — typically from an AI tool — shows it here and is screened out.
+ * The written screening answer used as an AI-use check: screening Q5, the Q1a
+ * of the participant's pre-test version (show your work). Someone who pastes a
+ * written answer in — typically from an AI tool — is screened out.
  */
-export const AI_CHECK_ITEM = "derivative-explain";
+export const AI_CHECK_ITEM = "q1a";
 
 /**
  * Pasted or dropped characters in that answer at or above which a participant

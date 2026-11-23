@@ -2,12 +2,16 @@ import AppHeader from "@/components/app-header";
 import SurveyReviewPanel from "@/components/instructor/survey-review-panel";
 import TestReviewPanel from "@/components/instructor/test-review-panel";
 import { listSurveys } from "@/lib/surveys/definitions";
-import { getTest } from "@/lib/tests/definitions";
+import { getFormTest } from "@/lib/tests/definitions";
 
 export default function InstructorTestsPage() {
-  const tests = [getTest("pretest"), getTest("posttest")].filter(
-    (test) => test !== null
-  );
+  // Both counterbalanced versions in full (Q1a — asked in screening — then
+  // Q1b–Q1f, Question 2, Question 3). Each participant takes one as the
+  // pre-test and the other as the post-test.
+  const tests = (["A", "B"] as const).map((form) => ({
+    ...getFormTest(form),
+    title: `Version ${form}`,
+  }));
   const surveys = listSurveys();
 
   return (

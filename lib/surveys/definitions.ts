@@ -104,17 +104,21 @@ const SCREENING_SURVEY: SurveyDefinition = {
           "For f(x) = x⁵ + 7, what is the derivative f′(x)?",
           POWER_RULE_OPTIONS
         ),
-        // AI-use check: pasting is allowed here, and pasting (or dropping) a
-        // written answer in screens the participant out — see
-        // lib/surveys/eligibility.ts. The answer itself is not graded.
+        // Q5: the Q1a of the participant's pre-test version (A or B, see
+        // lib/tests/forms.ts); the prompt is filled in when screening is shown.
+        // It is graded as their pre-test Q1a. It is also the AI-use check:
+        // pasting is allowed here, and pasting a written answer in screens the
+        // participant out (lib/surveys/eligibility.ts).
         {
           ...openItem(
             AI_CHECK_ITEM,
-            "In your own words, what does the derivative of a function tell you? (1–2 sentences) Please answer without using AI tools.",
+            "Q1a of the participant's pre-test version (filled in when shown).",
             true,
-            "Write your answer here…"
+            "Show your work here…"
           ),
           trackTyping: true,
+          mathInput: true,
+          pretestQ1a: true,
         },
       ],
     },

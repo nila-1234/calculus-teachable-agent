@@ -11,6 +11,10 @@ type TestQuestionPanelProps = {
   item: TestItem;
   answer: TestItemAnswer;
   onAnswerChange: (next: TestItemAnswer) => void;
+  /** Prefix for keystroke-tracking ids, e.g. "pretest" → "pretest:2.2". */
+  qidPrefix?: string;
+  /** Overrides the card's label (e.g. "Question 1 · Part 2 of 5" for shuffled parts). */
+  label?: string;
 };
 
 const TEXTAREA_CLASS =
@@ -21,7 +25,10 @@ export default function TestQuestionPanel({
   item,
   answer,
   onAnswerChange,
+  qidPrefix = "test",
+  label,
 }: TestQuestionPanelProps) {
+  const qid = (suffix = "") => `${qidPrefix}:${item.id}${suffix}`;
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
       {section.scenario && (
@@ -76,7 +83,7 @@ export default function TestQuestionPanel({
 
       <div className="rounded-xl border-2 border-stone-200 bg-white p-5 shadow-sm">
         <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
-          {section.items.length > 1 ? `Question ${item.id}` : section.title}
+          {label ?? (section.items.length > 1 ? `Question ${item.id}` : section.title)}
         </p>
 
         <MathDisplay
@@ -119,6 +126,7 @@ export default function TestQuestionPanel({
                       <input
                         type="text"
                         autoFocus
+                        data-qid={qid(":other")}
                         placeholder="Please specify…"
                         value={answer.otherText || ""}
                         onChange={(e) =>
@@ -139,6 +147,7 @@ export default function TestQuestionPanel({
                 {item.explanationPrompt}
               </p>
               <textarea
+                data-qid={qid(":explanation")}
                 placeholder={item.placeholder || "Explain your reasoning…"}
                 value={answer.explanation || ""}
                 onChange={(e) =>
@@ -199,8 +208,19 @@ export default function TestQuestionPanel({
             </div>
           )}
 
+          {item.kind === "short-answer" && (
+            <MathInputField
+              qid={qid()}
+              value={answer.text || ""}
+              onChange={(text) => onAnswerChange({ ...answer, text })}
+              placeholder={item.placeholder || "Your answer…"}
+              rows={3}
+            />
+          )}
+
           {item.kind === "free-response" && item.mathInput && (
             <MathInputField
+              qid={qid()}
               value={answer.text || ""}
               onChange={(text) => onAnswerChange({ ...answer, text })}
               placeholder={item.placeholder || "Type your answer…"}
@@ -209,6 +229,7 @@ export default function TestQuestionPanel({
 
           {item.kind === "free-response" && !item.mathInput && (
             <textarea
+              data-qid={qid()}
               placeholder={item.placeholder || "Type your answer…"}
               value={answer.text || ""}
               onChange={(e) => onAnswerChange({ ...answer, text: e.target.value })}

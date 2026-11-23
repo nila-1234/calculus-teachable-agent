@@ -51,10 +51,16 @@ function toLatex(line: string): string {
  * Whether to render a line as math. Prose would be mangled in math mode (KaTeX
  * collapses spaces), so a line is only rendered when it reads like an
  * expression — a math signal and at most one long word.
+ *
+ * Lines with LaTeX markup (a backslash or a $) are never rendered: that is what
+ * text pasted from an AI tool or another page looks like, and it must show as
+ * the plain text it is. Formatted math comes only from the keypad's readable
+ * tokens ("^2", "sqrt()", "/") — or typing them.
  */
 function looksLikeMath(line: string): boolean {
   const t = line.trim();
   if (!t) return false;
+  if (/[\\$]/.test(t)) return false;
   const hasSignal = /[=^]|sqrt\(|\/|\d\s*[-+*/]\s*\w/.test(t);
   const longWords = (t.match(/[A-Za-z]{4,}/g) || []).length;
   return hasSignal && longWords <= 1;
@@ -65,11 +71,17 @@ export default function MathInputField({
   onChange,
   placeholder,
   rows = 10,
+  qid,
+  textareaProps,
 }: {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
   rows?: number;
+  /** Identifies this answer for keystroke tracking (components/keystroke-tracker). */
+  qid?: string;
+  /** Extra handlers for the textarea (e.g. screening typing signals). */
+  textareaProps?: React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 }) {
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
@@ -78,6 +90,11 @@ export default function MathInputField({
     const start = el ? el.selectionStart : value.length;
     const end = el ? el.selectionEnd : value.length;
     const next = value.slice(0, start) + key.insert + value.slice(end);
+    // Keypad input has no keystrokes; announce it so keystroke tracking counts
+    // it as typed rather than flagging "more characters than keys pressed".
+    el?.dispatchEvent(
+      new CustomEvent("keypad-insert", { bubbles: true, detail: { text: key.insert } })
+    );
     onChange(next);
     // Put the cursor inside the inserted token (e.g. between sqrt( )).
     requestAnimationFrame(() => {
@@ -106,7 +123,9 @@ export default function MathInputField({
       </div>
 
       <textarea
+        {...textareaProps}
         ref={ref}
+        data-qid={qid}
         placeholder={placeholder || "Type your answer…"}
         value={value}
         onChange={(e) => onChange(e.target.value)}

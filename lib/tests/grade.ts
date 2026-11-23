@@ -1,9 +1,9 @@
 import { resolveGraderClient } from "./grading-model";
-import { getTest } from "./definitions";
+import { getFormTest, getTest } from "./definitions";
 import { itemKey } from "./answer-key";
 import { scoreTest, type ItemScore } from "./score";
 import { findItem, formatAnswer } from "./format";
-import type { TestAnswers, TestId } from "./types";
+import type { FormId, TestAnswers, TestId } from "./types";
 
 /**
  * Grading is instructor-side only.
@@ -97,17 +97,24 @@ function isVerdict(value: string): value is Verdict {
 
 export async function gradeTest(
   testId: TestId,
-  answers: TestAnswers
+  answers: TestAnswers,
+  /**
+   * The participant's version and the items they were given. Omitted for the
+   * pilot and for data from before counterbalancing, which use the original
+   * fixed tests.
+   */
+  options: { form?: FormId; items?: string[] } = {}
 ): Promise<GradeResult> {
-  const test = getTest(testId);
+  const { form } = options;
+  const test = form ? getFormTest(form) : getTest(testId);
   if (!test) throw new Error(`Unknown testId: ${testId}`);
 
   // Closed-form items are scored by lookup and never sent to the model.
-  const score = scoreTest(testId, answers);
+  const score = scoreTest(testId, answers, options);
   const openItems = score.items.filter((item) => item.kind === "open");
 
   const prompts = openItems.flatMap((scored) => {
-    const key = itemKey(testId, scored.itemId);
+    const key = itemKey(testId, scored.itemId, form);
     const found = findItem(test, scored.itemId);
     if (!key || key.kind !== "open" || !found) return [];
 
@@ -147,7 +154,7 @@ export async function gradeTest(
       const results = parseModelJson(raw);
 
       graded = openItems.flatMap((scored) => {
-        const key = itemKey(testId, scored.itemId);
+        const key = itemKey(testId, scored.itemId, form);
         if (!key || key.kind !== "open") return [];
 
         const result = results.find(

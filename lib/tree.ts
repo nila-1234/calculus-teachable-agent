@@ -1,8 +1,8 @@
 import { FieldValue, type Firestore } from "firebase-admin/firestore";
 import getFirestore from "@/lib/firestore";
-import { getTest } from "@/lib/tests/definitions";
+import { getFormTest, getTest } from "@/lib/tests/definitions";
 import { findItem, formatAnswer } from "@/lib/tests/format";
-import type { TestItemAnswer } from "@/lib/tests/types";
+import type { TestDefinition, TestItemAnswer } from "@/lib/tests/types";
 import { getSurvey } from "@/lib/surveys/definitions";
 import { getLesson } from "@/lib/lessons/definitions";
 import { parseMulti, type SurveyItem } from "@/lib/surveys/types";
@@ -133,9 +133,17 @@ type TreeItem = {
 /* ---------------------------------------------------------------- tests --- */
 
 /** Definition order across sections, so Q2.3 sorts after Q2.2 and before Q3.1. */
-function testOrder(testId: string): Map<string, number> {
+/**
+ * The test an item belongs to: the participant's version when the event
+ * records one (counterbalanced design), else the original fixed test.
+ */
+function testFor(testId: string, form?: unknown): TestDefinition | null {
+  return form === "A" || form === "B" ? getFormTest(form) : getTest(testId);
+}
+
+function testOrder(testId: string, form?: unknown): Map<string, number> {
   const order = new Map<string, number>();
-  const test = getTest(testId);
+  const test = testFor(testId, form);
   if (!test) return order;
 
   let index = 1;
@@ -148,15 +156,16 @@ function testOrder(testId: string): Map<string, number> {
 function testItemDoc(
   testId: string,
   itemId: string,
-  answer: unknown
+  answer: unknown,
+  form?: unknown
 ): TreeItem | null {
-  const test = getTest(testId);
+  const test = testFor(testId, form);
   if (!test) return null;
 
   const found = findItem(test, itemId);
   if (!found) return null;
 
-  const order = testOrder(testId).get(itemId) ?? 99;
+  const order = testOrder(testId, form).get(itemId) ?? 99;
 
   return {
     id: `${pad(order)}-Q${itemId}`,
@@ -378,14 +387,14 @@ export function opsFor(db: Firestore, entry: LogEntry): Op[] {
 
   if (event === "test_item_answered" && typeof scenarioId === "string") {
     const itemId = typeof data.item_id === "string" ? data.item_id : "";
-    const doc = itemId ? testItemDoc(scenarioId, itemId, data.answer) : null;
+    const doc = itemId ? testItemDoc(scenarioId, itemId, data.answer, data.form) : null;
     if (doc) items.push(doc);
   }
 
   if (event === "test_completed" && typeof scenarioId === "string") {
     const answers = (data.answers ?? {}) as Record<string, unknown>;
     for (const itemId of Object.keys(answers)) {
-      const doc = testItemDoc(scenarioId, itemId, answers[itemId]);
+      const doc = testItemDoc(scenarioId, itemId, answers[itemId], data.form);
       if (doc) items.push(doc);
     }
   }

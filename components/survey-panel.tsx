@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import OptionRow, { OptionRowState } from "@/components/option-row";
+import MathInputField from "@/components/math-input-field";
 import {
   parseMulti,
   parseTyping,
@@ -171,6 +172,7 @@ function SurveyItemCard({
   readOnly,
   typingRaw,
   onTyping,
+  surveyId,
 }: {
   item: SurveyItem;
   value: string;
@@ -178,7 +180,9 @@ function SurveyItemCard({
   readOnly: boolean;
   typingRaw?: string;
   onTyping?: (json: string) => void;
+  surveyId: string;
 }) {
+  const qid = `${surveyId}:${item.id}`;
   const typingHandlers = useTypingSignals(
     Boolean(item.trackTyping && item.kind === "open" && !readOnly),
     typingRaw,
@@ -200,7 +204,7 @@ function SurveyItemCard({
         )}
       </div>
 
-      <p className="text-base font-medium leading-7 text-stone-800">
+      <p className="whitespace-pre-line text-base font-medium leading-7 text-stone-800">
         {item.prompt}
       </p>
 
@@ -269,6 +273,7 @@ function SurveyItemCard({
         {item.kind === "text" && (
           <input
             type="text"
+            data-qid={qid}
             value={value}
             disabled={readOnly}
             placeholder={item.placeholder}
@@ -277,8 +282,20 @@ function SurveyItemCard({
           />
         )}
 
-        {item.kind === "open" && (
+        {item.kind === "open" && item.mathInput && !readOnly && (
+          <MathInputField
+            qid={qid}
+            value={value}
+            onChange={onChange}
+            placeholder={item.placeholder || "Show your work here…"}
+            rows={8}
+            textareaProps={typingHandlers}
+          />
+        )}
+
+        {item.kind === "open" && (!item.mathInput || readOnly) && (
           <textarea
+            data-qid={qid}
             value={value}
             disabled={readOnly}
             placeholder={item.placeholder || "Write your response…"}
@@ -317,6 +334,7 @@ export default function SurveyPanel({
                 value={answers[item.id] || ""}
                 onChange={(next) => onAnswerChange(item.id, next)}
                 readOnly={readOnly}
+                surveyId={survey.id}
                 typingRaw={
                   item.trackTyping ? answers[`${item.id}${TYPING_SUFFIX}`] : undefined
                 }

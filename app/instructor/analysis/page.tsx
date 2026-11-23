@@ -10,6 +10,7 @@ import {
   type ItemStat,
   type ItemResponse,
 } from "@/lib/tests/insights";
+import type { AiCheck } from "@/lib/tests/ai-check";
 import type {
   ConvTurn,
   FlowSummary,
@@ -815,10 +816,10 @@ function ItemDetailPanel({
         </button>
       </div>
 
-      {Object.entries(detail.prompts).map(([testId, prompt]) => (
-        <div key={testId} className="mt-4">
+      {Object.entries(detail.prompts).map(([version, prompt]) => (
+        <div key={version} className="mt-4">
           <p className="text-xs font-bold uppercase tracking-wider text-stone-400">
-            {testId === "pretest" ? "Pre-test" : "Post-test"} wording
+            {version} wording
           </p>
           <MathDisplay
             text={prompt ?? ""}
@@ -1033,6 +1034,140 @@ function SkillsBlock({
   );
 }
 
+/**
+ * Keystroke-tracker AI-use check (lib/tests/ai-check.ts): per-person counts and
+ * the flagged answers for manual review, plus possible_cheaters.csv.
+ */
+function AiCheckSection({ check }: { check: AiCheck }) {
+  const downloadCsv = () => {
+    const q = (x: unknown) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const counts = new Map(check.people.map((p) => [p.subjectId, p]));
+    const header = [
+      "subject_id", "qid", "step", "keypresses", "keypad_chars", "pastes", "copies",
+      "pasted_chars", "chars", "flag_more_than_one_paste", "flag_more_chars_than_keys",
+      "n_with_pastes", "n_too_short", "text",
+    ];
+    const lines = [header.map(q).join(",")];
+    for (const a of check.flagged) {
+      const p = counts.get(a.subjectId);
+      lines.push(
+        [
+          a.subjectId, a.qid, a.step, a.keypresses, a.keypadChars, a.pastes, a.copies,
+          a.pastedChars, a.chars, a.flagPaste, a.flagTooShort,
+          p?.nWithPastes ?? 0, p?.nTooShort ?? 0, a.text,
+        ].map(q).join(",")
+      );
+    }
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "possible_cheaters.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const flaggedPeople = check.people.filter((p) => p.flagged).length;
+  return (
+    <>
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold text-stone-800">
+          AI-use check (keystroke tracker)
+        </h2>
+        {check.flagged.length > 0 && (
+          <button
+            type="button"
+            onClick={downloadCsv}
+            className="rounded-xl border-2 border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-700 hover:border-lime-600"
+          >
+            Download possible_cheaters.csv
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-sm leading-6 text-stone-500">
+        Every text answer is logged with how it was entered. An answer is flagged
+        when it had <span className="font-semibold">more than one paste</span>,
+        or the final answer has{" "}
+        <span className="font-semibold">more characters than keys pressed</span>{" "}
+        (math-keypad characters count as typed). Flags are prompts for manual
+        review, not verdicts.
+      </p>
+      {check.logged === 0 ? (
+        <p className="mt-3 text-sm text-stone-400">
+          No keystroke logs yet — they start with participants after this update.
+        </p>
+      ) : (
+        <>
+          <p className="mt-3 text-sm text-stone-700">
+            <span className="font-semibold">{flaggedPeople}</span> of{" "}
+            {check.people.length} participant(s) flagged ·{" "}
+            {check.flagged.length} flagged answer(s) of {check.logged} logged.
+          </p>
+          <div className="mt-3 overflow-x-auto rounded-xl border-2 border-stone-200 bg-white">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead className="bg-stone-50 text-xs text-stone-500">
+                <tr>
+                  {["participant", "answers", "n_with_pastes", "n_too_short", "any paste", ""].map((h) => (
+                    <th key={h} className="border-b border-stone-200 px-3 py-2 font-semibold">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {check.people.map((p) => (
+                  <tr key={p.subjectId} className="border-b border-stone-100 last:border-b-0">
+                    <td className="px-3 py-1.5 font-mono text-xs text-stone-700">{p.subjectId}</td>
+                    <td className="px-3 py-1.5 text-stone-600">{p.answers}</td>
+                    <td className="px-3 py-1.5 text-stone-800">{p.nWithPastes}</td>
+                    <td className="px-3 py-1.5 text-stone-800">{p.nTooShort}</td>
+                    <td className="px-3 py-1.5 text-stone-500">{p.anyPaste}</td>
+                    <td className="px-3 py-1.5">
+                      {p.flagged ? (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">
+                          review
+                        </span>
+                      ) : (
+                        <span className="text-xs text-stone-400">ok</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {check.flagged.length > 0 && (
+            <>
+              <h3 className="mt-5 text-base font-bold text-stone-800">
+                Flagged answers — for manual review
+              </h3>
+              <div className="mt-2 space-y-2">
+                {check.flagged.map((a, i) => (
+                  <div key={i} className="rounded-xl border-2 border-amber-100 bg-white p-3 text-xs">
+                    <p className="text-stone-600">
+                      <span className="font-mono font-semibold text-stone-800">{a.subjectId}</span>{" "}
+                      · <span className="font-mono">{a.qid}</span> · {a.keypresses} keys
+                      {a.keypadChars ? ` + ${a.keypadChars} keypad chars` : ""} for {a.chars}{" "}
+                      characters · {a.pastes} paste(s)
+                      {a.pastedChars ? ` (${a.pastedChars} chars pasted)` : ""}
+                      <span className="ml-2 font-semibold text-amber-700">
+                        {[a.flagPaste && "more than one paste", a.flagTooShort && "more characters than keys"]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap text-stone-800">{a.text || "(empty)"}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 export default function InstructorAnalysisPage() {
   const [token, setToken] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -1208,6 +1343,16 @@ export default function InstructorAnalysisPage() {
                   </span>{" "}
                   participant(s) who finished the whole flow (of{" "}
                   {view.flow.totalParticipants} who started).
+                  {view.flow.forms && view.flow.forms.A + view.flow.forms.B > 0 && (
+                    <>
+                      {" "}Pre-test version: A ×{view.flow.forms.A}, B ×
+                      {view.flow.forms.B}
+                      {view.flow.forms.unknown
+                        ? ` (${view.flow.forms.unknown} from before counterbalancing)`
+                        : ""}
+                      .
+                    </>
+                  )}
                 </p>
 
                 {/* Time per phase */}
@@ -1811,6 +1956,8 @@ export default function InstructorAnalysisPage() {
                 onClose={() => setOpenItem(null)}
               />
             )}
+
+            {view.flow?.aiCheck && <AiCheckSection check={view.flow.aiCheck} />}
 
             {view.flow && view.flow.participants.length > 0 && (
               <>

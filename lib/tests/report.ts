@@ -1,5 +1,8 @@
 import type { GradeResult } from "./grade";
-import type { TestAnswers, TestId } from "./types";
+import type { FormId, TestAnswers, TestId } from "./types";
+
+const formOf = (value: unknown): FormId | undefined =>
+  value === "A" || value === "B" ? value : undefined;
 
 export const TEST_IDS: TestId[] = ["pretest", "posttest"];
 
@@ -20,7 +23,17 @@ export type Submission = {
   testId: TestId;
   submittedAt: string;
   answers: TestAnswers;
+  /**
+   * Counterbalanced design only: the version taken in this phase and the items
+   * the participant was given (scored against exactly these). Absent for data
+   * from before counterbalancing, which uses the original fixed tests.
+   */
+  form?: FormId;
+  items?: string[];
 };
+
+/** The screening item that is the pre-test version's Q1a. */
+const SCREENING_Q1A = "q1a";
 
 export type GradedSubmission = {
   submission: Submission;
@@ -44,17 +57,23 @@ export function collectSubmissions(docs: LogDoc[]): Submission[] {
 
     const key = `${subjectId}::${testId}`;
 
+    const form = formOf(doc.data?.form);
+
     if (doc.event === "test_completed") {
       const answers = doc.data?.answers as TestAnswers | undefined;
       if (answers && Object.keys(answers).length) {
         const existing = completed.get(key);
         // Keep the latest completion if a participant redid a test.
         if (!existing || (doc.timestamp ?? "") > existing.submittedAt) {
+          const items = Array.isArray(doc.data?.items)
+            ? (doc.data.items as unknown[]).map(String)
+            : undefined;
           completed.set(key, {
             subjectId,
             testId,
             submittedAt: doc.timestamp ?? "",
-            answers,
+            answers: { ...answers },
+            ...(form ? { form, items } : {}),
           });
         }
       }
@@ -68,6 +87,7 @@ export function collectSubmissions(docs: LogDoc[]): Submission[] {
       const entry =
         partial.get(key) ??
         ({ subjectId, testId, submittedAt: "", answers: {} } as Submission);
+      if (form) entry.form = form;
       entry.answers[itemId] = answer as TestAnswers[string];
       if ((doc.timestamp ?? "") > entry.submittedAt) {
         entry.submittedAt = doc.timestamp ?? "";
@@ -78,6 +98,26 @@ export function collectSubmissions(docs: LogDoc[]): Submission[] {
 
   for (const [key, entry] of partial) {
     if (!completed.has(key)) completed.set(key, entry);
+  }
+
+  // Counterbalanced design: the pre-test version's Q1a is asked in screening.
+  // It is that participant's pre-test Q1a, so it is graded as part of the
+  // pre-test (item "1").
+  const screeningQ1a = new Map<string, string>();
+  for (const doc of docs) {
+    if (doc.event !== "screening_completed") continue;
+    const text = (doc.data?.answers as Record<string, unknown> | undefined)?.[SCREENING_Q1A];
+    if (typeof text === "string" && text.trim() && doc.subject_id) {
+      screeningQ1a.set(doc.subject_id, text);
+    }
+  }
+  for (const entry of completed.values()) {
+    if (entry.testId !== "pretest" || !entry.form) continue;
+    const text = screeningQ1a.get(entry.subjectId);
+    if (text && !entry.answers["1"]) {
+      entry.answers["1"] = { text };
+      if (entry.items && !entry.items.includes("1")) entry.items = ["1", ...entry.items];
+    }
   }
 
   return [...completed.values()].sort(

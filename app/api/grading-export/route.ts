@@ -74,7 +74,11 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      const result = await gradeTest(testId, answers);
+      // The participant's version and items, when counterbalanced (else the fixed tests).
+      const result = await gradeTest(testId, answers, {
+        form: submission.form,
+        items: submission.items,
+      });
       await writeStoredGrade(subjectId, testId, answers, result);
       graded.push({ submission, result });
       gradedFresh += 1;

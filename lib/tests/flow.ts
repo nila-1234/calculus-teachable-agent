@@ -8,6 +8,7 @@ import {
   type SurveyItem,
 } from "@/lib/surveys/types";
 import { getLesson } from "@/lib/lessons/definitions";
+import { buildAiCheck, type AiCheck } from "./ai-check";
 import { getScenario } from "@/lib/scenarios/registry";
 import type { LessonQuestion } from "@/lib/lessons/types";
 import {
@@ -230,6 +231,10 @@ export type FlowSummary = {
   postSurvey: SurveyItemSummary[];
   instruction: InstructionSummary;
   participants: ParticipantDetail[];
+  /** Keystroke-tracker AI-use check over the completers' text answers. */
+  aiCheck: AiCheck;
+  /** How many completers took Version A / B as their pre-test. */
+  forms: { A: number; B: number; unknown: number };
 };
 
 function median(values: number[]): number | null {
@@ -1858,7 +1863,20 @@ export function buildFlowSummary(docs: LogDoc[]): FlowSummary {
     }))
     .sort((a, b) => b.total - a.total);
 
+  // Counterbalancing: which version each completer took as the pre-test.
+  const forms = { A: 0, B: 0, unknown: 0 };
+  for (const list of completerLists) {
+    const assigned =
+      latest(list, "form_assigned")?.data?.pretest_form ??
+      latest(list, "test_completed", "pretest")?.data?.form;
+    if (assigned === "A") forms.A += 1;
+    else if (assigned === "B") forms.B += 1;
+    else forms.unknown += 1;
+  }
+
   return {
+    aiCheck: buildAiCheck(completerLists.flat()),
+    forms,
     totalParticipants: subjects.length,
     completers: completerLists.length,
     funnel,

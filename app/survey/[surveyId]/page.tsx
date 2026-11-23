@@ -16,6 +16,9 @@ import {
   saveSurveyAnswers,
 } from "@/lib/surveys/storage";
 import type { SurveyAnswers } from "@/lib/surveys/types";
+import type { FormId } from "@/lib/tests/types";
+import { Q1A_ITEM } from "@/lib/tests/definitions";
+import { getPretestForm, otherForm } from "@/lib/tests/forms";
 import { logEvent } from "@/lib/logger";
 import CompletionCode from "@/components/completion-code";
 import {
@@ -38,6 +41,31 @@ function SurveyPageContent() {
   const preview = searchParams.has(PREVIEW_PARAM);
   const surveyId = typeof params.surveyId === "string" ? params.surveyId : "";
   const survey = getSurvey(surveyId);
+
+  // Screening Q5 is the Q1a of the participant's pre-test version, which comes
+  // from their (client-side) counterbalanced assignment — filled in after mount.
+  const [pretestForm, setPretestForm] = useState<FormId | null>(null);
+  useEffect(() => {
+    if (!survey?.sections.some((s) => s.items.some((i) => i.pretestQ1a))) return;
+    const form = getPretestForm();
+    queueMicrotask(() => setPretestForm(form));
+    logEvent("form_assigned", survey.id, {
+      pretest_form: form,
+      posttest_form: otherForm(form),
+    });
+  }, [survey]);
+  const shownSurvey = useMemo(() => {
+    if (!survey || !pretestForm) return survey;
+    return {
+      ...survey,
+      sections: survey.sections.map((section) => ({
+        ...section,
+        items: section.items.map((item) =>
+          item.pretestQ1a ? { ...item, prompt: Q1A_ITEM[pretestForm].prompt } : item
+        ),
+      })),
+    };
+  }, [survey, pretestForm]);
 
   const [screen, setScreen] = useState<"checking" | "form" | "complete">(
     "checking"
@@ -135,6 +163,8 @@ function SurveyPageContent() {
 
       logEvent("screening_completed", survey.id, {
         answers,
+        // Q5 was this version's Q1a; the pre-test continues with the same version.
+        pretest_form: pretestForm,
         eligible: eligibility.eligible,
         failed_items: eligibility.failedItems,
         reasons: eligibility.reasons,
@@ -171,7 +201,7 @@ function SurveyPageContent() {
             />
 
             <SurveyPanel
-              survey={survey}
+              survey={shownSurvey ?? survey}
               answers={answers}
               onAnswerChange={(itemId, value) => setAnswer(itemId, value)}
             />

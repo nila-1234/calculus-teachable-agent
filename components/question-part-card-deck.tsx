@@ -117,6 +117,7 @@ export default function QuestionPartCardDeck({
                 Explain your reasoning
               </Text>
               <textarea
+                data-qid={`question:${part.id}:explanation`}
                 placeholder="Why did you choose this answer?"
                 value={explanations[part.id] || ""}
                 onChange={(e) => onExplanationChange?.(part.id, e.target.value)}
