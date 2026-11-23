@@ -19,12 +19,21 @@ import {
   PlacementEffect,
   PlacementEvent,
   PlacementExplainSlot,
+  PlacementFlow,
   ReplyLabel,
   placementLine,
   quickReplyLabel,
   transitionPlacement,
 } from "@/lib/placement-flow";
 import { statusLine, statusSpeaker } from "@/lib/status-flow";
+import { FeedbackEvent, FeedbackFlow, transitionFeedback } from "@/lib/feedback-flow";
+import {
+  FeedbackAction,
+  FeedbackScenario,
+  FeedbackType,
+  TemplatedFeedback,
+  getTemplatedFeedback,
+} from "@/lib/feedback-templates";
 import { getScenario } from "@/lib/scenarios/registry";
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 import AppHeader from "@/components/app-header";
@@ -69,9 +78,11 @@ export default function GradeLinesActivity({
   const [finished, setFinished] = useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.toString();
-  // 1 = plain comment bubbles (previous setup), 2 = comment bubbles + the
-  // "Reply" discussion drawer. Defaults to 2.
+  // 1 = plain comment bubbles (previous setup), 2 = the "Are you sure?" discussion
+  // (lib/placement-flow.ts), 3 = the templated feedback flow from Figma (lib/feedback-flow.ts).
+  // Defaults to 2.
   const discussionMode = parseInt(searchParams.get("discussionMode") || "2", 10);
+  const templatedFeedback = discussionMode === 3;
   const scenario = scenarioId ? getScenario(scenarioId) : null;
 
   if (!scenarioId || !scenario) {
@@ -299,19 +310,19 @@ export default function GradeLinesActivity({
     answerId: string,
     criterionId: string,
     role: DiscussionMessage["role"],
-    text: string
+    text: string,
+    extra?: Record<string, unknown>
   ) => {
     // Record every line of the discussion exactly as shown — the TA's own replies
     // included. Not every reply reaches an AI route (e.g. answers to "What are you
     // unsure about?" that lead straight to "Take another look"), so without this
-    // the analysis could not show how the TA responded at each step.
-    logEvent("grade_lines_flow_message", scenarioId, {
-      kind,
-      answer_id: answerId,
-      criterion_id: criterionId,
-      role,
-      text,
-    });
+    // the analysis could not show how the TA responded at each step. Mode 3 logs under
+    // its own name so the mode 2 replay (lib/tests/flow.ts) never mixes the two.
+    logEvent(
+      templatedFeedback ? "grade_lines_feedback_message" : "grade_lines_flow_message",
+      scenarioId,
+      { kind, answer_id: answerId, criterion_id: criterionId, role, text, ...extra }
+    );
     updateFlowThread(kind, answerId, criterionId, (thread) => ({
       ...thread,
       messages: [
@@ -404,7 +415,8 @@ export default function GradeLinesActivity({
     const item = flowItemsRef.current[kind][answerId]?.[criterionId];
     if (!answer || !item) return;
 
-    const { flow: from, speaker } = getFlowThread(kind, answerId, criterionId);
+    const { flow, speaker } = getFlowThread(kind, answerId, criterionId);
+    const from = flow as PlacementFlow;
     const { next, effects } = transitionPlacement(from, event);
 
     logEvent(`grade_lines_${kind}_transition`, scenarioId, {
@@ -433,12 +445,171 @@ export default function GradeLinesActivity({
     updateFlowThread(kind, answerId, criterionId, (thread) => ({ ...thread, pending: false }));
   };
 
+  // Mode 3: the request fields both feedback routes share — the solution, the criterion, and
+  // the grading result being discussed.
+  const feedbackContext = (answer: FinalAiAnswer, item: StepCriterionFeedback) => ({
+    studentName: answer.label,
+    question,
+    answerText: answer.steps.join("\n\n"),
+    criterionLabel: item.criterion,
+    placedStep: item.placedStep,
+    placedStepText: item.placedStep != null ? answer.steps[item.placedStep - 1] ?? "" : "",
+    expectedStep: item.expectedStep,
+    expectedStepText: answer.steps[item.expectedStep - 1] ?? "",
+    userStatus: item.status,
+    expectedStatus: item.expectedStatus,
+    feedback: item.feedback,
+  });
+
+  // Mode 3: the LLM fills the bracketed gaps code couldn't. The route falls back to a plain
+  // line from the answer key, so this only comes back empty if the request itself fails.
+  const fetchFeedbackWrite = async (
+    answer: FinalAiAnswer,
+    item: StepCriterionFeedback,
+    scenario: FeedbackScenario,
+    feedbackType: FeedbackType,
+    fb: TemplatedFeedback,
+    taMessage: string | undefined
+  ): Promise<string> => {
+    try {
+      const res = await fetch("/api/feedback-write", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...feedbackContext(answer, item),
+          scenario,
+          feedbackType,
+          speaker: fb.speaker,
+          template: fb.text,
+          placeholders: fb.llmPlaceholders,
+          example: fb.example,
+          taMessage,
+        }),
+      });
+      const data = await res.json();
+      return data.text ?? "";
+    } catch {
+      return "";
+    }
+  };
+
+  // Mode 3: whether the TA's explanation is sufficient. Insufficient on failure, since that
+  // feedback still gives the correct reasoning.
+  const fetchFeedbackDiagnosis = async (
+    kind: CommentKind,
+    answer: FinalAiAnswer,
+    item: StepCriterionFeedback,
+    correct: boolean,
+    probe: string,
+    taMessage: string
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch("/api/feedback-diagnose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...feedbackContext(answer, item),
+          action: kind === "placement" ? "placement" : item.status,
+          correct,
+          probe,
+          taMessage,
+        }),
+      });
+      const data = await res.json();
+      return data.sufficient === true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Mode 3: advances one criterion's placement or pass/fail tree (lib/feedback-flow.ts) and
+  // says the resulting lines, each in the voice its template names.
+  const dispatchFeedback = async (
+    kind: CommentKind,
+    answerId: string,
+    criterionId: string,
+    event: FeedbackEvent,
+    taMessage?: string
+  ) => {
+    const answer = FINAL_AI_ANSWERS.find((entry) => entry.id === answerId);
+    const item = flowItemsRef.current[kind][answerId]?.[criterionId];
+    if (!answer || !item) return;
+
+    const from = getFlowThread(kind, answerId, criterionId).flow as FeedbackFlow;
+    const { next, effects } = transitionFeedback(from, event);
+
+    logEvent(`grade_lines_${kind}_feedback_transition`, scenarioId, {
+      answer_id: answerId,
+      criterion_id: criterionId,
+      from,
+      event,
+      to: next,
+    });
+
+    updateFlowThread(kind, answerId, criterionId, (thread) => ({
+      ...thread,
+      flow: next,
+      pending: true,
+    }));
+
+    for (const effect of effects) {
+      const fb = getTemplatedFeedback(effect.scenario, effect.feedback, criterionId, {
+        placedStep: item.placedStep,
+        expectedStep: item.expectedStep,
+        studentName: answer.label,
+      });
+      const text = fb.complete
+        ? fb.text
+        : await fetchFeedbackWrite(answer, item, effect.scenario, effect.feedback, fb, taMessage);
+      if (!text) continue;
+      updateFlowThread(kind, answerId, criterionId, (thread) => ({ ...thread, speaker: fb.speaker }));
+      appendFlowMessage(kind, answerId, criterionId, fb.speaker, text, {
+        scenario: effect.scenario,
+        feedback_type: effect.feedback,
+        filled_by: fb.complete ? "code" : "llm",
+      });
+    }
+
+    updateFlowThread(kind, answerId, criterionId, (thread) => ({ ...thread, pending: false }));
+  };
+
+  // Mode 3: the TA's explanation in reply to a probe is judged, then answered.
+  const handleFeedbackReply = async (
+    kind: CommentKind,
+    answerId: string,
+    criterionId: string,
+    text: string
+  ) => {
+    const thread = getFlowThread(kind, answerId, criterionId);
+    const flow = thread.flow as FeedbackFlow;
+    const answer = FINAL_AI_ANSWERS.find((entry) => entry.id === answerId);
+    const item = flowItemsRef.current[kind][answerId]?.[criterionId];
+    if (flow.kind !== "chat" || thread.pending || !answer || !item) return;
+
+    const probe =
+      [...thread.messages].reverse().find((message) => message.role !== "user")?.text ?? "";
+    appendFlowMessage(kind, answerId, criterionId, "user", text);
+    updateFlowThread(kind, answerId, criterionId, (current) => ({ ...current, pending: true }));
+
+    const sufficient = await fetchFeedbackDiagnosis(kind, answer, item, flow.correct, probe, text);
+    logEvent("grade_lines_feedback_diagnosis", scenarioId, {
+      kind,
+      answer_id: answerId,
+      criterion_id: criterionId,
+      scenario: flow.scenario,
+      sufficient,
+    });
+
+    await dispatchFeedback(kind, answerId, criterionId, { type: "EXPLAIN", sufficient }, text);
+  };
+
   const handleFlowReply = async (
     kind: CommentKind,
     answerId: string,
     criterionId: string,
     text: string
   ) => {
+    if (templatedFeedback) return handleFeedbackReply(kind, answerId, criterionId, text);
     const thread = getFlowThread(kind, answerId, criterionId);
     if (thread.flow.kind !== "chat" || thread.pending) return;
 
@@ -476,6 +647,17 @@ export default function GradeLinesActivity({
         [answerId]: { ...flowItemsRef.current[kind][answerId], [criterionId]: item },
       },
     };
+    if (templatedFeedback) {
+      // Sampling of correct 1st attempts is decided inside the tree, from `rand`.
+      const action: FeedbackAction = kind === "placement" ? "placement" : item.status ?? "pass";
+      dispatchFeedback(kind, answerId, criterionId, {
+        type: "ACT",
+        action,
+        correct,
+        rand: Math.random(),
+      });
+      return;
+    }
     dispatchFlow(kind, answerId, criterionId, { type: "DROP", correct });
   };
 
@@ -488,7 +670,8 @@ export default function GradeLinesActivity({
     criterionId: string,
     correct: boolean
   ): boolean => {
-    const { flow } = getFlowThread(kind, answerId, criterionId);
+    // Mode 2 only, so the thread runs on the placement tree.
+    const flow = getFlowThread(kind, answerId, criterionId).flow as PlacementFlow;
     if (!correct || flow.kind !== "dragging" || flow.revealed) return false;
     if (Math.random() < PROFESSOR_CHALLENGE_RATE) return false;
     logEvent(`grade_lines_${kind}_unchallenged`, scenarioId, {
@@ -512,6 +695,10 @@ export default function GradeLinesActivity({
     criterionId: string,
     item: StepCriterionFeedback
   ) => {
+    if (templatedFeedback) {
+      startFlowTurn("placement", answerId, criterionId, item, item.stepCorrect);
+      return;
+    }
     if (discussionMode === 2) {
       if (acceptUnchallenged("placement", answerId, criterionId, item.stepCorrect)) return;
       startFlowTurn("placement", answerId, criterionId, item, item.stepCorrect);
@@ -532,6 +719,11 @@ export default function GradeLinesActivity({
     criterionId: string,
     item: StepCriterionFeedback
   ) => {
+    if (templatedFeedback) {
+      if (!item.status) return;
+      startFlowTurn("status", answerId, criterionId, item, item.statusCorrect);
+      return;
+    }
     if (discussionMode === 2) {
       if (!item.status) return;
       const speaker = statusSpeaker(item.status);
