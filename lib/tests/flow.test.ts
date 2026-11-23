@@ -141,6 +141,49 @@ test("newer runs use the exact logged transcript", () => {
   assert.ok(!lines.some((l) => /not saved/.test(l)));
 });
 
+test("mode 3 (templated feedback): probe, reply, judgment and answer, in order", () => {
+  const fb = (role: string, text: string, extra: Record<string, unknown> = {}) =>
+    ev("grade_lines_feedback_message", "5", { kind: "placement", answer_id: "a1", criterion_id: "c1", role, text, ...extra });
+  const mode3 = [
+    ev("grade_lines_criterion_graded", "5", { answer_id: "a1", criterion_id: "c1", phase: "placement" }),
+    grade(2, 1, false),
+    ev("grade_lines_placement_feedback_transition", "5", { answer_id: "a1", criterion_id: "c1", from: { kind: "dragging", attempt: 1 }, event: { type: "ACT", action: "placement", correct: false, rand: 0.3 }, to: { kind: "chat", node: "explain", scenario: "1b", attempt: 1, correct: false } }),
+    fb("professor", "What about step 1 makes you think this is where the student finds the derivative?", { feedback_type: "probe", filled_by: "code" }),
+    fb("user", "because step 1 has the area function"),
+    ev("grade_lines_feedback_diagnosis", "5", { kind: "placement", answer_id: "a1", criterion_id: "c1", scenario: "1b", sufficient: false }),
+    ev("grade_lines_placement_feedback_transition", "5", { answer_id: "a1", criterion_id: "c1", from: { kind: "chat", node: "explain", scenario: "1b", attempt: 1, correct: false }, event: { type: "EXPLAIN", sufficient: false }, to: { kind: "dragging", attempt: 2 } }),
+    fb("professor", "Take another look at what it requires. Try again.", { feedback_type: "insufficient", filled_by: "llm" }),
+    ev("grade_lines_criterion_graded", "5", { answer_id: "a1", criterion_id: "c1", phase: "placement" }),
+    grade(1, 2, true),
+    ev("grade_lines_placement_feedback_transition", "5", { answer_id: "a1", criterion_id: "c1", from: { kind: "dragging", attempt: 2 }, event: { type: "ACT", action: "placement", correct: true, rand: 0.9 }, to: { kind: "resolved", how: "unprobed", attempt: 2 } }),
+  ];
+  // Same participant flow, with mode 3 in place of the mode 2 discussion.
+  const start = docs.findIndex((d) => d.event === "grade_lines_criterion_graded");
+  const end = docs.findIndex((d) => d.event === "grade_lines_completed");
+  const flow = buildFlowSummary([...docs.slice(0, start), ...mode3, ...docs.slice(end)]);
+  const instr = flow.participants[0].instruction;
+  assert.equal(instr.agentExactTranscript, true);
+  const a = instr.agentTasks.find((x) => x.task === "Apply Rubric")!;
+  const lines = a.items[0].turns.map((x) => `${x.speaker}:${x.text}`);
+  const idx = (re: RegExp) => lines.findIndex((l) => re.test(l));
+  const order = [
+    idx(/^participant:Dragged .* onto step 1 — wrong/),
+    idx(/^professor:What about step 1/),
+    idx(/^participant:because step 1 has the area function$/),
+    idx(/^system:AI judged the explanation insufficient/),
+    idx(/^professor:Take another look/),
+    idx(/^participant:Dragged .* onto step 2 — correct/),
+  ];
+  assert.ok(order.every((i) => i >= 0), lines.join("\n"));
+  assert.deepEqual([...order].sort((x, y) => x - y), order, lines.join("\n"));
+  assert.match(a.items[0].trigger, /wrong step/);
+  assert.match(a.items[0].outcome, /Resolved/);
+  // The probe is a fixed template; the answer was written by the model.
+  const kinds = Object.fromEntries(a.items[0].turns.map((x) => [x.text.slice(0, 10), x.kind]));
+  assert.equal(kinds["What about"], "scripted");
+  assert.equal(kinds["Take anoth"], "llm");
+});
+
 // The database returns same-millisecond events in arbitrary order. Reproduce the
 // worst case: each discussion step logged in the same instant as the grade /
 // reading that caused it, and delivered BEFORE it.

@@ -62,7 +62,10 @@ export function buildAiCheck(docs: LogDoc[]): AiCheck {
     if (!prev || (d.timestamp ?? "") >= (prev.timestamp ?? "")) latest.set(key, d);
   }
 
-  const answers: KeystrokeAnswer[] = [...latest.values()].map((d) => {
+  // A box left empty (e.g. a chat box after its message was sent) is not an answer.
+  const nonEmpty = [...latest.values()].filter((d) => String(d.data?.text ?? "").trim());
+
+  const answers: KeystrokeAnswer[] = nonEmpty.map((d) => {
     const n = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
     const text = String(d.data?.text ?? "");
     const keypresses = n(d.data?.keypresses);

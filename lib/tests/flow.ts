@@ -1263,17 +1263,21 @@ function rubricTaskOf(sorted: LogDoc[]): AgentTask | null {
  */
 function causalRank(d: LogDoc): number {
   const route = d.event === "ai_exchange" ? String(d.data?.route ?? "") : "";
+  const isMessage =
+    d.event === "grade_lines_flow_message" || d.event === "grade_lines_feedback_message";
   if (route === "grade-lines-feedback" || d.event === "grade_lines_criterion_graded") return 0;
-  if (d.event === "grade_lines_flow_message" && d.data?.role === "user") return 1;
-  if (route === "placement-classify") return 2;
+  if (isMessage && d.data?.role === "user") return 1;
+  if (route === "placement-classify" || d.event === "grade_lines_feedback_diagnosis") return 2;
   if (
     d.event === "grade_lines_placement_transition" ||
     d.event === "grade_lines_status_transition" ||
+    d.event === "grade_lines_placement_feedback_transition" ||
+    d.event === "grade_lines_status_feedback_transition" ||
     d.event === "grade_lines_placement_unchallenged" ||
     d.event === "grade_lines_status_unchallenged"
   )
     return 3;
-  if (d.event === "grade_lines_flow_message") return 4;
+  if (isMessage) return 4;
   if (route === "placement-explain") return 5;
   return 3;
 }
@@ -1317,7 +1321,11 @@ const PAIR_WINDOW_MS = 15000;
  */
 function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boolean } {
   const sorted = causalSort(list);
-  const exact = sorted.some((d) => d.event === "grade_lines_flow_message");
+  // Mode 3 (templated feedback, lib/feedback-flow) always logs every line.
+  const exact = sorted.some(
+    (d) =>
+      d.event === "grade_lines_flow_message" || d.event === "grade_lines_feedback_message"
+  );
 
   // Every graded drag / mark, and every classified reply, up front — so each
   // can be paired with its own discussion step regardless of log order.
@@ -1379,6 +1387,44 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
 
   for (const d of sorted) {
     const data = (d.data ?? {}) as Record<string, unknown>;
+
+    // Mode 3: the templated-feedback tree. Its lines are all in
+    // grade_lines_feedback_message; here only the trigger and the outcome.
+    if (
+      d.event === "grade_lines_placement_feedback_transition" ||
+      d.event === "grade_lines_status_feedback_transition"
+    ) {
+      const phase = (d.event ?? "").includes("_status_") ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      activeKey = key;
+      const v = current.get(key);
+      const it = itemFor(key, v, phase);
+      const event = (data.event ?? {}) as Record<string, unknown>;
+      const to = (data.to ?? {}) as Record<string, unknown>;
+      if (event.type === "ACT" && !it.trigger && v) it.trigger = triggerFor(phase, v.item);
+      if (to.kind === "resolved") {
+        if (to.how === "unprobed" && event.type === "ACT") {
+          it.turns.push({ speaker: "system", kind: "note", text: "No feedback for this move." });
+        }
+        it.outcome =
+          to.how === "discussed"
+            ? `Resolved — after discussing it (attempt ${to.attempt}).`
+            : `Resolved — correct, no discussion (attempt ${to.attempt}).`;
+      } else if (to.kind === "dragging" && event.type === "ACT" && event.correct === false) {
+        it.outcome = "Wrong again — the AI gave the answer; the participant must redo it.";
+      }
+      continue;
+    }
+    if (d.event === "grade_lines_feedback_diagnosis") {
+      const phase = data.kind === "status" ? "status" : "placement";
+      const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
+      itemFor(key, current.get(key), phase).turns.push({
+        speaker: "system",
+        kind: "note",
+        text: `AI judged the explanation ${data.sufficient === true ? "sufficient" : "insufficient"}.`,
+      });
+      continue;
+    }
 
     const isTransition =
       d.event === "grade_lines_placement_transition" ||
@@ -1528,8 +1574,8 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
       continue;
     }
 
-    // Exact transcript lines (newer runs).
-    if (d.event === "grade_lines_flow_message") {
+    // Exact transcript lines (newer runs; mode 3 under its own name).
+    if (d.event === "grade_lines_flow_message" || d.event === "grade_lines_feedback_message") {
       const phase = data.kind === "status" ? "status" : "placement";
       const key = `${data.answer_id}::${data.criterion_id}::${phase}`;
       const it = itemFor(key, current.get(key), phase);
@@ -1539,7 +1585,8 @@ function applyRubricTaskOf(list: LogDoc[]): { task: AgentTask | null; exact: boo
           ? { speaker: "participant", kind: "reply", text: String(data.text ?? "") }
           : {
               speaker: role === "student" ? "student" : "professor",
-              kind: "llm",
+              // Mode 3 says which lines are fixed templates and which the model wrote.
+              kind: data.filled_by === "code" ? "scripted" : "llm",
               text: String(data.text ?? ""),
             }
       );
