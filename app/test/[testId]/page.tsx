@@ -234,17 +234,8 @@ function TestPageContent() {
               paragraphs={test.intro}
             />
 
-            <div className="rounded-xl border-2 border-stone-200 bg-white p-5 shadow-sm">
-              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
-                What this assessment covers
-              </p>
-              <ul className="list-disc space-y-1 pl-5 text-sm leading-6 text-stone-600">
-                {test.goals.map((goal) => (
-                  <li key={goal}>{goal}</li>
-                ))}
-              </ul>
-            </div>
-
+            {/* The assessment goals (test.goals) are not shown: they name the
+                comparison ("conventional instruction" vs "our system"). */}
             <div className="mt-6 flex justify-end">
               <Button onClick={handleStart}>Start the test</Button>
             </div>
