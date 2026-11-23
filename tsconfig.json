@@ -38,6 +38,7 @@
     "app/ai-student"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "Diagrams"
   ]
 }

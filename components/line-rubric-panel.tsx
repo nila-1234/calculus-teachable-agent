@@ -15,6 +15,7 @@ import DiscussionPanel, { DiscussionMessage } from "@/components/discussion-pane
 import { FinalAiAnswer } from "@/lib/scenarios/types";
 import type { CommentSpeaker } from "@/lib/grading-voice";
 import { PLACEMENT_QUICK_REPLIES, PlacementFlow } from "@/lib/placement-flow";
+import type { FeedbackFlow } from "@/lib/feedback-flow";
 
 export type { DiscussionMessage } from "@/components/discussion-panel";
 
@@ -24,11 +25,12 @@ export type GradeComment = {
   pending: boolean;
 };
 
-// One criterion's placement or pass/fail discussion (discussion mode 2), driven by the
-// decision tree in lib/placement-flow (reused as-is for pass/fail, see lib/status-flow).
+// One criterion's placement or pass/fail discussion, driven by a decision tree: mode 2 uses
+// lib/placement-flow (reused as-is for pass/fail, see lib/status-flow), mode 3 uses
+// lib/feedback-flow. Both share the "dragging" / "chat" / "resolved" kinds the panel reads.
 // Lives across re-drags and re-marks, so the transcript and attempt count survive them.
 export type FlowThread = {
-  flow: PlacementFlow;
+  flow: PlacementFlow | FeedbackFlow;
   messages: DiscussionMessage[];
   // True while a classify or explain call is in flight.
   pending: boolean;
@@ -193,7 +195,8 @@ export default function LineRubricPanel({
     status: statusThreads?.[currentAnswer.id] ?? {},
   };
 
-  const canDiscuss = discussionMode === 2;
+  // Mode 2 ("Are you sure?") and mode 3 (templated feedback) share the discussion UI.
+  const canDiscuss = discussionMode === 2 || discussionMode === 3;
 
   // In discussion mode, a call (placement, then pass/fail) is settled only by its decision
   // tree reaching the end — and that closing line having arrived — since every drop and
