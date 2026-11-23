@@ -13,8 +13,10 @@ type TestQuestionPanelProps = {
   onAnswerChange: (next: TestItemAnswer) => void;
   /** Prefix for keystroke-tracking ids, e.g. "pretest" → "pretest:2.2". */
   qidPrefix?: string;
-  /** Overrides the card's label (e.g. "Question 1 · Part 2 of 5" for shuffled parts). */
+  /** Overrides the card's label (e.g. "Q1.2" for the second part shown). */
   label?: string;
+  /** Leave out the section's scenario (it is already shown above, on the same page). */
+  hideScenario?: boolean;
 };
 
 const TEXTAREA_CLASS =
@@ -27,11 +29,12 @@ export default function TestQuestionPanel({
   onAnswerChange,
   qidPrefix = "test",
   label,
+  hideScenario = false,
 }: TestQuestionPanelProps) {
   const qid = (suffix = "") => `${qidPrefix}:${item.id}${suffix}`;
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4">
-      {section.scenario && (
+      {section.scenario && !hideScenario && (
         <div className="rounded-xl border-2 border-stone-200 bg-white p-5 shadow-sm">
           <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-400">
             {section.title} · Scenario

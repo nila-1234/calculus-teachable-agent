@@ -173,6 +173,7 @@ function SurveyItemCard({
   typingRaw,
   onTyping,
   surveyId,
+  number,
 }: {
   item: SurveyItem;
   value: string;
@@ -181,6 +182,8 @@ function SurveyItemCard({
   typingRaw?: string;
   onTyping?: (json: string) => void;
   surveyId: string;
+  /** Position in the survey as shown (Q1, Q2, …); ids are never shown. */
+  number: number;
 }) {
   const qid = `${surveyId}:${item.id}`;
   const typingHandlers = useTypingSignals(
@@ -188,8 +191,7 @@ function SurveyItemCard({
     typingRaw,
     onTyping
   );
-  const label =
-    item.id === "subject-id" ? "Subject ID" : `Question ${item.id}`;
+  const label = item.id === "subject-id" ? "Subject ID" : `Q${number}`;
 
   return (
     <div className="rounded-xl border-2 border-stone-200 bg-white p-5 shadow-sm">
@@ -316,6 +318,11 @@ export default function SurveyPanel({
   onAnswerChange,
   readOnly = false,
 }: SurveyPanelProps) {
+  // Questions are numbered Q1, Q2, … across the whole survey, in display order.
+  const numbers = new Map<string, number>();
+  for (const item of survey.sections.flatMap((section) => section.items)) {
+    if (item.id !== "subject-id") numbers.set(item.id, numbers.size + 1);
+  }
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8">
       {survey.sections.map((section) => (
@@ -335,6 +342,7 @@ export default function SurveyPanel({
                 onChange={(next) => onAnswerChange(item.id, next)}
                 readOnly={readOnly}
                 surveyId={survey.id}
+                number={numbers.get(item.id) ?? 0}
                 typingRaw={
                   item.trackTyping ? answers[`${item.id}${TYPING_SUFFIX}`] : undefined
                 }

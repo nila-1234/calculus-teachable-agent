@@ -93,7 +93,33 @@ export default function InstructorDashboardPage() {
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {PREVIEW_PHASES.map((phase) => (
+          {PREVIEW_PHASES.map((phase) =>
+            phase.versions ? (
+              // Differs by version: one link per version (a card can't hold nested links).
+              <div
+                key={phase.id}
+                className="flex flex-col rounded-2xl border-2 border-stone-200 bg-white p-5 shadow-sm"
+              >
+                <span className="text-lg font-bold text-stone-800">
+                  {phase.label}
+                </span>
+                <span className="mt-2 flex-1 text-sm leading-6 text-stone-500">
+                  {phase.description}
+                </span>
+                <span className="mt-4 flex flex-wrap gap-2">
+                  {(["A", "B"] as const).map((form) => (
+                    <Link
+                      key={form}
+                      href={previewHref(`${phase.path}?form=${form}`)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border-2 border-stone-200 px-3 py-1.5 text-sm font-bold text-lime-700 transition-colors hover:border-lime-600"
+                    >
+                      Version {form}
+                      <ArrowRightIcon width={14} height={14} aria-hidden="true" />
+                    </Link>
+                  ))}
+                </span>
+              </div>
+            ) : (
             <Link
               key={phase.id}
               href={previewHref(phase.path)}
@@ -115,7 +141,8 @@ export default function InstructorDashboardPage() {
                 />
               </span>
             </Link>
-          ))}
+            )
+          )}
         </div>
 
         <h2 className="mt-12 text-2xl font-bold text-stone-800">

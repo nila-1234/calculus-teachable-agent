@@ -51,24 +51,37 @@ function TestPageContent() {
   const [answers, setAnswers] = useState<TestAnswers>({});
 
   // Q1b–Q1f come in a per-participant random order, stable across reloads.
+  // Labels follow what is shown — Q1.1, Q1.2 … in display order, Q2.1 … — never
+  // the item ids, which would give away the original order.
   const items = useMemo(
     () =>
       test
-        ? test.sections.flatMap((section) => {
+        ? test.sections.flatMap((section, sectionIndex) => {
             const list = section.shuffle
               ? seededShuffle(section.items, `${getSubjectId()}:${test.id}:${section.id}`)
               : section.items;
+            const n = sectionIndex + 1;
             return list.map((item, index) => ({
               section,
               item,
-              label: section.shuffle
-                ? `${section.title} · Part ${index + 1} of ${list.length}`
-                : undefined,
+              label: list.length > 1 ? `Q${n}.${index + 1}` : `Q${n}`,
             }));
           })
         : [],
     [test]
   );
+
+  // Screens: a shuffled section (Question 1) is one page with all its parts;
+  // every other question keeps a page of its own.
+  const screens = useMemo(() => {
+    const out: (typeof items)[] = [];
+    for (const entry of items) {
+      const last = out[out.length - 1];
+      if (entry.section.shuffle && last?.[0].section.id === entry.section.id) last.push(entry);
+      else out.push([entry]);
+    }
+    return out;
+  }, [items]);
 
   useEffect(() => {
     if (!test) return;
@@ -110,14 +123,14 @@ function TestPageContent() {
   }
   if (!test) return null; // version still loading (one frame)
 
-  const isComplete = screenIndex >= items.length;
-  const current = screenIndex >= 0 && !isComplete ? items[screenIndex] : null;
+  const isComplete = screenIndex >= screens.length;
+  const current = screenIndex >= 0 && !isComplete ? screens[screenIndex] : null;
 
   const progressLabels = [...test.sections.map((s) => s.title), "Complete"];
   const progressStep = isComplete
     ? test.sections.length
     : current
-      ? test.sections.findIndex((s) => s.id === current.section.id)
+      ? test.sections.findIndex((s) => s.id === current[0].section.id)
       : 0;
 
   const saveAnswers = (next: TestAnswers) => {
@@ -128,9 +141,11 @@ function TestPageContent() {
     }
   };
 
-  const isAnswered = (): boolean => {
-    if (!current) return false;
-    const { item } = current;
+  /** Every question on the screen is answered. */
+  const isAnswered = (): boolean =>
+    Boolean(current?.length) && current!.every(({ item }) => isItemAnswered(item));
+
+  const isItemAnswered = (item: (typeof items)[number]["item"]): boolean => {
     const answer = answers[item.id] || {};
 
     if (item.kind === "multiple-choice") {
@@ -177,16 +192,19 @@ function TestPageContent() {
     // Preview steps through without answering; a participant cannot.
     if (!current || (!isAnswered() && !preview)) return;
 
-    const { item } = current;
-    logEvent("test_item_answered", test.id, {
-      item_id: item.id,
-      answer: answers[item.id],
-      form,
-      version: TEST_DESIGN_VERSION,
-      position: screenIndex + 1,
-    });
+    for (const entry of current) {
+      logEvent("test_item_answered", test.id, {
+        item_id: entry.item.id,
+        answer: answers[entry.item.id],
+        form,
+        version: TEST_DESIGN_VERSION,
+        // Position in the whole test, in the order shown, and its label there.
+        position: items.indexOf(entry) + 1,
+        label: entry.label,
+      });
+    }
 
-    if (screenIndex === items.length - 1 && !preview) {
+    if (screenIndex === screens.length - 1 && !preview) {
       sessionStorage.setItem(`test:${test.id}:completed`, "true");
       logEvent("test_completed", test.id, {
         answers,
@@ -235,16 +253,23 @@ function TestPageContent() {
 
         {current && (
           <>
-            <TestQuestionPanel
-              section={current.section}
-              item={current.item}
-              label={current.label}
-              qidPrefix={test.id}
-              answer={answers[current.item.id] || {}}
-              onAnswerChange={(next: TestItemAnswer) =>
-                saveAnswers({ ...answers, [current.item.id]: next })
-              }
-            />
+            <div className="space-y-4">
+              {current.map((entry, index) => (
+                <TestQuestionPanel
+                  key={entry.item.id}
+                  section={entry.section}
+                  item={entry.item}
+                  label={entry.label}
+                  // A section's shared scenario is shown once, above its first part.
+                  hideScenario={index > 0}
+                  qidPrefix={test.id}
+                  answer={answers[entry.item.id] || {}}
+                  onAnswerChange={(next: TestItemAnswer) =>
+                    saveAnswers({ ...answers, [entry.item.id]: next })
+                  }
+                />
+              ))}
+            </div>
 
             <div className="mx-auto mt-6 flex w-full max-w-3xl items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -266,21 +291,22 @@ function TestPageContent() {
                   </Button>
                 )}
                 <span className="text-xs font-semibold text-stone-400">
-                  {screenIndex + 1} of {items.length}
+                  {screenIndex + 1} of {screens.length}
                 </span>
               </div>
               <div className="flex flex-wrap items-center justify-end gap-3">
                 {!preview && (
                   <span className="text-xs text-stone-400">
-                    Please review your answer before continuing. Once you
-                    continue, you will not be able to go back and change it.
+                    {current.length > 1
+                      ? "Answer every part, then review your answers before continuing. Once you continue, you will not be able to go back and change them."
+                      : "Please review your answer before continuing. Once you continue, you will not be able to go back and change it."}
                   </span>
                 )}
                 <Button
                   onClick={handleNext}
                   disabled={!isAnswered() && !preview}
                 >
-                  {screenIndex === items.length - 1 ? "Finish test" : "Next"}
+                  {screenIndex === screens.length - 1 ? "Finish test" : "Next"}
                 </Button>
               </div>
             </div>

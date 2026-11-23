@@ -102,6 +102,8 @@ export type PreviewPhase = {
   description: string;
   /** Path without the preview flag; previewHref() adds it. */
   path: string;
+  /** Differs by test version: the preview offers Version A and Version B (?form=). */
+  versions?: boolean;
 };
 
 /**
@@ -116,8 +118,9 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
     id: "screening",
     label: "Screening",
     description:
-      "The eligibility questions shown before anything else. Ineligible answers end the run.",
+      "The eligibility questions shown before anything else. Ineligible answers end the run. Q5 is the Q1a of the participant's pre-test version.",
     path: "/survey/screening",
+    versions: true,
   },
   {
     id: "consent",
@@ -140,8 +143,10 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
   {
     id: "pre-test",
     label: "Pre-test",
-    description: "The optimization assessment taken before instruction.",
+    description:
+      "The optimization assessment taken before instruction: Q1b–Q1f in a shuffled order, then Questions 2 and 3.",
     path: "/test/pretest",
+    versions: true,
   },
   {
     id: "instructions",
@@ -160,8 +165,10 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
   {
     id: "post-test",
     label: "Post-test",
-    description: "The parallel assessment taken after instruction.",
+    description:
+      "The parallel assessment taken after instruction — the other version from the pre-test.",
     path: "/test/posttest",
+    versions: true,
   },
   {
     id: "post-survey",

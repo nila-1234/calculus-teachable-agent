@@ -45,15 +45,18 @@ function SurveyPageContent() {
   // Screening Q5 is the Q1a of the participant's pre-test version, which comes
   // from their (client-side) counterbalanced assignment — filled in after mount.
   const [pretestForm, setPretestForm] = useState<FormId | null>(null);
+  // Preview may pick the version with ?form=A / ?form=B (nothing is logged there).
+  const formParam = searchParams.get("form");
   useEffect(() => {
     if (!survey?.sections.some((s) => s.items.some((i) => i.pretestQ1a))) return;
-    const form = getPretestForm();
+    const form: FormId =
+      preview && (formParam === "A" || formParam === "B") ? formParam : getPretestForm();
     queueMicrotask(() => setPretestForm(form));
     logEvent("form_assigned", survey.id, {
       pretest_form: form,
       posttest_form: otherForm(form),
     });
-  }, [survey]);
+  }, [survey, preview, formParam]);
   const shownSurvey = useMemo(() => {
     if (!survey || !pretestForm) return survey;
     return {
