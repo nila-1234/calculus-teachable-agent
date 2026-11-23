@@ -1,0 +1,72 @@
+flowchart LR
+
+    %% TA feedback flow for all three TA actions: placement, PASS, FAIL.
+    %% Source: Figma board "Calculus TA Chat Flow", page "Page (confirmed flow)", section "Overview · decision flow".
+    %%
+    %% The action sets the scenario group n, which prefixes every template key:
+    %%   n = 1  Placement  TA drags a rubric criterion onto a solution step
+    %%   n = 2  PASS       TA says the step meets the rubric
+    %%   n = 3  FAIL       TA says the step fails to meet the rubric
+    %% Branches: a = TA correct (1st attempt, sampled) · b = TA incorrect, 1st attempt · c = TA incorrect, 2nd or later attempt.
+    %% "attempt" counts the TA's actions on the current criterion. It resolves only when the TA gets it right.
+    %%
+    %% Speakers (also stored per template in feedback_templates.json):
+    %%   Probe and Sufficient Feedback: Prof for placement and PASS, Alex (AI student) for FAIL.
+    %%   Insufficient Feedback and the c feedback: always Prof.
+    %%
+    %% Wording: feedback_templates.json → templates["<n><branch>"][type], built from the Figma tables
+    %% "1 · Placement feedback", "2 · PASS feedback", "3 · FAIL feedback". Each feedback node shows its key with n.
+    %% In code (discussion mode 3, ?discussionMode=3): the tree is transitionFeedback in lib/feedback-flow.ts;
+    %% the wording is getTemplatedFeedback / templatedFeedbackForNode in lib/feedback-templates.ts.
+
+    A[TA acts on the current criterion<br/>Placement: drags it onto a step<br/>PASS / FAIL: marks the step] --> CJ{TA judgement correct?}
+
+    %% =========================
+    %% a · TA CORRECT
+    %% =========================
+
+    CJ -->|✓ Correct| AT1{Attempt = 1?}
+    AT1 -->|No, 2nd+ attempt| NF[No feedback]
+    AT1 -->|Yes, 1st attempt| SMP{Sampled for feedback?<br/>Placement 10#37; · PASS 10#37; · FAIL 50#37;}
+    SMP -->|No| NF
+    SMP -->|Yes| LA[Lock the action<br/>criterion / PASS–FAIL buttons]
+    LA --> PA["a · Probe<br/>Prof asks for explanation (FAIL: Alex)<br/>na.probe"]
+    PA --> EA[TA explains their reasoning in free text]
+    EA --> DA{"LLM diagnoses:<br/>Explanation sufficient?"}
+    DA -->|✓ Sufficient| SA["a · Sufficient Feedback<br/>Prof confirms reasoning (FAIL: Alex)<br/>na.sufficient"]
+    DA -->|✗ Insufficient| IA["a · Insufficient Feedback<br/>Prof fixes reasoning<br/>na.insufficient"]
+    SA --> R
+    IA --> R
+    NF --> R
+
+    %% =========================
+    %% b · TA INCORRECT, 1ST ATTEMPT
+    %% =========================
+
+    CJ -->|✗ Incorrect| AT2{Attempt = 1?}
+    AT2 -->|Yes, 1st attempt| LB[Lock the action<br/>criterion / PASS–FAIL buttons]
+    LB --> PB["b · Probe<br/>Prof asks for explanation (FAIL: Alex)<br/>nb.probe"]
+    PB --> EB[TA explains their reasoning in free text]
+    EB --> DB{"LLM diagnoses:<br/>Acknowledges error<br/>and reasoning sufficient?"}
+    DB -->|✓ Sufficient| SB["b · Sufficient Feedback<br/>Prof confirms correction (FAIL: Alex)<br/>nb.sufficient"]
+    DB -->|✗ Insufficient| IB["b · Insufficient Feedback<br/>Prof fixes judgement<br/>nb.insufficient"]
+    SB --> TRY[Try again → 2nd attempt<br/>Unlock; TA re-places / re-marks]
+    IB --> TRY
+    TRY --> A
+
+    %% =========================
+    %% c · TA INCORRECT, 2ND ATTEMPT (and any later one)
+    %% Probe skipped. The Professor gives corrective feedback that reveals the correct answer.
+    %% The criterion is NOT resolved: the TA still has to act on it again. A correct answer then
+    %% gets no feedback and moves on; another wrong one repeats c.
+    %% =========================
+
+    AT2 -->|No, 2nd+ attempt · probe skipped| C["c · Insufficient Feedback · 2nd attempt<br/>Prof gives the correct judgement and why<br/>nc.insufficient_2nd"]
+    C --> AGAIN[Answer revealed → act again<br/>Unlock; TA re-places / re-marks]
+    AGAIN --> A
+
+    %% =========================
+    %% MOVE ON
+    %% =========================
+
+    R[Move on] --> NEXT[Next criterion<br/>TA makes the next selection]
