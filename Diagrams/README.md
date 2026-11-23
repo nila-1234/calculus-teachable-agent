@@ -3,8 +3,8 @@
 Chatbot logic and wording for feedback on the TA's three actions: placing a rubric criterion on a step, marking a step PASS, or marking it FAIL.
 Source of truth: Figma board "Calculus TA Chat Flow", page "Page (confirmed flow)".
 
-In the app this is **discussion mode 3**: open /grade-lines with `?discussionMode=3`.
-Mode 2 (the default) is still the older "Are you sure?" flow in `docs/step_placement_discussion_flow.mmd` and `docs/evaluation_discussion_flow.mmd`, kept so the pilot logs can be replayed.
+In the app this is **discussion mode 3**, the default on /grade-lines.
+Mode 2 (`?discussionMode=2`) is still the older "Are you sure?" flow in `docs/step_placement_discussion_flow.mmd` and `docs/evaluation_discussion_flow.mmd`, kept so the pilot logs can be replayed.
 
 | File | What it is | Edit it? |
 |---|---|---|

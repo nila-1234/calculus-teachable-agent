@@ -80,8 +80,8 @@ export default function GradeLinesActivity({
   const query = searchParams.toString();
   // 1 = plain comment bubbles (previous setup), 2 = the "Are you sure?" discussion
   // (lib/placement-flow.ts), 3 = the templated feedback flow from Figma (lib/feedback-flow.ts).
-  // Defaults to 2.
-  const discussionMode = parseInt(searchParams.get("discussionMode") || "2", 10);
+  // Defaults to 3, the study's flow; ?discussionMode=2 still runs the pilot's flow.
+  const discussionMode = parseInt(searchParams.get("discussionMode") || "3", 10);
   const templatedFeedback = discussionMode === 3;
   const scenario = scenarioId ? getScenario(scenarioId) : null;
 
