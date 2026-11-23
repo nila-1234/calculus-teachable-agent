@@ -32,10 +32,23 @@ function parseMath(text: string) {
       return <InlineMath key={i} math={math} />;
     }
 
-    // Plain text (preserve line breaks)
+    // Plain text (preserve line breaks). A run of underscores is a fill-in
+    // blank: drawn as one unbroken line, since fonts leave gaps between "_".
     return (
       <span key={i} className="whitespace-pre-wrap">
-        {part}
+        {part.split(/(_{3,})/).map((piece, j) =>
+          /^_{3,}$/.test(piece) ? (
+            <span
+              key={j}
+              role="img"
+              aria-label="blank"
+              className="mx-0.5 inline-block border-b-2 border-current align-baseline"
+              style={{ width: `${Math.max(piece.length * 0.6, 3)}em` }}
+            />
+          ) : (
+            piece
+          )
+        )}
       </span>
     );
   });
