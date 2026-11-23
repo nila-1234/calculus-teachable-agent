@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AppHeader from "@/components/app-header";
 import Button from "@/components/button";
 import MathDisplay from "@/components/math-display";
@@ -11,6 +11,7 @@ import {
   type ItemResponse,
 } from "@/lib/tests/insights";
 import type { AiCheck } from "@/lib/tests/ai-check";
+import type { ScreeningQ1aGrade } from "@/lib/tests/screening-q1a";
 import type {
   ScreeningOutcomes,
   ScreeningPerson,
@@ -36,10 +37,16 @@ import type {
 
 const TOKEN_KEY = "gradingExportToken";
 
+/** How often the study dashboard checks for new data while open. */
+const REFRESH_MS = 45_000;
+
 type Sheet = { columns: string[]; rows: Record<string, unknown>[] };
 
 type Summary = {
   generatedAt: string;
+  /** Study cohort only: who counts (screened since) and whether test- runs are shown. */
+  studyStart?: string;
+  includeTeamTests?: boolean;
   events: number;
   submissions: number;
   allComplete: boolean;
@@ -54,9 +61,14 @@ type Summary = {
   insights: Insights;
   flow: FlowSummary;
   armViews: { lesson: ArmView; agent: ArmView };
+  /** Screening Q1a, graded but outside every pre/post figure. */
+  screeningQ1a?: Q1aRow[];
 };
 
 type ArmView = { insights: Insights; flow: FlowSummary };
+
+/** A participant's screening Q1a grade (kept out of the pre/post totals). */
+type Q1aRow = ScreeningQ1aGrade & { arm: string | null };
 type ArmKey = "all" | "lesson" | "agent";
 
 const pct = (value: number | null) =>
@@ -200,7 +212,80 @@ const DOWNLOADS: { format: string; label: string; ext: string }[] = [
   { format: "answers", label: "Every answer (CSV)", ext: "csv" },
   { format: "events", label: "Raw event log (CSV)", ext: "csv" },
   { format: "pairs", label: "Pre/post gain (CSV)", ext: "csv" },
+  { format: "q1a", label: "Screening Q1a (CSV)", ext: "csv" },
 ];
+
+/**
+ * Screening Q1a: the version's worked problem, asked once in screening and
+ * graded, but left out of the pre/post totals because the post-test has no Q1a.
+ */
+function ScreeningQ1aSection({ rows }: { rows: Q1aRow[] }) {
+  const scored = rows.filter((r) => r.graded && r.points != null);
+  const max = rows[0]?.maxPoints ?? 5;
+  const mean = scored.length
+    ? scored.reduce((sum, r) => sum + (r.points ?? 0), 0) / scored.length
+    : null;
+  return (
+    <>
+      <h2 className="mt-10 text-xl font-bold text-stone-800">
+        Screening Q1a — baseline
+      </h2>
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-stone-500">
+        The worked optimization problem (show your work), asked once in screening
+        as the pre-test version&apos;s Q1a. It is graded, but it is{" "}
+        <span className="font-semibold">not part of the pre/post totals</span>:
+        the post-test has no Q1a, so both tests are compared on the same items
+        and points.
+        {mean !== null && (
+          <>
+            {" "}Mean{" "}
+            <span className="font-semibold text-stone-700">
+              {mean.toFixed(1)}/{max}
+            </span>{" "}
+            over {scored.length} participant(s).
+          </>
+        )}
+      </p>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-sm text-stone-400">No graded Q1a answers yet.</p>
+      ) : (
+        <table className="mt-3 w-full border-collapse text-sm">
+          <thead>
+            <tr className="text-left text-xs text-stone-400">
+              <th className="py-1 pr-3 font-semibold">Participant</th>
+              <th className="py-1 pr-3 font-semibold">Arm</th>
+              <th className="py-1 pr-3 font-semibold">Version</th>
+              <th className="py-1 pr-3 font-semibold">Score</th>
+              <th className="py-1 font-semibold">Criteria</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.subjectId} className="border-t border-stone-100 align-top">
+                <td className="py-1 pr-3 font-mono text-xs text-stone-700">{r.subjectId}</td>
+                <td className="py-1 pr-3 text-stone-600">{r.arm ?? "—"}</td>
+                <td className="py-1 pr-3 text-stone-600">{r.form ?? "—"}</td>
+                <td className="whitespace-nowrap py-1 pr-3 font-semibold text-stone-700">
+                  {r.graded ? `${r.points}/${r.maxPoints}` : "not graded yet"}
+                  {r.needsReview && (
+                    <span className="ml-1 text-xs font-normal text-amber-700">review</span>
+                  )}
+                </td>
+                <td className="py-1 text-[11px] leading-tight text-stone-500">
+                  {r.criteria.map((c) => (
+                    <div key={c.id}>
+                      <Tick ok={c.verdict === "met"} /> {critLabel(c.id)}
+                    </div>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </>
+  );
+}
 
 /** A simple labelled bar row with a full (wrapping) label, for survey items. */
 function MiniBar({ label, count, max }: { label: string; count: number; max: number }) {
@@ -695,9 +780,11 @@ function ResponseTable({
 function ParticipantCard({
   p,
   rows,
+  q1a,
 }: {
   p: ParticipantDetail;
   rows: SubjectItemRow[];
+  q1a?: Q1aRow;
 }) {
   const pre = totalOf(rows, "pre");
   const post = totalOf(rows, "post");
@@ -721,6 +808,27 @@ function ParticipantCard({
       </summary>
       <div className="border-t border-stone-100 p-5 pt-4">
         <AnswerBlock title="Math background (self-reported) — screening" lines={p.screening} />
+        {q1a && (
+          <div className="mt-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-stone-400">
+              Screening Q1a score — not in the pre/post totals
+            </p>
+            <p className="mt-1 text-xs text-stone-700">
+              <span className="font-semibold">
+                {q1a.graded ? `${q1a.points}/${q1a.maxPoints}` : "not graded yet"}
+              </span>
+              {q1a.criteria.length > 0 && (
+                <span className="ml-2 text-stone-500">
+                  {q1a.criteria.map((c) => (
+                    <span key={c.id} className="mr-2 whitespace-nowrap">
+                      <Tick ok={c.verdict === "met"} /> {critLabel(c.id)}
+                    </span>
+                  ))}
+                </span>
+              )}
+            </p>
+          </div>
+        )}
         <AnswerBlock title="Pre-survey" lines={p.preSurvey} />
         <ResponseTable title="Pre-test — all responses" rows={rows} test="pre" />
         <InstructionBlock instr={p.instruction} />
@@ -1323,14 +1431,18 @@ export type StudyResultsProps = {
   intro: string;
   /**
    * Server-side participant filter (see /api/grading-export). Omitted: every
-   * logged participant. "full-pilot": only runs on the counterbalanced A/B
-   * design.
+   * logged participant. "study": only the new study's recruits (screened since
+   * STUDY_START), refreshed automatically while the page is open.
    */
-  cohort?: "full-pilot";
+  cohort?: "study";
 };
 
 export default function StudyResults({ title, intro, cohort }: StudyResultsProps) {
-  const cohortParam = cohort ? `&cohort=${cohort}` : "";
+  // Study dashboard only: also show the team's own test- runs.
+  const [includeTests, setIncludeTests] = useState(false);
+  const cohortParam = cohort
+    ? `&cohort=${cohort}${includeTests ? "&tests=1" : ""}`
+    : "";
   const [token, setToken] = useState("");
   const [summary, setSummary] = useState<Summary | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
@@ -1340,22 +1452,57 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
   const [error, setError] = useState<string | null>(null);
   const [arm, setArm] = useState<ArmKey>("all");
 
+  // Auto-refresh (study dashboard): the token that last loaded, the data
+  // fingerprint at that load, and whether a background refresh is running.
+  const loadedToken = useRef<string | null>(null);
+  const fingerprint = useRef<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+
   useEffect(() => {
     const saved = sessionStorage.getItem(TOKEN_KEY);
     if (saved) queueMicrotask(() => setToken(saved));
   }, []);
 
-  const load = useCallback(async (accessToken: string) => {
+  /** The cheap "has anything changed?" fingerprint (study dashboard only). */
+  const fetchFingerprint = useCallback(
+    async (accessToken: string): Promise<string | null> => {
+      const res = await fetch(
+        `/api/grading-export?format=status&token=${encodeURIComponent(accessToken)}${cohortParam}`,
+        { cache: "no-store" }
+      );
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
+      setCheckedAt(body?.checkedAt ?? new Date().toISOString());
+      return typeof body?.fingerprint === "string" ? body.fingerprint : null;
+    },
+    [cohortParam]
+  );
+
+  /**
+   * Loads the full summary. A `silent` load is a background refresh: it keeps
+   * the current results on screen (and on failure keeps them, with a note)
+   * instead of blanking the page.
+   */
+  const load = useCallback(async (accessToken: string, silent = false) => {
     if (!accessToken.trim()) {
       setError("Enter the export token to load results.");
       setStatus("error");
       return;
     }
 
-    setStatus("loading");
-    setError(null);
+    if (silent) setRefreshing(true);
+    else {
+      setStatus("loading");
+      setError(null);
+    }
 
     try {
+      // Taken before the summary, so anything that lands during the load
+      // changes the fingerprint and is picked up on the next check.
+      const before = cohort ? await fetchFingerprint(accessToken) : null;
+
       const res = await fetch(
         `/api/grading-export?format=summary&token=${encodeURIComponent(accessToken)}${cohortParam}`,
         { cache: "no-store" }
@@ -1367,14 +1514,70 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
       }
 
       sessionStorage.setItem(TOKEN_KEY, accessToken);
+      loadedToken.current = accessToken;
+      fingerprint.current = before;
       setSummary(body as Summary);
       setStatus("idle");
+      setRefreshError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus("error");
-      setSummary(null);
+      const message = err instanceof Error ? err.message : String(err);
+      if (silent) {
+        setRefreshError(message);
+      } else {
+        setError(message);
+        setStatus("error");
+        setSummary(null);
+        loadedToken.current = null;
+      }
+    } finally {
+      if (silent) setRefreshing(false);
     }
-  }, [cohortParam]);
+  }, [cohort, cohortParam, fetchFingerprint]);
+
+  // Study dashboard: check every REFRESH_MS while the tab is visible, and
+  // reload the results only when something new has landed (a step finished or
+  // a grade stored). Starts after the first successful load.
+  const loaded = summary !== null;
+  useEffect(() => {
+    if (!cohort || !loaded) return;
+
+    let busy = false;
+    const tick = async () => {
+      const accessToken = loadedToken.current;
+      if (busy || !accessToken || document.hidden) return;
+      busy = true;
+      try {
+        const now = await fetchFingerprint(accessToken);
+        if (now !== fingerprint.current) await load(accessToken, true);
+      } catch (err) {
+        setRefreshError(err instanceof Error ? err.message : String(err));
+      } finally {
+        busy = false;
+      }
+    };
+
+    const id = window.setInterval(() => void tick(), REFRESH_MS);
+    // Coming back to the tab checks straight away rather than waiting.
+    const onVisible = () => {
+      if (!document.hidden) void tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [cohort, loaded, fetchFingerprint, load]);
+
+  // Flipping "Show test runs" reloads with the new filter.
+  const firstFilter = useRef(true);
+  useEffect(() => {
+    if (firstFilter.current) {
+      firstFilter.current = false;
+      return;
+    }
+    if (loadedToken.current) void load(loadedToken.current, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeTests]);
 
   const download = (format: string, ext: string) => {
     const url = `/api/grading-export?format=${format}&token=${encodeURIComponent(token)}${cohortParam}`;
@@ -1430,7 +1633,45 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
           <Button onClick={() => void load(token)}>
             {status === "loading" ? "Loading…" : "Load results"}
           </Button>
+          {cohort && (
+            <label className="flex h-11 cursor-pointer items-center gap-2 text-sm font-semibold text-stone-600">
+              <input
+                type="checkbox"
+                checked={includeTests}
+                onChange={(event) => setIncludeTests(event.target.checked)}
+                className="h-4 w-4 accent-lime-600"
+              />
+              Show test runs (IDs starting with <code>test-</code>)
+            </label>
+          )}
         </div>
+
+        {cohort && summary && (
+          <p className="mt-3 text-sm text-stone-500">
+            {summary.studyStart && (
+              <>
+                Participants screened since{" "}
+                <span className="font-semibold text-stone-700">
+                  {new Date(summary.studyStart).toLocaleString()}
+                </span>
+                {summary.includeTeamTests ? ", including test runs" : ""}.{" "}
+              </>
+            )}
+            Last updated{" "}
+            <span className="font-semibold text-stone-700">
+              {new Date(summary.generatedAt).toLocaleTimeString()}
+            </span>
+            {" · "}
+            {refreshing
+              ? "updating…"
+              : `checks for new data every ${REFRESH_MS / 1000}s${
+                  checkedAt ? ` (last check ${new Date(checkedAt).toLocaleTimeString()})` : ""
+                }`}
+            {refreshError && (
+              <span className="text-red-700"> · last refresh failed: {refreshError}</span>
+            )}
+          </p>
+        )}
 
         {error && (
           <p className="mt-4 rounded-xl border-2 border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
@@ -2117,6 +2358,16 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
               />
             )}
 
+            {summary.screeningQ1a && (
+              <ScreeningQ1aSection
+                rows={
+                  arm === "all"
+                    ? summary.screeningQ1a
+                    : summary.screeningQ1a.filter((q) => q.arm === arm)
+                }
+              />
+            )}
+
             {/* Screened-out people have no arm, so this is always over everyone. */}
             {summary.flow?.screeningOutcomes && (
               <ScreeningSection s={summary.flow.screeningOutcomes} />
@@ -2139,6 +2390,7 @@ export default function StudyResults({ title, intro, cohort }: StudyResultsProps
                       key={p.subjectId}
                       p={p}
                       rows={subjectRows.get(p.subjectId) ?? []}
+                      q1a={summary.screeningQ1a?.find((q) => q.subjectId === p.subjectId)}
                     />
                   ))}
                 </div>

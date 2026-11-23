@@ -7,6 +7,7 @@ dotenv.config({ path: ".env.local" });
 import getFirestore from "../lib/firestore";
 import { gradeTest } from "../lib/tests/grade";
 import { maxScore } from "../lib/tests/answer-key";
+import { splitScreeningQ1a } from "../lib/tests/screening-q1a";
 import {
   buildGradeReport,
   buildPairReport,
@@ -101,11 +102,14 @@ async function main() {
 
   // Report shapes come from lib/tests/report.ts, shared with the grading
   // export endpoint so the two can never drift apart.
-  const grades = buildGradeReport(results);
+  // Screening Q1a is pre-test only on the A/B design, so the per-test and
+  // pre/post sheets compare both tests without it (see lib/tests/screening-q1a).
+  const { comparable } = splitScreeningQ1a(results);
+  const grades = buildGradeReport(comparable);
   const gradesPath = path.join(outDir, `grades-${stamp}.csv`);
   await fs.writeFile(gradesPath, toCsv(grades.rows, grades.columns), "utf8");
 
-  const pairs = buildPairReport(results);
+  const pairs = buildPairReport(comparable);
   const pairsPath = path.join(outDir, `pre-post-${stamp}.csv`);
   await fs.writeFile(pairsPath, toCsv(pairs.rows, pairs.columns), "utf8");
 

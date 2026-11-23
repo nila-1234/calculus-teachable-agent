@@ -1,7 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import getFirestore from "@/lib/firestore";
 import { mirrorEvents, type LogEntry } from "@/lib/tree";
+import { gradeFinishedRun } from "@/lib/tests/study-data";
+
+// Grading a finished run (below) runs after the response, within this budget.
+export const maxDuration = 300;
+
+/**
+ * Subjects whose run just ended: the post-survey is the last step, so its
+ * arrival is when their pre- and post-test get graded.
+ */
+function finishedSubjects(entries: unknown[]): string[] {
+  const ids = entries
+    .map((e) => e as Record<string, unknown>)
+    .filter((e) => e?.event === "survey_completed" && e?.scenario_id === "post")
+    .map((e) => String(e.subject_id ?? "").trim())
+    .filter((id) => id && id !== "unknown");
+  return [...new Set(ids)];
+}
 
 const ALREADY_EXISTS = 6;
 
@@ -110,6 +127,23 @@ export async function POST(req: NextRequest) {
       } catch (err) {
         console.error("Tree mirror failed (logs are unaffected):", err);
       }
+    }
+
+    // Grade a run as soon as it finishes, in the background so the participant's
+    // request returns immediately. Only whole runs are graded (gradeFinishedRun
+    // checks every step is there). A failure here is not lost: the dashboard
+    // grades any finished run that has no stored grade on its next load.
+    const finished = finishedSubjects(mainEntries);
+    if (finished.length) {
+      after(async () => {
+        for (const subjectId of finished) {
+          try {
+            console.log("Completion grading:", await gradeFinishedRun(subjectId));
+          } catch (err) {
+            console.error(`Completion grading failed for ${subjectId}:`, err);
+          }
+        }
+      });
     }
 
     return NextResponse.json({ ok: failed.length === 0, inserted, failed });

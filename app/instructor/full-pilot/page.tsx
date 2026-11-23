@@ -3,9 +3,9 @@ import StudyResults from "@/components/instructor/study-results";
 export default function FullPilotResultsPage() {
   return (
     <StudyResults
-      cohort="full-pilot"
+      cohort="study"
       title="Full pilot results"
-      intro="Only participants on the counterbalanced design: screening Q5 as the pre-test's Q1a, Versions A/B for the pre/post tests, and Q1b–Q1f. Earlier runs and the test-question pilot are left out. Graded against each participant's own version."
+      intro="The new study's participants only — everyone screened since the study start, across both arms. Each run is graded by AI as soon as the participant finishes the post-survey, against their own test version; runs that stop partway are not graded. Updates automatically while this page is open."
     />
   );
 }

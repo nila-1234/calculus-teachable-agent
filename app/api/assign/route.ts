@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import getFirestore from "@/lib/firestore";
+import { isTeamTestRun } from "@/lib/tests/cohort";
 
 /**
  * Balanced condition assignment.
@@ -30,10 +31,16 @@ type Condition = (typeof CONDITIONS)[number];
  * "lesson"/"agent" collects that arm only; set back to null to restore the
  * balanced split. (A matching override exists in lib/condition.ts — flip both.)
  */
-const FORCE_CONDITION: Condition | null = "lesson";
+const FORCE_CONDITION: Condition | null = null;
 
 const ASSIGNMENTS = "assignments";
-const COUNTS_DOC = "assignment_counts/global";
+/**
+ * The new study's own running count. The earlier runs' count
+ * (assignment_counts/global) includes everyone forced onto the lesson arm, so
+ * balancing against it would send every new recruit to the agent arm until the
+ * two caught up. A fresh counter starts the new study at 0 / 0.
+ */
+const COUNTS_DOC = "assignment_counts/new-study";
 
 function isCondition(value: unknown): value is Condition {
   return typeof value === "string" && (CONDITIONS as readonly string[]).includes(value);
@@ -69,6 +76,10 @@ export async function POST(req: NextRequest) {
         CONDITIONS.map((c) => [c, Number(counts[c]) || 0])
       ) as Record<Condition, number>;
 
+      // The team's own test- runs still get an arm (by the same rule), but are
+      // never counted, so testing cannot unbalance the real split.
+      const teamTest = isTeamTestRun(subjectId);
+
       let chosen: Condition;
       if (FORCE_CONDITION) {
         chosen = FORCE_CONDITION;
@@ -88,13 +99,16 @@ export async function POST(req: NextRequest) {
         // Recorded so a fallback assignment is visible as one when the split is
         // audited — it bypassed the balancing.
         via: FORCE_CONDITION ? "forced" : preferred ? "client-fallback" : "balanced",
+        ...(teamTest ? { team_test: true } : {}),
         assigned_at: FieldValue.serverTimestamp(),
       });
-      tx.set(
-        countsRef,
-        { ...tally, [chosen]: tally[chosen] + 1, updated_at: FieldValue.serverTimestamp() },
-        { merge: true }
-      );
+      if (!teamTest) {
+        tx.set(
+          countsRef,
+          { ...tally, [chosen]: tally[chosen] + 1, updated_at: FieldValue.serverTimestamp() },
+          { merge: true }
+        );
+      }
 
       return chosen;
     });

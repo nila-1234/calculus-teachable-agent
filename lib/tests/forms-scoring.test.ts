@@ -5,7 +5,18 @@ import { scoreTest } from "./score";
 import { collectSubmissions, type LogDoc } from "./report";
 import { buildAiCheck } from "./ai-check";
 import { seededShuffle } from "./forms";
-import { dropTestRuns, filterCohort, isCohort } from "./cohort";
+import {
+  cohortSubjects,
+  dropTestRuns,
+  filterCohort,
+  filterTeamTests,
+  isCohort,
+  isTeamTestRun,
+} from "./cohort";
+import { fullFlowSubjects } from "./export";
+import { splitScreeningQ1a } from "./screening-q1a";
+import { buildPairReport, type GradedSubmission } from "./report";
+import type { GradeResult } from "./grade";
 import { buildScreeningOutcomes } from "./screening-outcomes";
 import { SKILL_CHECK_ANSWERS } from "@/lib/surveys/eligibility";
 
@@ -110,24 +121,62 @@ test("AI-use check flags, following the keystroke-tracker rules", () => {
   assert.equal(check.people[0].flagged, true);
 });
 
-test("the full-pilot cohort keeps every event of A/B participants and nobody else", () => {
-  const ev = (subject_id: string, event: string) =>
-    ({ event, subject_id, scenario_id: "x", timestamp: "2026-11-23T10:00:00Z", data: {} }) as LogDoc;
+test("the study cohort is everyone screened since the start, with all their events", () => {
+  const ev = (subject_id: string, event: string, timestamp: string) =>
+    ({ event, subject_id, scenario_id: "x", timestamp, data: {} }) as LogDoc;
+  const start = "2026-12-01T00:00:00.000Z";
   const docs = [
-    ev("OLD", "screening_completed"),
-    ev("OLD", "test_completed"),
-    ev("NEW", "step_entered"),
-    ev("NEW", "form_assigned"),
-    ev("NEW", "test_completed"),
+    // Earlier A/B pilot participant: screened before the start.
+    ev("OLD", "form_assigned", "2026-11-20T10:00:00.000Z"),
+    ev("OLD", "test_completed", "2026-12-02T10:00:00.000Z"),
+    // New recruit: their welcome-page view a moment before screening still counts.
+    ev("NEW", "step_entered", "2026-12-02T09:59:59.000Z"),
+    ev("NEW", "form_assigned", "2026-12-02T10:00:00.000Z"),
+    ev("NEW", "test_completed", "2026-12-02T10:30:00.000Z"),
+    // Never screened at all.
+    ev("NOSCREEN", "step_entered", "2026-12-02T10:00:00.000Z"),
   ];
-  const kept = filterCohort(docs, "full-pilot");
-  assert.deepEqual(kept.map((d) => `${d.subject_id}:${d.event}`), [
-    "NEW:step_entered",
-    "NEW:form_assigned",
-    "NEW:test_completed",
-  ]);
-  assert.ok(isCohort("full-pilot"));
-  assert.ok(!isCohort("everyone"));
+  assert.deepEqual([...cohortSubjects(docs, start)], ["NEW"]);
+  assert.deepEqual(
+    filterCohort(docs, start).map((d) => `${d.subject_id}:${d.event}`),
+    ["NEW:step_entered", "NEW:form_assigned", "NEW:test_completed"]
+  );
+  assert.ok(isCohort("study"));
+  assert.ok(!isCohort("full-pilot"));
+});
+
+test("the team's test- runs are hidden unless asked for; real ids are not caught", () => {
+  assert.ok(isTeamTestRun("test-corina-1"));
+  assert.ok(isTeamTestRun("TEST-2"));
+  assert.ok(!isTeamTestRun("5f1a2b3c4d5e6f7a8b9c0d1e"));
+  assert.ok(!isTeamTestRun("anon-test1234"));
+  assert.ok(!isTeamTestRun("claude-test-1"));
+  const ev = (subject_id: string) =>
+    ({ event: "form_assigned", subject_id, scenario_id: "screening", timestamp: "t", data: {} }) as LogDoc;
+  const docs = [ev("test-corina-1"), ev("5f1a2b3c4d5e6f7a8b9c0d1e")];
+  assert.deepEqual(filterTeamTests(docs, false).map((d) => d.subject_id), ["5f1a2b3c4d5e6f7a8b9c0d1e"]);
+  assert.equal(filterTeamTests(docs, true).length, 2);
+});
+
+test("only a run that finished every step counts as finished (and so gets graded)", () => {
+  const ev = (subject_id: string, event: string, scenario_id: string, data: Record<string, unknown> = {}) =>
+    ({ event, subject_id, scenario_id, timestamp: "2026-12-02T10:00:00.000Z", data }) as LogDoc;
+  const run = (id: string, arm: string) => [
+    ev(id, "screening_completed", "screening"),
+    ev(id, "survey_completed", "pre"),
+    ev(id, "test_completed", "pretest"),
+    ev(id, "condition_assigned", "instruction", { condition: arm }),
+    ev(id, arm === "lesson" ? "lesson_completed" : "grade_lines_completed", "x"),
+    ev(id, "test_completed", "posttest"),
+    ev(id, "survey_completed", "post"),
+  ];
+  const docs = [
+    ...run("DONE-LESSON", "lesson"),
+    ...run("DONE-AGENT", "agent"),
+    // Stopped after the pre-test.
+    ...run("STOPPED", "agent").slice(0, 3),
+  ];
+  assert.deepEqual([...fullFlowSubjects(docs)].sort(), ["DONE-AGENT", "DONE-LESSON"]);
 });
 
 test("Claude's test runs are dropped; real participants are kept", () => {
@@ -173,4 +222,59 @@ test("the Q1 shuffle is a stable permutation per participant", () => {
     Array.from({ length: 30 }, (_, i) => seededShuffle(items, `P${i}:pretest:q1`).join(","))
   );
   assert.ok(orders.size > 5, "different participants see different orders");
+});
+
+test("screening Q1a is taken out of the A/B pre-test, so pre and post are out of the same points", () => {
+  const item = (itemId: string, points: number, maxPoints: number, kind = "value") =>
+    ({ itemId, kind, points, maxPoints, needsGrading: false }) as unknown as GradeResult["items"][number];
+  const result = (testId: "pretest" | "posttest", items: GradeResult["items"]): GradeResult => ({
+    testId,
+    items,
+    openItems: items
+      .filter((i) => i.itemId === "1")
+      .map((i) => ({ itemId: "1", points: i.points ?? 0, maxPoints: i.maxPoints, criteria: [{ id: "model", verdict: "met", comment: "" }], needsReview: false })),
+    autoPoints: 0,
+    autoMaxPoints: 0,
+    totalPoints: items.reduce((s, i) => s + (i.points ?? 0), 0),
+    totalMaxPoints: items.reduce((s, i) => s + i.maxPoints, 0),
+    complete: true,
+    ungraded: [],
+    needsReview: [],
+    gradingError: null,
+    gradedBy: "test",
+  });
+  const graded: GradedSubmission[] = [
+    {
+      submission: { subjectId: "S", testId: "pretest", submittedAt: "t", form: "B", items: ["1", "1b"], answers: { "1": { text: "work" }, "1b": { text: "16" } } },
+      result: result("pretest", [item("1", 4, 5, "open"), item("1b", 1, 1)]),
+    },
+    {
+      submission: { subjectId: "S", testId: "posttest", submittedAt: "t", form: "A", items: ["1b"], answers: { "1b": { text: "324" } } },
+      result: result("posttest", [item("1b", 0, 1)]),
+    },
+    // Legacy fixed tests (no version) asked Q1a in both tests: left alone.
+    {
+      submission: { subjectId: "OLD", testId: "pretest", submittedAt: "t", answers: { "1": { text: "x" } } },
+      result: result("pretest", [item("1", 3, 5, "open")]),
+    },
+  ];
+
+  const { comparable, screeningQ1a } = splitScreeningQ1a(graded);
+  const pre = comparable[0];
+  assert.equal(pre.result.totalPoints, 1);
+  assert.equal(pre.result.totalMaxPoints, 1);
+  assert.ok(!pre.result.items.some((i) => i.itemId === "1"));
+  assert.ok(!("1" in pre.submission.answers));
+  assert.deepEqual(pre.submission.items, ["1b"]);
+  assert.equal(comparable[2].result.totalMaxPoints, 5, "legacy pre-test keeps its Q1a");
+
+  assert.equal(screeningQ1a.length, 1);
+  assert.deepEqual(
+    { s: screeningQ1a[0].subjectId, p: screeningQ1a[0].points, m: screeningQ1a[0].maxPoints, a: screeningQ1a[0].answer, f: screeningQ1a[0].form },
+    { s: "S", p: 4, m: 5, a: "work", f: "B" }
+  );
+
+  const pair = buildPairReport(comparable).rows.find((r) => r.subject_id === "S");
+  assert.equal(pair?.max_points, 1);
+  assert.equal(pair?.gain, -1);
 });
