@@ -91,7 +91,9 @@ function LikertScale({
 function useTypingSignals(
   enabled: boolean,
   initialRaw: string | undefined,
-  onTyping: ((json: string) => void) | undefined
+  onTyping: ((json: string) => void) | undefined,
+  /** The answer box's data-qid, to pick out its keypad inserts. */
+  qid?: string
 ) {
   const signals = useRef<TypingSignals>(parseTyping(initialRaw));
   const hiddenAt = useRef<number | null>(null);
@@ -131,9 +133,24 @@ function useTypingSignals(
         onTyping?.(JSON.stringify(signals.current));
       }
     };
+    // The math keypad inserts text without keystrokes and announces it with a
+    // bubbling "keypad-insert" event from the answer box (math-input-field).
+    const onKeypad = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (!qid || target?.getAttribute?.("data-qid") !== qid) return;
+      const text = String((event as CustomEvent).detail?.text ?? "");
+      resume();
+      signals.current.keypadChars = (signals.current.keypadChars ?? 0) + text.length;
+      if (signals.current.firstFocusAt == null) signals.current.firstFocusAt = Date.now();
+      onTyping?.(JSON.stringify(signals.current));
+    };
     document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [enabled, onTyping]);
+    document.addEventListener("keypad-insert", onKeypad);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("keypad-insert", onKeypad);
+    };
+  }, [enabled, onTyping, qid]);
 
   if (!enabled) return {};
   return {
@@ -158,9 +175,18 @@ function useTypingSignals(
       update((s) => {
         s.droppedChars += event.dataTransfer.getData("text").length;
       }),
-    onInput: () =>
+    onInput: (event: React.FormEvent) =>
       update((s) => {
         s.lastInputAt = Date.now();
+        // Text the browser reports as typed — counts phone keyboards and input
+        // methods, whose keys don't always show up as key presses.
+        const native = event.nativeEvent as InputEvent;
+        if (
+          (native.inputType === "insertText" || native.inputType === "insertCompositionText") &&
+          native.data
+        ) {
+          s.typedChars = (s.typedChars ?? 0) + native.data.length;
+        }
       }),
   };
 }
@@ -189,7 +215,8 @@ function SurveyItemCard({
   const typingHandlers = useTypingSignals(
     Boolean(item.trackTyping && item.kind === "open" && !readOnly),
     typingRaw,
-    onTyping
+    onTyping,
+    qid
   );
   const label = item.id === "subject-id" ? "Subject ID" : `Q${number}`;
 

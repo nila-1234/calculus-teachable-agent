@@ -79,6 +79,22 @@ export const INELIGIBLE_OPTIONS: Record<string, string[]> = {
   "calculus-courses": ["3 or more"],
 };
 
+/**
+ * Formatting a participant does not type by hand but AI tools produce: LaTeX
+ * commands and delimiters, markdown emphasis / headings, and chatbot phrasing.
+ * Returns the markers found (empty if none).
+ */
+const AI_WORDING: [string, RegExp][] = [
+  ["LaTeX", /\\(frac|cdot|times|text|sqrt|left|right|quad|boxed|implies|Rightarrow|le|ge)\b|\\\(|\\\)|\\\[|\\\]|\$\$|\$[^$\n]+\$/],
+  ["markdown bold", /\*\*[^*\n]+\*\*/],
+  ["markdown heading", /^\s{0,3}#{1,4}\s+\S/m],
+  ["chatbot phrasing", /\b(as an ai|i hope this helps|certainly!|here'?s (a|the) step-by-step)\b/i],
+];
+
+export function aiWordingMarkers(text: string): string[] {
+  return AI_WORDING.filter(([, re]) => re.test(text)).map(([name]) => name);
+}
+
 export type EligibilityResult = {
   eligible: boolean;
   /** Item ids that triggered exclusion, for the record. */
@@ -118,13 +134,39 @@ export function evaluateEligibility(answers: SurveyAnswers): EligibilityResult {
     }
   }
 
-  // AI-use check: written answer pasted or dropped in rather than typed.
+  // AI-use check on screening Q5, from the typing log and the wording.
   if (answers[AI_CHECK_ITEM] !== undefined) {
+    const text = answers[AI_CHECK_ITEM] ?? "";
     const typing = parseTyping(answers[`${AI_CHECK_ITEM}${TYPING_SUFFIX}`]);
+    const aiReasons: string[] = [];
+
+    // 1. Pasted or dropped in rather than typed.
     const inserted = typing.pastedChars + typing.droppedChars;
     if (inserted >= PASTE_SCREEN_OUT_CHARS) {
+      aiReasons.push(`${inserted} characters pasted in`);
+    }
+
+    // 2. Text that arrived without being typed, pasted or entered on the keypad
+    //    (autofill, an extension, a script). Only judged when typing was logged.
+    const accounted =
+      Math.max(typing.keystrokes, typing.typedChars ?? 0) +
+      (typing.keypadChars ?? 0) +
+      typing.pastedChars +
+      typing.droppedChars;
+    const unexplained = text.trim().length - accounted;
+    if (typing.firstFocusAt != null && inserted < PASTE_SCREEN_OUT_CHARS && unexplained >= PASTE_SCREEN_OUT_CHARS) {
+      aiReasons.push(`${unexplained} more characters than were typed`);
+    }
+
+    // 3. Wording only an AI tool or a copy would produce: the page shows pasted
+    //    text as plain text and the keypad inserts plain symbols, so a typed
+    //    answer has no LaTeX or markdown in it.
+    const markers = aiWordingMarkers(text);
+    if (markers.length) aiReasons.push(`AI-style formatting (${markers.join(", ")})`);
+
+    if (aiReasons.length) {
       failedItems.push(AI_CHECK_ITEM);
-      reasons.push(`${AI_CHECK_ITEM}: ${inserted} characters pasted in (possible AI use)`);
+      reasons.push(`${AI_CHECK_ITEM}: ${aiReasons.join("; ")} (possible AI use)`);
     }
   }
 

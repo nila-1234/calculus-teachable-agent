@@ -52,6 +52,10 @@ export type TypingSignals = {
   pasteCount: number;
   droppedChars: number;
   keystrokes: number;
+  /** Characters inserted with the on-screen math keypad (no keystrokes). */
+  keypadChars?: number;
+  /** Characters the browser reported as typed input (incl. phone keyboards / IMEs). */
+  typedChars?: number;
   backspaces: number;
   firstFocusAt: number | null;
   firstKeyAt: number | null;

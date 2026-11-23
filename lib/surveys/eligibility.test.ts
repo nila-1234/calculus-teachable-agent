@@ -48,3 +48,45 @@ test("answers without the AI-check question (older runs) are unaffected", () => 
   void _removed;
   assert.equal(evaluateEligibility(older).eligible, true);
 });
+
+test("text that appeared without being typed is screened out", () => {
+  // 71 characters in the box, 3 keys pressed, nothing pasted: inserted by a script or extension.
+  const r = evaluateEligibility(withTyping({ keystrokes: 3, firstFocusAt: 1 }));
+  assert.equal(r.eligible, false);
+  assert.match(r.reasons.join(" "), /more characters than were typed/);
+});
+
+test("keypad symbols and phone-keyboard input count as typed", () => {
+  const keypad = evaluateEligibility(withTyping({ keystrokes: 60, keypadChars: 12, firstFocusAt: 1 }));
+  assert.equal(keypad.eligible, true, keypad.reasons.join("; "));
+  // A phone keyboard may report no key presses, only typed input.
+  const phone = evaluateEligibility(withTyping({ keystrokes: 0, typedChars: 75, firstFocusAt: 1 }));
+  assert.equal(phone.eligible, true, phone.reasons.join("; "));
+});
+
+test("AI-style wording is screened out, even when typed", () => {
+  const typed = { keystrokes: 400, firstFocusAt: 1 };
+  for (const [answer, marker] of [
+    ["Let \\(x\\) be the width, so \\(A = x(60-2x)\\).", "LaTeX"],
+    ["A'(x) = 60 - 4x = 0, so $x = 15$.", "LaTeX"],
+    ["**Step 1:** set up the constraint 2x + y = 60.", "markdown bold"],
+    ["### Solution\n2x + y = 60", "markdown heading"],
+    ["Certainly! Here's the step-by-step solution.", "chatbot phrasing"],
+  ] as const) {
+    const r = evaluateEligibility({
+      ...withTyping(typed),
+      [AI_CHECK_ITEM]: answer,
+    });
+    assert.equal(r.eligible, false, answer);
+    assert.match(r.reasons.join(" "), new RegExp(marker), answer);
+  }
+});
+
+test("ordinary typed math is not mistaken for AI wording", () => {
+  const r = evaluateEligibility({
+    ...withTyping({ keystrokes: 200, keypadChars: 8, firstFocusAt: 1 }),
+    [AI_CHECK_ITEM]:
+      "2x + y = 60 so y = 60 - 2x. A(x) = x(60-2x) = 60x - 2x^2. A'(x) = 60 - 4x = 0 -> x = 15, y = 30. A'' = -4 < 0 so max. Area = 450 m^2 ($ not needed)",
+  });
+  assert.equal(r.eligible, true, r.reasons.join("; "));
+});

@@ -21,7 +21,10 @@ export const SCREEN_REASONS: Record<string, { label: string; group: ScreenGroup 
   "calculus-courses": { label: "Too advanced: 3 or more calculus courses", group: "high" },
   algebra_check: { label: "Algebra check wrong", group: "low" },
   power_rule_check: { label: "Power-rule check wrong", group: "low" },
-  [AI_CHECK_ITEM]: { label: "Pasted the Q5 answer (possible AI use)", group: "ai" },
+  [AI_CHECK_ITEM]: {
+    label: "Possible AI use on Q5 (pasted, not typed, or AI-style wording)",
+    group: "ai",
+  },
 };
 
 export const SCREEN_GROUP_LABELS: Record<ScreenGroup, string> = {
