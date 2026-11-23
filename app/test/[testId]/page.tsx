@@ -13,7 +13,7 @@ import { formForPhase, seededShuffle } from "@/lib/tests/forms";
 import { getSubjectId } from "@/lib/subject";
 import type { FormId, TestAnswers, TestId, TestItemAnswer } from "@/lib/tests/types";
 
-/** Marks test events from the counterbalanced design (version + Q1b–Q1f). */
+/** Marks test events from the counterbalanced design (version + Q1b, Q1c, Q1e, Q1f). */
 const TEST_DESIGN_VERSION = 2;
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
@@ -50,7 +50,7 @@ function TestPageContent() {
   const [screenIndex, setScreenIndex] = useState(-1);
   const [answers, setAnswers] = useState<TestAnswers>({});
 
-  // Q1b–Q1f come in a per-participant random order, stable across reloads.
+  // Q1b, Q1c, Q1e, Q1f come in a per-participant random order, stable across reloads.
   // Labels follow what is shown — Q1.1, Q1.2 … in display order, Q2.1 … — never
   // the item ids, which would give away the original order.
   const items = useMemo(

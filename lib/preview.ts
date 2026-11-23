@@ -144,7 +144,7 @@ export const PREVIEW_PHASES: PreviewPhase[] = [
     id: "pre-test",
     label: "Pre-test",
     description:
-      "The optimization assessment taken before instruction: Q1b–Q1f in a shuffled order, then Questions 2 and 3.",
+      "The optimization assessment taken before instruction: the four short Q1 problems on one page in a shuffled order, then Questions 2 and 3.",
     path: "/test/pretest",
     versions: true,
   },

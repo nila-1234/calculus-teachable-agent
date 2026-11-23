@@ -371,13 +371,14 @@ export function getTest(id: string): TestDefinition | null {
 /* ===================================================== counterbalanced forms */
 
 /**
- * Question 1's short items, Q1b–Q1f, per version. Four of them are the
- * original LearnVia Self-Quiz 10.2.8 items, word for word (two in each
- * version); the matching item in the other version is an isomorphic copy —
- * same wording, different numbers. In each version b and c fall within the
- * allowed range and d and e at its edge (or the reverse); f asks for the
- * objective function itself. Answers are verified: A 324, 45, 400, 96,
- * −x² + 25x; B 16, 25, 1800, 81, −x² + 35x.
+ * Question 1's short items per version: Q1b, Q1c, Q1e, Q1f. Four LearnVia
+ * Self-Quiz 10.2.8 items, word for word (two in each version); the matching
+ * item in the other version is an isomorphic copy — same wording, different
+ * numbers. Each pair puts its maximum within the allowed range in one version
+ * and at the edge in the other; f asks for the objective function itself.
+ * (Q1d, a fencing problem not from LearnVia that mirrored Q1a, was dropped;
+ * the ids are kept so scoring and older logs line up.) Answers are verified:
+ * A 324, 45, 96, −x² + 25x; B 16, 25, 81, −x² + 35x.
  */
 const Q1_SHORT: Record<FormId, TestItem[]> = {
   A: [
@@ -398,15 +399,6 @@ const Q1_SHORT: Record<FormId, TestItem[]> = {
       placeholder: "Your answer…",
       reference:
         "LearnVia original (Self-Quiz 10.2.8, profit) — within range. x = 45 (P(x) = −2x² + 180x − 850).",
-    },
-    {
-      id: "1d",
-      kind: "short-answer",
-      prompt:
-        "A farmer builds a rectangular pen against a straight wall, fencing only the three sides not along the wall, using 60 m of fencing. With \\(x\\) the length of each side perpendicular to the wall, the area is \\(A(x) = x(60 - 2x)\\). Each perpendicular side must satisfy \\(20 \\le x \\le 30\\). What is the maximum possible area, in square meters?",
-      placeholder: "Your answer…",
-      reference:
-        "Fencing — on the edge. 400 m², at x = 20 (the critical point x = 15 is outside [20, 30]).",
     },
     {
       id: "1e",
@@ -447,16 +439,6 @@ const Q1_SHORT: Record<FormId, TestItem[]> = {
         "Isomorphic to the LearnVia profit item (Version A Q1c) — on the edge. x = 25 (the unconstrained best, x = 35, is outside [10, 25]).",
     },
     {
-      id: "1d",
-      kind: "short-answer",
-      prompt:
-        "A farmer builds a rectangular pen against a straight wall, fencing only the three sides not along the wall, using 120 m of fencing. With \\(x\\) the length of each side perpendicular to the wall, the area is \\(A(x) = x(120 - 2x)\\), with \\(0 \\le x \\le 60\\). What is the maximum possible area, in square meters?",
-      placeholder: "Your answer…",
-      // 120 m, not 80 m: Version B's Q1a is the 80 m problem (answer 800 m²),
-      // and a participant whose pre-test is B answers that Q1a in screening.
-      reference: "Fencing — within range. 1800 m² (interior critical point, x = 30; A′(x) = 120 − 4x).",
-    },
-    {
       id: "1e",
       kind: "short-answer",
       prompt:
@@ -487,7 +469,7 @@ export const Q1A_ITEM: Record<FormId, TestItem> = {
 const FORM_BASE: Record<FormId, TestDefinition> = { A: PRE_TEST, B: POST_TEST };
 
 /**
- * Everything in one version: Q1a, Q1b–Q1f, Question 2, Question 3. Used to
+ * Everything in one version: Q1a, Q1b, Q1c, Q1e, Q1f, Question 2, Question 3. Used to
  * grade and to look up any item's wording, whichever phase it was taken in.
  */
 export function getFormTest(form: FormId): TestDefinition {
@@ -507,12 +489,12 @@ const PHASE_TITLES: Record<TestId, string> = {
 
 const PHASE_INTROS: Record<TestId, string[]> = {
   pretest: [
-    "This assessment has three questions: five short calculus problems, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
+    "This assessment has three questions: four short calculus problems, a multi-part modeling and grading exercise, and a real-world problem you analyze together with an AI.",
     "Use the math keypad under each answer box to enter symbols such as powers and square roots.",
     "Answer each question in order. Once you continue past a question you cannot go back and change your answer.",
   ],
   posttest: [
-    "This assessment has three questions: five short calculus problems, a multi-part modeling and evaluation exercise, and a real-world problem you analyze together with an AI.",
+    "This assessment has three questions: four short calculus problems, a multi-part modeling and evaluation exercise, and a real-world problem you analyze together with an AI.",
     "For questions involving an AI response, evaluate the response using both the mathematics and the real-world information in the problem. Use the math keypad under each answer box to enter symbols such as powers and square roots.",
     "Answer each question in order. Once you continue past a question you cannot go back and change your answer.",
   ],
@@ -520,7 +502,7 @@ const PHASE_INTROS: Record<TestId, string[]> = {
 
 /**
  * The test a participant takes in a phase, from their assigned version: Q1a
- * is left out (it was asked in screening), and Q1b–Q1f appear in random order.
+ * is left out (it was asked in screening), and Q1b, Q1c, Q1e, Q1f appear in random order.
  */
 export function getPhaseTest(testId: TestId, form: FormId): TestDefinition {
   const full = getFormTest(form);

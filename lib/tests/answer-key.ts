@@ -182,7 +182,7 @@ export const ANSWER_KEY: Record<TestId, Record<string, ItemKey>> = {
 
 /**
  * The key for each version: its original key (Q1a, Question 2, Question 3) plus
- * Q1b–Q1f, one point each. Version A is the original pre-test content and
+ * Q1b, Q1c, Q1e, Q1f, one point each (Q1d was dropped). Version A is the original pre-test content and
  * Version B the original post-test content, whichever phase they're taken in.
  */
 export const FORM_KEY: Record<FormId, Record<string, ItemKey>> = {
@@ -190,7 +190,6 @@ export const FORM_KEY: Record<FormId, Record<string, ItemKey>> = {
     ...ANSWER_KEY.pretest,
     "1b": { kind: "value", maxPoints: 1, expected: 324 },
     "1c": { kind: "value", maxPoints: 1, expected: 45 },
-    "1d": { kind: "value", maxPoints: 1, expected: 400 },
     "1e": { kind: "value", maxPoints: 1, expected: 96 },
     "1f": { kind: "expression", maxPoints: 1, expected: "-x^2 + 25x", variable: "x" },
   },
@@ -198,7 +197,6 @@ export const FORM_KEY: Record<FormId, Record<string, ItemKey>> = {
     ...ANSWER_KEY.posttest,
     "1b": { kind: "value", maxPoints: 1, expected: 16 },
     "1c": { kind: "value", maxPoints: 1, expected: 25 },
-    "1d": { kind: "value", maxPoints: 1, expected: 1800 },
     "1e": { kind: "value", maxPoints: 1, expected: 81 },
     "1f": { kind: "expression", maxPoints: 1, expected: "-x^2 + 35x", variable: "x" },
   },

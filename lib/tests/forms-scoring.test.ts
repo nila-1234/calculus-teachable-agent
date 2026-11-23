@@ -12,10 +12,10 @@ import { SKILL_CHECK_ANSWERS } from "@/lib/surveys/eligibility";
 const ids = (t: ReturnType<typeof getFormTest>) =>
   t.sections.flatMap((s) => s.items.map((i) => i.id));
 
-test("each version has Q1a, Q1b–Q1f, Question 2 and Question 3", () => {
+test("each version has Q1a, Q1b, Q1c, Q1e, Q1f, Question 2 and Question 3", () => {
   for (const form of ["A", "B"] as const) {
     assert.deepEqual(ids(getFormTest(form)), [
-      "1", "1b", "1c", "1d", "1e", "1f", "2.1", "2.2", "2.3", "2.4", "3.1", "3.2",
+      "1", "1b", "1c", "1e", "1f", "2.1", "2.2", "2.3", "2.4", "3.1", "3.2",
     ]);
   }
   // Version A's content is the original pre-test, B's the original post-test.
@@ -23,11 +23,11 @@ test("each version has Q1a, Q1b–Q1f, Question 2 and Question 3", () => {
   assert.equal(Q1A_ITEM.B.prompt, getTest("posttest")!.sections[0].items[0].prompt);
 });
 
-test("the test taken in a phase leaves out Q1a and shuffles Q1b–Q1f", () => {
+test("the test taken in a phase leaves out Q1a and shuffles the four short items", () => {
   for (const testId of ["pretest", "posttest"] as const) {
     const t = getPhaseTest(testId, "B");
     assert.equal(t.id, testId);
-    assert.deepEqual(t.sections[0].items.map((i) => i.id), ["1b", "1c", "1d", "1e", "1f"]);
+    assert.deepEqual(t.sections[0].items.map((i) => i.id), ["1b", "1c", "1e", "1f"]);
     assert.equal(t.sections[0].shuffle, true);
     assert.ok(t.sections[0].items.every((i) => i.kind === "short-answer"));
   }
@@ -43,11 +43,11 @@ test("LearnVia originals are word for word (two per version)", () => {
 });
 
 const right: Record<"A" | "B", Record<string, string>> = {
-  A: { "1b": "324 cm", "1c": "x = 45", "1d": "400", "1e": "96 ft^2", "1f": "A(x) = 25x - x^2" },
-  B: { "1b": "16", "1c": "$25", "1d": "1800 m²", "1e": "81", "1f": "x(35 - x)" },
+  A: { "1b": "324 cm", "1c": "x = 45", "1e": "96 ft^2", "1f": "A(x) = 25x - x^2" },
+  B: { "1b": "16", "1c": "$25", "1e": "81", "1f": "x(35 - x)" },
 };
 
-test("Q1b–Q1f are scored against the participant's version", () => {
+test("the four short items are scored against the participant's version", () => {
   for (const form of ["A", "B"] as const) {
     const answers = Object.fromEntries(
       Object.entries(right[form]).map(([id, text]) => [id, { text }])
@@ -55,7 +55,7 @@ test("Q1b–Q1f are scored against the participant's version", () => {
     const s = scoreTest("pretest", answers, { form, items: Object.keys(right[form]) });
     assert.deepEqual(
       s.items.map((i) => [i.itemId, i.points]),
-      ["1b", "1c", "1d", "1e", "1f"].map((id) => [id, 1]),
+      ["1b", "1c", "1e", "1f"].map((id) => [id, 1]),
       form
     );
     // The other version's answers are wrong here.
@@ -165,7 +165,7 @@ test("screening outcomes: who was screened out and why, plus non-finishers", () 
 });
 
 test("the Q1 shuffle is a stable permutation per participant", () => {
-  const items = ["1b", "1c", "1d", "1e", "1f"];
+  const items = ["1b", "1c", "1e", "1f"];
   const a = seededShuffle(items, "P1:pretest:q1");
   assert.deepEqual([...a].sort(), items);
   assert.deepEqual(seededShuffle(items, "P1:pretest:q1"), a);

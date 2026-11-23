@@ -6,7 +6,7 @@ import { getFormTest } from "@/lib/tests/definitions";
 
 export default function InstructorTestsPage() {
   // Both counterbalanced versions in full (Q1a — asked in screening — then
-  // Q1b–Q1f, Question 2, Question 3). Each participant takes one as the
+  // Q1b, Q1c, Q1e, Q1f, Question 2, Question 3). Each participant takes one as the
   // pre-test and the other as the post-test.
   const tests = (["A", "B"] as const).map((form) => ({
     ...getFormTest(form),
