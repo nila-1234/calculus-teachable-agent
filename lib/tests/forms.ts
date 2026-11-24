@@ -21,7 +21,7 @@ const SALT = "test-form:";
  * ("A" = A pre / B post, "B" = B pre / A post). Set back to null to restore
  * the random split. Participants who already have a version keep it.
  */
-const FORCE_PRETEST_FORM: FormId | null = "A";
+const FORCE_PRETEST_FORM: FormId | null = "B";
 
 /** FNV-1a — a stable, well-spread mapping from an id to a bucket. */
 function hash(value: string): number {
