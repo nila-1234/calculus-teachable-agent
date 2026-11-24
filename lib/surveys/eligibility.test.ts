@@ -90,3 +90,20 @@ test("ordinary typed math is not mistaken for AI wording", () => {
   });
   assert.equal(r.eligible, true, r.reasons.join("; "));
 });
+
+test("a Q5 answer with no attempt counts as blank and is screened out", () => {
+  for (const answer of ["()", "-", " ? ", "...", "sqrt()", "pi*()"]) {
+    const r = evaluateEligibility({
+      ...withTyping({ keystrokes: 3, keypadChars: 6, firstFocusAt: 1 }),
+      [AI_CHECK_ITEM]: answer,
+    });
+    assert.equal(r.eligible, false, answer);
+    assert.match(r.reasons.join(" "), /left blank/, answer);
+  }
+  // A real (if short) attempt is not blank.
+  const r = evaluateEligibility({
+    ...withTyping({ keystrokes: 6, firstFocusAt: 1 }),
+    [AI_CHECK_ITEM]: "x = 15",
+  });
+  assert.equal(r.eligible, true, r.reasons.join("; "));
+});

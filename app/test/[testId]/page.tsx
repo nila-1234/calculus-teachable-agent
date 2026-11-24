@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { CheckIcon } from "@radix-ui/react-icons";
 import AppHeader from "@/components/app-header";
@@ -17,6 +17,11 @@ import type { FormId, TestAnswers, TestId, TestItemAnswer } from "@/lib/tests/ty
 const TEST_DESIGN_VERSION = 2;
 import { logEvent } from "@/lib/logger";
 import { PREVIEW_PARAM, isPreviewActive } from "@/lib/preview";
+
+/** Whole seconds from an ISO time until now (called from event handlers). */
+function secondsSince(iso: string): number {
+  return Math.round((Date.now() - Date.parse(iso)) / 1000);
+}
 
 function TestPageContent() {
   const router = useRouter();
@@ -49,6 +54,12 @@ function TestPageContent() {
   // -1 = intro screen, 0..n-1 = question screens, n = complete screen
   const [screenIndex, setScreenIndex] = useState(-1);
   const [answers, setAnswers] = useState<TestAnswers>({});
+  // First / last edit per question, and when the current page was shown.
+  const editTimes = useRef<Record<string, { first: string; last: string }>>({});
+  const screenShownAt = useRef<string | null>(null);
+  useEffect(() => {
+    screenShownAt.current = screenIndex >= 0 ? new Date().toISOString() : null;
+  }, [screenIndex]);
 
   // Q1b, Q1c, Q1e, Q1f come in a per-participant random order, stable across reloads.
   // Labels follow what is shown — Q1.1, Q1.2 … in display order, Q2.1 … — never
@@ -134,6 +145,14 @@ function TestPageContent() {
       : 0;
 
   const saveAnswers = (next: TestAnswers) => {
+    // When each question was first and last edited: several questions share a
+    // page (Question 1), so the submit time alone can't time each one.
+    const now = new Date().toISOString();
+    for (const id of Object.keys(next)) {
+      if (JSON.stringify(next[id]) === JSON.stringify(answers[id])) continue;
+      const seen = editTimes.current[id];
+      editTimes.current[id] = { first: seen?.first ?? now, last: now };
+    }
     setAnswers(next);
     // Preview must not leave participant answers behind in storage.
     if (!preview) {
@@ -192,7 +211,10 @@ function TestPageContent() {
     // Preview steps through without answering; a participant cannot.
     if (!current || (!isAnswered() && !preview)) return;
 
+    const pageStartedAt = screenShownAt.current;
+    const pageSeconds = pageStartedAt ? secondsSince(pageStartedAt) : null;
     for (const entry of current) {
+      const edits = editTimes.current[entry.item.id];
       logEvent("test_item_answered", test.id, {
         item_id: entry.item.id,
         answer: answers[entry.item.id],
@@ -201,6 +223,12 @@ function TestPageContent() {
         // Position in the whole test, in the order shown, and its label there.
         position: items.indexOf(entry) + 1,
         label: entry.label,
+        // Timing per question, even when several share a page.
+        page_started_at: pageStartedAt,
+        page_seconds: pageSeconds,
+        page_questions: current.length,
+        first_edit_at: edits?.first ?? null,
+        last_edit_at: edits?.last ?? null,
       });
     }
 

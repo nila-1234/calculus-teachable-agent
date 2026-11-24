@@ -137,6 +137,16 @@ export function evaluateEligibility(answers: SurveyAnswers): EligibilityResult {
   // AI-use check on screening Q5, from the typing log and the wording.
   if (answers[AI_CHECK_ITEM] !== undefined) {
     const text = answers[AI_CHECK_ITEM] ?? "";
+
+    // No attempt at all: nothing but spaces or symbols (e.g. "()" from the
+    // keypad, "-", "?"). Counts as blank, which screens out.
+    // Keypad words (sqrt, pi) don't count as an attempt on their own.
+    const blank = !/[\p{L}\p{N}]/u.test(text.replace(/sqrt|pi/gi, ""));
+    if (blank) {
+      failedItems.push(AI_CHECK_ITEM);
+      reasons.push(`${AI_CHECK_ITEM}: left blank (no attempt: "${text.trim().slice(0, 20)}")`);
+    }
+
     const typing = parseTyping(answers[`${AI_CHECK_ITEM}${TYPING_SUFFIX}`]);
     const aiReasons: string[] = [];
 
@@ -164,7 +174,7 @@ export function evaluateEligibility(answers: SurveyAnswers): EligibilityResult {
     const markers = aiWordingMarkers(text);
     if (markers.length) aiReasons.push(`AI-style formatting (${markers.join(", ")})`);
 
-    if (aiReasons.length) {
+    if (aiReasons.length && !blank) {
       failedItems.push(AI_CHECK_ITEM);
       reasons.push(`${AI_CHECK_ITEM}: ${aiReasons.join("; ")} (possible AI use)`);
     }
